@@ -148,7 +148,8 @@ export function calculateATR(candles: Candle[], period: number = 14): number {
 
 // Calculate all technical indicators
 export function calculateIndicators(candles: Candle[]): TechnicalIndicators | null {
-  if (candles.length < 200) return null;
+  // Need at least 50 candles for meaningful analysis
+  if (candles.length < 50) return null;
   
   const closePrices = candles.map(c => c.close);
   const macd = calculateMACD(closePrices);
@@ -161,7 +162,7 @@ export function calculateIndicators(candles: Candle[]): TechnicalIndicators | nu
     macd_histogram: macd.histogram,
     sma_20: calculateSMA(closePrices, 20),
     sma_50: calculateSMA(closePrices, 50),
-    sma_200: calculateSMA(closePrices, 200),
+    sma_200: candles.length >= 200 ? calculateSMA(closePrices, 200) : calculateSMA(closePrices, Math.min(100, candles.length)),
     ema_12: calculateEMA(closePrices, 12),
     ema_26: calculateEMA(closePrices, 26),
     bb_upper: bb.upper,

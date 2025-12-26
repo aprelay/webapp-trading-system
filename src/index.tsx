@@ -20,7 +20,7 @@ app.get('/', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Gold/USD Trading System</title>
+        <title>Gold Trading System (GLD ETF)</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -34,7 +34,7 @@ app.get('/', (c) => {
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <i class="fas fa-chart-line text-yellow-500 text-3xl"></i>
-                            <h1 class="text-2xl font-bold text-yellow-500">Gold/USD Trading System</h1>
+                            <h1 class="text-2xl font-bold text-yellow-500">Gold Trading System (GLD ETF)</h1>
                         </div>
                         <div class="flex items-center space-x-4">
                             <div id="currentPrice" class="text-2xl font-bold text-green-400">
@@ -419,7 +419,7 @@ app.get('/api/market/latest', async (c) => {
   try {
     const result = await DB.prepare(`
       SELECT * FROM market_data 
-      WHERE timeframe = '1h'
+      WHERE timeframe = '1d'
       ORDER BY timestamp DESC 
       LIMIT 50
     `).all();
@@ -532,26 +532,43 @@ app.post('/api/market/fetch', async (c) => {
       apiKey = 'demo';
     }
     
-    const symbol = 'XAU'; // Gold
-    const market = 'USD';
+    // Use GLD (Gold ETF) instead of direct Gold/USD forex
+    // Free tier supports daily stock data, not intraday forex
+    const symbol = 'GLD'; // SPDR Gold Trust ETF (tracks gold prices)
     
-    // Fetch intraday data (60min interval)
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}${market}&interval=60min&apikey=${apiKey}`;
+    // Fetch daily data (free tier) - compact gives ~100 days which is enough for our indicators
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
     
     const response = await fetch(url);
     const data = await response.json();
     
-    if (data['Error Message'] || data['Note']) {
+    if (data['Error Message']) {
       return c.json({ 
         success: false, 
-        error: 'API limit reached. Please add your own Alpha Vantage API key in settings.',
+        error: data['Error Message'],
         count: 0 
       });
     }
     
-    const timeSeries = data['Time Series (60min)'];
+    if (data['Note']) {
+      return c.json({ 
+        success: false, 
+        error: 'API limit reached (25 calls/day on free tier). Please wait 24 hours or upgrade.',
+        count: 0 
+      });
+    }
+    
+    if (data['Information'] && data['Information'].includes('premium')) {
+      return c.json({ 
+        success: false, 
+        error: 'Premium endpoint required. Please check your API configuration.',
+        count: 0 
+      });
+    }
+    
+    const timeSeries = data['Time Series (Daily)'];
     if (!timeSeries) {
-      return c.json({ success: false, error: 'No data available', count: 0 });
+      return c.json({ success: false, error: 'No data available from Alpha Vantage', count: 0 });
     }
     
     let count = 0;
@@ -571,15 +588,15 @@ app.post('/api/market/fetch', async (c) => {
       
       await DB.prepare(`
         INSERT INTO market_data (timestamp, open, high, low, close, volume, timeframe)
-        VALUES (?, ?, ?, ?, ?, ?, '1h')
+        VALUES (?, ?, ?, ?, ?, ?, '1d')
         ON CONFLICT DO NOTHING
       `).bind(timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume).run();
       
       count++;
     }
     
-    // Calculate indicators
-    if (candles.length >= 200) {
+    // Calculate indicators (need at least 50 candles)
+    if (candles.length >= 50) {
       const indicators = calculateIndicators(candles.reverse());
       
       if (indicators) {
@@ -588,7 +605,7 @@ app.post('/api/market/fetch', async (c) => {
           (timestamp, timeframe, rsi_14, macd, macd_signal, macd_histogram,
            sma_20, sma_50, sma_200, ema_12, ema_26,
            bb_upper, bb_middle, bb_lower, atr_14)
-          VALUES (datetime('now'), '1h', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (datetime('now'), '1d', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           indicators.rsi_14,
           indicators.macd,
@@ -668,13 +685,13 @@ app.post('/api/signals/generate', async (c) => {
     // Get recent market data
     const marketData = await DB.prepare(`
       SELECT * FROM market_data 
-      WHERE timeframe = '1h'
+      WHERE timeframe = '1d'
       ORDER BY timestamp DESC 
       LIMIT 200
     `).all();
     
-    if (!marketData.results || marketData.results.length < 200) {
-      return c.json({ success: false, error: 'Not enough data. Please fetch market data first.' });
+    if (!marketData.results || marketData.results.length < 50) {
+      return c.json({ success: false, error: 'Not enough data. Please fetch market data first (need at least 50 candles).' });
     }
     
     const candles = (marketData.results as any[]).reverse().map(row => ({
