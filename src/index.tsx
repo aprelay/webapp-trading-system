@@ -128,6 +128,10 @@ app.get('/', (c) => {
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
+                            <label class="block text-sm font-medium mb-2">Alpha Vantage API Key</label>
+                            <input type="text" id="alphaVantageKey" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2" placeholder="Your API key (configured)" readonly>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium mb-2">Telegram Bot Token</label>
                             <input type="text" id="telegramToken" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2" placeholder="Enter bot token">
                         </div>
@@ -322,6 +326,8 @@ app.get('/', (c) => {
                     const res = await axios.get('/api/settings');
                     const settings = res.data.settings;
                     
+                    const apiKey = settings.alpha_vantage_api_key || 'J5LBTD5UCBAB1PBG';
+                    document.getElementById('alphaVantageKey').value = apiKey.substring(0, 8) + '...' + apiKey.substring(apiKey.length - 4);
                     document.getElementById('telegramToken').value = settings.telegram_bot_token || '';
                     document.getElementById('telegramChatId').value = settings.telegram_chat_id || '';
                     document.getElementById('minConfidence').value = settings.min_confidence || '70';
@@ -513,9 +519,19 @@ app.post('/api/market/fetch', async (c) => {
   const { DB } = c.env;
   
   try {
-    // Using Alpha Vantage demo key (limited to 25 requests/day)
-    // Users should get their own key from alphavantage.co
-    const apiKey = 'demo';
+    // Get API key from settings or environment
+    const settingsResult = await DB.prepare(`
+      SELECT setting_value FROM user_settings 
+      WHERE setting_key = 'alpha_vantage_api_key'
+    `).first();
+    
+    let apiKey = (settingsResult as any)?.setting_value || 'J5LBTD5UCBAB1PBG';
+    
+    // If still empty or placeholder, use demo
+    if (!apiKey || apiKey === 'your_key_here' || apiKey === '') {
+      apiKey = 'demo';
+    }
+    
     const symbol = 'XAU'; // Gold
     const market = 'USD';
     
