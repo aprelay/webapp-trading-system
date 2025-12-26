@@ -128,8 +128,8 @@ app.get('/', (c) => {
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-2">Alpha Vantage API Key</label>
-                            <input type="text" id="alphaVantageKey" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2" placeholder="Your API key (configured)" readonly>
+                            <label class="block text-sm font-medium mb-2">Twelve Data API Key</label>
+                            <input type="text" id="twelveDataKey" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2" placeholder="Your API key (configured)" readonly>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-2">Telegram Bot Token</label>
@@ -170,8 +170,8 @@ app.get('/', (c) => {
                         <li><strong>Create Telegram Bot:</strong> Message @BotFather on Telegram, use /newbot command, save the bot token</li>
                         <li><strong>Get Chat ID:</strong> Message your bot, then visit: https://api.telegram.org/bot[YOUR_BOT_TOKEN]/getUpdates</li>
                         <li><strong>Configure Settings:</strong> Enter your Telegram credentials above and click "Save Settings"</li>
-                        <li><strong>Get API Keys:</strong> Sign up for free at Alpha Vantage (alphavantage.co) for market data</li>
-                        <li><strong>Fetch Data:</strong> Click "Fetch Market Data" to populate the system with current gold/USD prices</li>
+                        <li><strong>API Configured:</strong> Using Twelve Data API (800 calls/day) for real-time XAU/USD data</li>
+                        <li><strong>Fetch Data:</strong> Click "Fetch Market Data" to get latest hourly Gold/USD prices</li>
                         <li><strong>Test Alerts:</strong> Click "Test Telegram" to verify your bot is working</li>
                     </ol>
                 </div>
@@ -326,8 +326,8 @@ app.get('/', (c) => {
                     const res = await axios.get('/api/settings');
                     const settings = res.data.settings;
                     
-                    const apiKey = settings.alpha_vantage_api_key || 'J5LBTD5UCBAB1PBG';
-                    document.getElementById('alphaVantageKey').value = apiKey.substring(0, 8) + '...' + apiKey.substring(apiKey.length - 4);
+                    const apiKey = settings.twelve_data_api_key || '70140f57bea54c5e90768de696487d8f';
+                    document.getElementById('twelveDataKey').value = apiKey.substring(0, 8) + '...' + apiKey.substring(apiKey.length - 4);
                     document.getElementById('telegramToken').value = settings.telegram_bot_token || '';
                     document.getElementById('telegramChatId').value = settings.telegram_chat_id || '';
                     document.getElementById('minConfidence').value = settings.min_confidence || '70';
