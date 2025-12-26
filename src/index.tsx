@@ -647,8 +647,11 @@ app.post('/api/market/fetch', async (c) => {
           INSERT INTO indicators 
           (timestamp, timeframe, rsi_14, macd, macd_signal, macd_histogram,
            sma_20, sma_50, sma_200, ema_12, ema_26,
-           bb_upper, bb_middle, bb_lower, atr_14)
-          VALUES (datetime('now'), '1h', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           bb_upper, bb_middle, bb_lower, atr_14,
+           stochastic_k, stochastic_d, adx, plus_di, minus_di,
+           ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b,
+           parabolic_sar, vwap, fib_382, fib_500, fib_618)
+          VALUES (datetime('now'), '1h', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           indicators.rsi_14,
           indicators.macd,
@@ -662,7 +665,21 @@ app.post('/api/market/fetch', async (c) => {
           indicators.bb_upper,
           indicators.bb_middle,
           indicators.bb_lower,
-          indicators.atr_14
+          indicators.atr_14,
+          indicators.stochastic_k,
+          indicators.stochastic_d,
+          indicators.adx,
+          indicators.plus_di,
+          indicators.minus_di,
+          indicators.ichimoku_tenkan,
+          indicators.ichimoku_kijun,
+          indicators.ichimoku_senkou_a,
+          indicators.ichimoku_senkou_b,
+          indicators.parabolic_sar,
+          indicators.vwap,
+          indicators.fib_382 || 0,
+          indicators.fib_500 || 0,
+          indicators.fib_618 || 0
         ).run();
         
         // Generate trading signals
