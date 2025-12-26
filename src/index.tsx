@@ -158,6 +158,9 @@ app.get('/', (c) => {
                         <button onclick="fetchMarketData()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-download mr-2"></i>Fetch Market Data
                         </button>
+                        <button onclick="generateSignalNow()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition">
+                            <i class="fas fa-chart-line mr-2"></i>Generate Signal NOW
+                        </button>
                     </div>
                 </div>
 
@@ -382,6 +385,52 @@ app.get('/', (c) => {
                     alert('❌ Error fetching data: ' + error.message);
                     event.target.disabled = false;
                     event.target.innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
+                }
+            }
+
+            async function generateSignalNow() {
+                try {
+                    const btn = event.target;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
+                    
+                    const res = await axios.post('/api/signals/generate-now');
+                    
+                    if (res.data.success) {
+                        const day = res.data.signals.day_trade;
+                        const swing = res.data.signals.swing_trade;
+                        
+                        let message = '✅ Signals Generated!\\n\\n';
+                        message += '📊 DAY TRADE:\\n';
+                        message += 'Signal: ' + day.signal_type + ' (' + day.confidence.toFixed(1) + '%)\\n';
+                        message += 'Entry: $' + day.price.toFixed(2) + '\\n';
+                        message += 'Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n';
+                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + '\\n\\n';
+                        
+                        message += '📈 SWING TRADE:\\n';
+                        message += 'Signal: ' + swing.signal_type + ' (' + swing.confidence.toFixed(1) + '%)\\n';
+                        message += 'Entry: $' + swing.price.toFixed(2) + '\\n';
+                        message += 'Stop Loss: $' + swing.stop_loss.toFixed(2) + '\\n';
+                        message += 'TP1: $' + swing.take_profit_1.toFixed(2) + '\\n\\n';
+                        
+                        if (res.data.telegram_sent) {
+                            message += '📱 Sent to Telegram!';
+                        } else {
+                            message += '⚠️ Telegram not sent (check settings)';
+                        }
+                        
+                        alert(message);
+                        await refreshData();
+                    } else {
+                        alert('❌ Error: ' + res.data.error);
+                    }
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                    event.target.disabled = false;
+                    event.target.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
                 }
             }
 
@@ -712,6 +761,124 @@ app.post('/api/signals/generate', async (c) => {
         day_trade: dayTradeSignal,
         swing_trade: swingTradeSignal
       }
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+})
+
+// Force generate signal and send to Telegram
+app.post('/api/signals/generate-now', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    // Get recent market data
+    const marketData = await DB.prepare(`
+      SELECT * FROM market_data 
+      WHERE timeframe = '1h'
+      ORDER BY timestamp DESC 
+      LIMIT 200
+    `).all();
+    
+    if (!marketData.results || marketData.results.length < 50) {
+      return c.json({ success: false, error: 'Not enough data. Please fetch market data first.' });
+    }
+    
+    const candles = (marketData.results as any[]).reverse().map(row => ({
+      timestamp: row.timestamp,
+      open: row.open,
+      high: row.high,
+      low: row.low,
+      close: row.close,
+      volume: row.volume
+    }));
+    
+    const indicators = calculateIndicators(candles);
+    if (!indicators) {
+      return c.json({ success: false, error: 'Failed to calculate indicators' });
+    }
+    
+    const currentPrice = candles[candles.length - 1].close;
+    const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
+    const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
+    
+    // Get Telegram settings
+    const settings = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings
+      WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+    `).all();
+    
+    const config: any = {};
+    for (const row of settings.results || []) {
+      config[(row as any).setting_key] = (row as any).setting_value;
+    }
+    
+    let telegramSent = false;
+    let sentSignals: any[] = [];
+    
+    // Send both signals to Telegram (regardless of confidence)
+    if (config.telegram_bot_token && config.telegram_chat_id) {
+      // Send day trade signal
+      const daySuccess = await sendTelegramMessage(
+        { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+        formatTradeSignal({
+          ...dayTradeSignal,
+          timestamp: new Date().toISOString()
+        })
+      );
+      
+      if (daySuccess) {
+        sentSignals.push('day_trade');
+        telegramSent = true;
+      }
+      
+      // Wait a second between messages
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Send swing trade signal
+      const swingSuccess = await sendTelegramMessage(
+        { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+        formatTradeSignal({
+          ...swingTradeSignal,
+          timestamp: new Date().toISOString()
+        })
+      );
+      
+      if (swingSuccess) {
+        sentSignals.push('swing_trade');
+        telegramSent = true;
+      }
+    }
+    
+    // Store signals in database
+    for (const signal of [dayTradeSignal, swingTradeSignal]) {
+      await DB.prepare(`
+        INSERT INTO signals 
+        (timestamp, signal_type, trading_style, price, stop_loss, 
+         take_profit_1, take_profit_2, take_profit_3, confidence, reason, telegram_sent)
+        VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        signal.signal_type,
+        signal.trading_style,
+        signal.price,
+        signal.stop_loss,
+        signal.take_profit_1,
+        signal.take_profit_2,
+        signal.take_profit_3,
+        signal.confidence,
+        signal.reason,
+        telegramSent ? 1 : 0
+      ).run();
+    }
+    
+    return c.json({ 
+      success: true,
+      signals: {
+        day_trade: dayTradeSignal,
+        swing_trade: swingTradeSignal
+      },
+      telegram_sent: telegramSent,
+      sent_to_telegram: sentSignals
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
