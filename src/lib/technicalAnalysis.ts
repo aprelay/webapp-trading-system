@@ -191,6 +191,9 @@ export function generateSignal(
     bullishCount += 1;
   } else if (indicators.rsi_14 > 70) {
     signals.push('RSI overbought (>70)');
+    bearishCount += 3;
+  } else if (indicators.rsi_14 > 65) {
+    signals.push('RSI approaching overbought (>65)');
     bearishCount += 2;
   } else if (indicators.rsi_14 > 60) {
     signals.push('RSI above 60');
@@ -240,10 +243,10 @@ export function generateSignal(
   let signalType: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
   let confidence = 50;
   
-  if (bullishCount > bearishCount + 2) {
+  if (bullishCount > bearishCount + 1) {
     signalType = 'BUY';
     confidence = Math.min(bullishPercentage, 95);
-  } else if (bearishCount > bullishCount + 2) {
+  } else if (bearishCount > bullishCount + 1) {
     signalType = 'SELL';
     confidence = Math.min(100 - bullishPercentage, 95);
   }
