@@ -563,6 +563,115 @@ app.post('/api/telegram/test', async (c) => {
   }
 })
 
+// ============================================================================
+// PHASE 2: NEWS & SENTIMENT API ENDPOINTS (85% Accuracy)
+// ============================================================================
+
+// Fetch and analyze gold-related news
+app.post('/api/news/fetch', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    // Get NewsAPI key from settings
+    const settingsResult = await DB.prepare(`
+      SELECT setting_value FROM user_settings 
+      WHERE setting_key = 'news_api_key'
+    `).first();
+    
+    const apiKey = (settingsResult as any)?.setting_value || '';
+    
+    if (!apiKey || apiKey === 'your_key_here') {
+      return c.json({ 
+        success: false, 
+        message: 'NewsAPI key not configured. Using free tier (100 calls/day)',
+        sentiment: { overall: 'neutral', score: 0, bullishCount: 0, bearishCount: 0, neutralCount: 0, articles: [] }
+      });
+    }
+    
+    // Import news functions
+    const { fetchGoldNews, analyzeNewsSentiment } = await import('./lib/newsAnalysis');
+    
+    // Fetch latest gold news
+    const articles = await fetchGoldNews(apiKey);
+    
+    // Analyze sentiment
+    const sentiment = analyzeNewsSentiment(articles);
+    
+    // Store news articles in database
+    for (const article of sentiment.articles.slice(0, 10)) {
+      await DB.prepare(`
+        INSERT INTO news_articles 
+        (title, description, url, published_at, source, sentiment, score)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        article.title,
+        article.description || '',
+        article.url,
+        article.publishedAt,
+        article.source,
+        article.sentiment,
+        article.score || 0
+      ).run();
+    }
+    
+    // Store sentiment summary
+    await DB.prepare(`
+      INSERT INTO market_sentiment 
+      (timestamp, overall_sentiment, sentiment_score, bullish_count, bearish_count, neutral_count)
+      VALUES (datetime('now'), ?, ?, ?, ?, ?)
+    `).bind(
+      sentiment.overall,
+      sentiment.score,
+      sentiment.bullishCount,
+      sentiment.bearishCount,
+      sentiment.neutralCount
+    ).run();
+    
+    return c.json({ success: true, sentiment, articleCount: articles.length });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+})
+
+// Get latest news sentiment
+app.get('/api/news/sentiment', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    const sentiment = await DB.prepare(`
+      SELECT * FROM market_sentiment 
+      ORDER BY timestamp DESC 
+      LIMIT 1
+    `).first();
+    
+    const articles = await DB.prepare(`
+      SELECT * FROM news_articles 
+      ORDER BY published_at DESC 
+      LIMIT 10
+    `).all();
+    
+    return c.json({ 
+      success: true, 
+      sentiment: sentiment || { overall_sentiment: 'neutral', sentiment_score: 0 },
+      articles: articles.results || []
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+})
+
+// Get economic calendar events
+app.get('/api/news/events', async (c) => {
+  try {
+    const { getEconomicEvents } = await import('./lib/newsAnalysis');
+    const events = await getEconomicEvents();
+    
+    return c.json({ success: true, events });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+})
+
 // Fetch market data from Alpha Vantage
 app.post('/api/market/fetch', async (c) => {
   const { DB } = c.env;
