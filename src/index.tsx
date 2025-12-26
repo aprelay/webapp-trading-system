@@ -90,6 +90,42 @@ app.get('/', (c) => {
                     </div>
                 </div>
 
+                <!-- Automation Panel -->
+                <div class="bg-gradient-to-r from-yellow-900 to-yellow-800 p-6 rounded-lg border-2 border-yellow-500 mb-6 shadow-xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h2 class="text-2xl font-bold text-white mb-2">
+                                <i class="fas fa-robot mr-3"></i>Automated Daily Analysis
+                            </h2>
+                            <p class="text-yellow-100 mb-4">
+                                One-click analysis: Fetches latest data, generates MTF signals, calculates position sizes, and sends to Telegram
+                            </p>
+                            <div id="automationStatus" class="text-sm text-yellow-200">
+                                Click the button to run automated analysis →
+                            </div>
+                        </div>
+                        <button 
+                            id="analyzeButton"
+                            onclick="runAutomatedAnalysis()" 
+                            class="bg-white hover:bg-yellow-50 text-yellow-900 px-8 py-4 rounded-lg font-bold text-lg transition shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-play-circle mr-2"></i>
+                            <span id="analyzeButtonText">Analyze & Notify</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Results Display -->
+                    <div id="analysisResults" class="mt-6 hidden">
+                        <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                            <h3 class="text-lg font-bold text-white mb-3">
+                                <i class="fas fa-check-circle text-green-400 mr-2"></i>Analysis Complete
+                            </h3>
+                            <div id="analysisDetails" class="space-y-2 text-sm text-yellow-100">
+                                <!-- Results will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Price Chart -->
                 <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-6">
                     <h2 class="text-xl font-bold mb-4 text-yellow-500">
@@ -431,6 +467,118 @@ app.get('/', (c) => {
                     alert('❌ Error: ' + error.message);
                     event.target.disabled = false;
                     event.target.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
+                }
+            }
+
+            async function runAutomatedAnalysis() {
+                const btn = document.getElementById('analyzeButton');
+                const statusDiv = document.getElementById('automationStatus');
+                const resultsDiv = document.getElementById('analysisResults');
+                const detailsDiv = document.getElementById('analysisDetails');
+                const buttonText = document.getElementById('analyzeButtonText');
+                
+                try {
+                    // Disable button
+                    btn.disabled = true;
+                    buttonText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
+                    statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Running full analysis...';
+                    resultsDiv.classList.add('hidden');
+                    
+                    // Run automated analysis
+                    const res = await axios.post('/api/automation/analyze-and-notify');
+                    
+                    if (res.data.success) {
+                        const { signals, positions, alignment, telegram_sent, results } = res.data;
+                        
+                        // Update status
+                        statusDiv.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-2"></i>' +
+                            'Analysis completed at ' + new Date().toLocaleTimeString() +
+                            (telegram_sent ? ' | 📱 Sent to Telegram' : ' | ⚠️ Telegram not configured');
+                        
+                        // Build results display
+                        let html = '';
+                        
+                        // Step results
+                        html += '<div class="mb-4"><h4 class="font-bold mb-2">Analysis Steps:</h4>';
+                        results.steps.forEach(step => {
+                            const icon = step.status === 'completed' ? '✅' : step.status === 'failed' ? '❌' : '⏳';
+                            html += '<div>' + icon + ' Step ' + step.step + ': ' + step.name + '</div>';
+                        });
+                        html += '</div>';
+                        
+                        // Multi-timeframe alignment
+                        html += '<div class="mb-4">';
+                        html += '<h4 class="font-bold mb-2">Multi-Timeframe Alignment:</h4>';
+                        html += '<div class="text-lg font-bold">' + alignment.type + ' (' + alignment.score + '/5)</div>';
+                        html += '<div class="mt-2 space-y-1">';
+                        alignment.trends.forEach(t => {
+                            const icon = t.trend === 'BULLISH' ? '📈' : t.trend === 'BEARISH' ? '📉' : '➡️';
+                            html += '<div>' + icon + ' ' + t.timeframe + ': ' + t.trend + ' (' + t.confidence.toFixed(0) + '%)</div>';
+                        });
+                        html += '</div></div>';
+                        
+                        // Day Trade Signal
+                        const day = signals.day_trade;
+                        html += '<div class="mb-4">';
+                        html += '<h4 class="font-bold mb-2">Day Trade Signal:</h4>';
+                        html += '<div class="text-lg font-bold ' + (day.isValid ? 'text-green-400' : 'text-yellow-400') + '">';
+                        html += (day.isValid ? '✅' : '⚠️') + ' ' + day.signal_type + ' (' + day.final_confidence + '% confidence)';
+                        html += '</div>';
+                        html += '<div class="mt-2 space-y-1">';
+                        html += '<div>Entry: $' + day.price.toFixed(2) + '</div>';
+                        html += '<div>Stop: $' + day.stop_loss.toFixed(2) + ' (' + ((day.stop_loss / day.price - 1) * 100).toFixed(2) + '%)</div>';
+                        html += '<div>TP1: $' + day.take_profit_1.toFixed(2) + ' (' + ((day.take_profit_1 / day.price - 1) * 100).toFixed(2) + '%)</div>';
+                        html += '<div>Position: ' + positions.day_trade.units + ' lots ($' + positions.day_trade.value + ')</div>';
+                        html += '<div>Risk: $' + positions.day_trade.risk_amount + ' (' + positions.day_trade.risk_pct + '%)</div>';
+                        html += '<div>R:R: ' + positions.day_trade.reward_risk_ratio + ':1</div>';
+                        html += '</div></div>';
+                        
+                        // Swing Trade Signal
+                        const swing = signals.swing_trade;
+                        html += '<div class="mb-4">';
+                        html += '<h4 class="font-bold mb-2">Swing Trade Signal:</h4>';
+                        html += '<div class="text-lg font-bold ' + (swing.isValid ? 'text-green-400' : 'text-yellow-400') + '">';
+                        html += (swing.isValid ? '✅' : '⚠️') + ' ' + swing.signal_type + ' (' + swing.final_confidence + '% confidence)';
+                        html += '</div>';
+                        html += '<div class="mt-2 space-y-1">';
+                        html += '<div>Entry: $' + swing.price.toFixed(2) + '</div>';
+                        html += '<div>Stop: $' + swing.stop_loss.toFixed(2) + ' (' + ((swing.stop_loss / swing.price - 1) * 100).toFixed(2) + '%)</div>';
+                        html += '<div>TP1: $' + swing.take_profit_1.toFixed(2) + ' (' + ((swing.take_profit_1 / swing.price - 1) * 100).toFixed(2) + '%)</div>';
+                        html += '<div>Position: ' + positions.swing_trade.units + ' lots ($' + positions.swing_trade.value + ')</div>';
+                        html += '<div>Risk: $' + positions.swing_trade.risk_amount + ' (' + positions.swing_trade.risk_pct + '%)</div>';
+                        html += '<div>R:R: ' + positions.swing_trade.reward_risk_ratio + ':1</div>';
+                        html += '</div></div>';
+                        
+                        // Recommendation
+                        html += '<div class="mt-4 pt-4 border-t border-yellow-300">';
+                        html += '<h4 class="font-bold mb-2">Recommendation:</h4>';
+                        
+                        if (day.isValid && day.signal_type !== 'HOLD') {
+                            html += '<div class="text-green-400 font-bold">✅ Day Trade: EXECUTE ' + day.signal_type + '</div>';
+                        } else {
+                            html += '<div class="text-yellow-400">⚠️ Day Trade: SKIP (' + day.mtf_reason + ')</div>';
+                        }
+                        
+                        if (swing.isValid && swing.signal_type !== 'HOLD') {
+                            html += '<div class="text-green-400 font-bold">✅ Swing Trade: EXECUTE ' + swing.signal_type + '</div>';
+                        } else {
+                            html += '<div class="text-yellow-400">⚠️ Swing Trade: SKIP (' + swing.mtf_reason + ')</div>';
+                        }
+                        html += '</div>';
+                        
+                        detailsDiv.innerHTML = html;
+                        resultsDiv.classList.remove('hidden');
+                        
+                        // Refresh signals display
+                        await refreshData();
+                    } else {
+                        statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>Error: ' + res.data.error;
+                    }
+                } catch (error) {
+                    statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>Error: ' + error.message;
+                } finally {
+                    btn.disabled = false;
+                    buttonText.innerHTML = 'Analyze & Notify';
                 }
             }
 
@@ -1715,6 +1863,342 @@ app.get('/api/trading/backtest/history', async (c) => {
     return c.json({ success: true, runs: runs.results || [] })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================================
+// FULL AUTOMATION: ONE-CLICK ANALYSIS & TELEGRAM
+// ============================================================
+
+// Automated Daily Analysis (Full Morning Routine)
+app.post('/api/automation/analyze-and-notify', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const results: any = {
+      timestamp: new Date().toISOString(),
+      steps: []
+    }
+    
+    // Step 1: Fetch Multi-Timeframe Data
+    results.steps.push({ step: 1, name: 'Fetch MTF Data', status: 'running' })
+    
+    // Get API key
+    const apiKeyResult = await DB.prepare(`
+      SELECT setting_value FROM user_settings 
+      WHERE setting_key = 'twelve_data_api_key'
+    `).first()
+    
+    const apiKey = (apiKeyResult as any)?.setting_value || '70140f57bea54c5e90768de696487d8f'
+    
+    const timeframes = [
+      { interval: '5min', dbKey: '5m' },
+      { interval: '15min', dbKey: '15m' },
+      { interval: '1h', dbKey: '1h' },
+      { interval: '4h', dbKey: '4h' },
+      { interval: '1day', dbKey: 'daily' }
+    ]
+    
+    let totalCandles = 0
+    for (const tf of timeframes) {
+      const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${tf.interval}&apikey=${apiKey}&outputsize=100`
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (data.values && Array.isArray(data.values)) {
+        const candles: Candle[] = []
+        for (const item of data.values) {
+          const candle = {
+            timestamp: item.datetime,
+            open: parseFloat(item.open),
+            high: parseFloat(item.high),
+            low: parseFloat(item.low),
+            close: parseFloat(item.close),
+            volume: 0
+          }
+          candles.push(candle)
+          
+          await DB.prepare(`
+            INSERT INTO market_data (timestamp, open, high, low, close, volume, timeframe)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT DO NOTHING
+          `).bind(candle.timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume, tf.dbKey).run()
+        }
+        
+        if (candles.length >= 50) {
+          const indicators = calculateIndicators(candles.reverse())
+          if (indicators) {
+            await DB.prepare(`
+              INSERT INTO multi_timeframe_indicators 
+              (timestamp, timeframe, rsi_14, macd, macd_signal, macd_histogram,
+               sma_20, sma_50, sma_200, ema_12, ema_26,
+               bb_upper, bb_middle, bb_lower, atr_14,
+               stochastic_k, stochastic_d, adx, plus_di, minus_di,
+               ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b,
+               parabolic_sar, vwap, fib_382, fib_500, fib_618)
+              VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+              tf.dbKey, indicators.rsi_14, indicators.macd, indicators.macd_signal, indicators.macd_histogram,
+              indicators.sma_20, indicators.sma_50, indicators.sma_200, indicators.ema_12, indicators.ema_26,
+              indicators.bb_upper, indicators.bb_middle, indicators.bb_lower, indicators.atr_14,
+              indicators.stochastic_k, indicators.stochastic_d, indicators.adx, indicators.plus_di, indicators.minus_di,
+              indicators.ichimoku_tenkan, indicators.ichimoku_kijun, indicators.ichimoku_senkou_a, indicators.ichimoku_senkou_b,
+              indicators.parabolic_sar, indicators.vwap, indicators.fib_382, indicators.fib_500, indicators.fib_618
+            ).run()
+          }
+        }
+        totalCandles += data.values.length
+      }
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    
+    results.steps[0].status = 'completed'
+    results.steps[0].data = { totalCandles }
+    
+    // Step 2: Generate MTF Signal
+    results.steps.push({ step: 2, name: 'Generate MTF Signal', status: 'running' })
+    
+    const { analyzeTimeframeAlignment, validateMultiTimeframeSignal, formatAlignmentReport } = await import('./lib/multiTimeframeAnalysis')
+    
+    const mtfIndicators: any = {}
+    for (const tf of ['5m', '15m', '1h', '4h', 'daily']) {
+      const indicatorData = await DB.prepare(`
+        SELECT * FROM multi_timeframe_indicators 
+        WHERE timeframe = ?
+        ORDER BY timestamp DESC 
+        LIMIT 1
+      `).bind(tf).first()
+      
+      if (indicatorData) {
+        mtfIndicators[tf] = indicatorData
+      }
+    }
+    
+    const marketData = await DB.prepare(`
+      SELECT * FROM market_data 
+      WHERE timeframe = '1h'
+      ORDER BY timestamp DESC 
+      LIMIT 1
+    `).first()
+    
+    const currentPrice = (marketData as any)?.close || 0
+    
+    const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
+    const h1Indicators = mtfIndicators['1h']
+    const dayTradeSignal = generateSignal(currentPrice, h1Indicators, 'day_trade')
+    const swingTradeSignal = generateSignal(currentPrice, h1Indicators, 'swing_trade')
+    
+    const dayValidation = validateMultiTimeframeSignal(dayTradeSignal.signal_type, alignment)
+    const swingValidation = validateMultiTimeframeSignal(swingTradeSignal.signal_type, alignment)
+    
+    const dayTradeMTF = {
+      ...dayTradeSignal,
+      final_confidence: Math.min(95, dayValidation.confidence),
+      isValid: dayValidation.isValid,
+      mtf_reason: dayValidation.reason,
+      alignment_score: alignment.score,
+      alignment_type: alignment.type
+    }
+    
+    const swingTradeMTF = {
+      ...swingTradeSignal,
+      final_confidence: Math.min(95, swingValidation.confidence),
+      isValid: swingValidation.isValid,
+      mtf_reason: swingValidation.reason,
+      alignment_score: alignment.score,
+      alignment_type: alignment.type
+    }
+    
+    results.steps[1].status = 'completed'
+    results.steps[1].data = { dayTrade: dayTradeMTF, swingTrade: swingTradeMTF, alignment }
+    
+    // Step 3: Calculate Position Sizes
+    results.steps.push({ step: 3, name: 'Calculate Position Sizes', status: 'running' })
+    
+    const account = await DB.prepare(`
+      SELECT * FROM trading_accounts WHERE id = 1
+    `).first()
+    
+    const rules = await DB.prepare(`
+      SELECT * FROM position_sizing_rules 
+      WHERE account_id = 1 AND is_active = 1
+      ORDER BY confidence_min DESC
+    `).all()
+    
+    const { calculatePositionSize } = await import('./lib/riskManagement')
+    
+    const dayPosition = calculatePositionSize(account as any, {
+      entry_price: dayTradeMTF.price,
+      stop_loss: dayTradeMTF.stop_loss,
+      take_profit_1: dayTradeMTF.take_profit_1,
+      take_profit_2: dayTradeMTF.take_profit_2,
+      take_profit_3: dayTradeMTF.take_profit_3,
+      confidence: dayTradeMTF.final_confidence,
+      signal_type: dayTradeMTF.signal_type,
+      trading_style: dayTradeMTF.trading_style
+    }, rules.results as any)
+    
+    const swingPosition = calculatePositionSize(account as any, {
+      entry_price: swingTradeMTF.price,
+      stop_loss: swingTradeMTF.stop_loss,
+      take_profit_1: swingTradeMTF.take_profit_1,
+      take_profit_2: swingTradeMTF.take_profit_2,
+      take_profit_3: swingTradeMTF.take_profit_3,
+      confidence: swingTradeMTF.final_confidence,
+      signal_type: swingTradeMTF.signal_type,
+      trading_style: swingTradeMTF.trading_style
+    }, rules.results as any)
+    
+    results.steps[2].status = 'completed'
+    results.steps[2].data = { dayPosition, swingPosition }
+    
+    // Step 4: Send to Telegram
+    results.steps.push({ step: 4, name: 'Send Telegram Alert', status: 'running' })
+    
+    const settings = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings
+      WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+    `).all()
+    
+    const config: any = {}
+    for (const row of settings.results || []) {
+      config[(row as any).setting_key] = (row as any).setting_value
+    }
+    
+    let telegramSent = false
+    
+    if (config.telegram_bot_token && config.telegram_chat_id) {
+      // Format comprehensive message
+      const message = `
+🤖 *AUTOMATED DAILY ANALYSIS*
+⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 *MULTI-TIMEFRAME ALIGNMENT*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${alignment.type} (${alignment.score}/5 timeframes)
+Confidence Boost: +${alignment.confidenceBoost}%
+
+${alignment.trends.map(t => {
+  const icon = t.trend === 'BULLISH' ? '📈' : t.trend === 'BEARISH' ? '📉' : '➡️'
+  return `${icon} *${t.timeframe}*: ${t.trend} (${t.confidence.toFixed(0)}%)`
+}).join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 *DAY TRADE SIGNAL*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${dayTradeMTF.isValid ? '✅' : '❌'} *${dayTradeMTF.signal_type}* (${dayTradeMTF.final_confidence}% confidence)
+
+*Entry:* $${dayTradeMTF.price.toFixed(2)}
+*Stop Loss:* $${dayTradeMTF.stop_loss.toFixed(2)} (${((dayTradeMTF.stop_loss / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP1:* $${dayTradeMTF.take_profit_1.toFixed(2)} (${((dayTradeMTF.take_profit_1 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP2:* $${dayTradeMTF.take_profit_2.toFixed(2)} (${((dayTradeMTF.take_profit_2 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP3:* $${dayTradeMTF.take_profit_3.toFixed(2)} (${((dayTradeMTF.take_profit_3 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
+
+💼 *Position:* ${dayPosition.units} lots ($${dayPosition.value.toLocaleString()})
+💰 *Risk:* $${dayPosition.risk_amount} (${dayPosition.risk_pct}%)
+📊 *R:R:* ${dayPosition.reward_risk_ratio}:1
+
+${dayPosition.warning ? `⚠️ ${dayPosition.warning}` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🌊 *SWING TRADE SIGNAL*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${swingTradeMTF.isValid ? '✅' : '❌'} *${swingTradeMTF.signal_type}* (${swingTradeMTF.final_confidence}% confidence)
+
+*Entry:* $${swingTradeMTF.price.toFixed(2)}
+*Stop Loss:* $${swingTradeMTF.stop_loss.toFixed(2)} (${((swingTradeMTF.stop_loss / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP1:* $${swingTradeMTF.take_profit_1.toFixed(2)} (${((swingTradeMTF.take_profit_1 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP2:* $${swingTradeMTF.take_profit_2.toFixed(2)} (${((swingTradeMTF.take_profit_2 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP3:* $${swingTradeMTF.take_profit_3.toFixed(2)} (${((swingTradeMTF.take_profit_3 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
+
+💼 *Position:* ${swingPosition.units} lots ($${swingPosition.value.toLocaleString()})
+💰 *Risk:* $${swingPosition.risk_amount} (${swingPosition.risk_pct}%)
+📊 *R:R:* ${swingPosition.reward_risk_ratio}:1
+
+${swingPosition.warning ? `⚠️ ${swingPosition.warning}` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 *RECOMMENDATION*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${dayTradeMTF.isValid && dayTradeMTF.signal_type !== 'HOLD' ? 
+  `✅ Day Trade: EXECUTE ${dayTradeMTF.signal_type}` : 
+  `⚠️ Day Trade: SKIP (${dayTradeMTF.mtf_reason})`}
+
+${swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD' ? 
+  `✅ Swing Trade: EXECUTE ${swingTradeMTF.signal_type}` : 
+  `⚠️ Swing Trade: SKIP (${swingTradeMTF.mtf_reason})`}
+
+🌐 Dashboard: ${c.req.url.replace('/api/automation/analyze-and-notify', '')}
+      `.trim()
+      
+      const success = await sendTelegramMessage(
+        { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+        message
+      )
+      
+      telegramSent = success
+    }
+    
+    results.steps[3].status = telegramSent ? 'completed' : 'failed'
+    results.steps[3].data = { telegramSent }
+    
+    // Save to database
+    if (dayTradeMTF.isValid || swingTradeMTF.isValid) {
+      for (const signal of [dayTradeMTF, swingTradeMTF]) {
+        if (signal.isValid) {
+          await DB.prepare(`
+            INSERT INTO mtf_signals 
+            (timestamp, signal_type, trading_style, price, stop_loss, 
+             take_profit_1, take_profit_2, take_profit_3, 
+             base_confidence, mtf_confidence, final_confidence,
+             alignment_score, alignment_type, reason, telegram_sent)
+            VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            signal.signal_type,
+            signal.trading_style,
+            signal.price,
+            signal.stop_loss,
+            signal.take_profit_1,
+            signal.take_profit_2,
+            signal.take_profit_3,
+            signal.confidence,
+            signal.final_confidence,
+            signal.final_confidence,
+            signal.alignment_score,
+            signal.alignment_type,
+            signal.reason,
+            telegramSent ? 1 : 0
+          ).run()
+        }
+      }
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Daily analysis completed',
+      results,
+      signals: {
+        day_trade: dayTradeMTF,
+        swing_trade: swingTradeMTF
+      },
+      positions: {
+        day_trade: dayPosition,
+        swing_trade: swingPosition
+      },
+      alignment,
+      telegram_sent: telegramSent
+    })
+  } catch (error: any) {
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      stack: error.stack 
+    }, 500)
   }
 })
 
