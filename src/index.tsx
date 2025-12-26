@@ -1334,4 +1334,388 @@ app.post('/api/signals/generate-now', async (c) => {
   }
 })
 
+// ============================================================
+// LIVE TRADING & BACKTESTING ENDPOINTS
+// ============================================================
+
+// Get trading account info
+app.get('/api/trading/account/:id', async (c) => {
+  const { DB } = c.env
+  const accountId = c.req.param('id')
+  
+  try {
+    const account = await DB.prepare(`
+      SELECT * FROM trading_accounts WHERE id = ?
+    `).bind(accountId).first()
+    
+    if (!account) {
+      return c.json({ success: false, error: 'Account not found' }, 404)
+    }
+    
+    return c.json({ success: true, account })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Calculate position size for a signal
+app.post('/api/trading/calculate-position', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const body = await c.req.json()
+    const { account_id, signal } = body
+    
+    // Get account
+    const account = await DB.prepare(`
+      SELECT * FROM trading_accounts WHERE id = ?
+    `).bind(account_id).first()
+    
+    if (!account) {
+      return c.json({ success: false, error: 'Account not found' }, 404)
+    }
+    
+    // Get position sizing rules
+    const rules = await DB.prepare(`
+      SELECT * FROM position_sizing_rules 
+      WHERE account_id = ? AND is_active = 1
+      ORDER BY confidence_min DESC
+    `).bind(account_id).all()
+    
+    // Import risk management
+    const { calculatePositionSize, formatPositionSize } = await import('./lib/riskManagement')
+    
+    // Calculate position
+    const position = calculatePositionSize(account as any, signal, rules.results as any)
+    
+    return c.json({
+      success: true,
+      position,
+      formatted: formatPositionSize(position)
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Execute trade (paper trading)
+app.post('/api/trading/execute', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const body = await c.req.json()
+    const {
+      account_id,
+      signal_id,
+      entry_price,
+      stop_loss,
+      take_profit_1,
+      take_profit_2,
+      take_profit_3,
+      position_size,
+      signal_type,
+      trading_style,
+      confidence
+    } = body
+    
+    // Get account
+    const account = await DB.prepare(`
+      SELECT * FROM trading_accounts WHERE id = ?
+    `).bind(account_id).first()
+    
+    if (!account) {
+      return c.json({ success: false, error: 'Account not found' }, 404)
+    }
+    
+    // Check daily loss limit
+    const today = new Date().toISOString().split('T')[0]
+    const todayTrades = await DB.prepare(`
+      SELECT profit_loss FROM trades 
+      WHERE account_id = ? 
+      AND date(entry_time) = ?
+      AND status = 'CLOSED'
+    `).bind(account_id, today).all()
+    
+    const { checkDailyLossLimit } = await import('./lib/riskManagement')
+    const lossCheck = checkDailyLossLimit(account as any, todayTrades.results as any)
+    
+    if (lossCheck.limit_exceeded) {
+      return c.json({
+        success: false,
+        error: `Daily loss limit exceeded: ${lossCheck.current_loss_pct}% (max ${(account as any).max_daily_loss_pct}%)`
+      }, 400)
+    }
+    
+    // Insert trade
+    const positionValue = position_size * entry_price
+    
+    const result = await DB.prepare(`
+      INSERT INTO trades (
+        account_id, signal_id, trade_type, trading_style, symbol,
+        entry_price, entry_time, position_size, position_value,
+        stop_loss, take_profit_1, take_profit_2, take_profit_3,
+        confidence_level, status
+      ) VALUES (?, ?, ?, ?, 'XAU/USD', ?, datetime('now'), ?, ?, ?, ?, ?, ?, ?, 'OPEN')
+    `).bind(
+      account_id,
+      signal_id || null,
+      signal_type,
+      trading_style,
+      entry_price,
+      position_size,
+      positionValue,
+      stop_loss,
+      take_profit_1,
+      take_profit_2,
+      take_profit_3,
+      confidence
+    ).run()
+    
+    return c.json({
+      success: true,
+      trade_id: result.meta.last_row_id,
+      message: 'Trade executed successfully'
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Close trade
+app.post('/api/trading/close/:trade_id', async (c) => {
+  const { DB } = c.env
+  const tradeId = c.req.param('trade_id')
+  
+  try {
+    const body = await c.req.json()
+    const { exit_price, exit_reason } = body
+    
+    // Get trade
+    const trade = await DB.prepare(`
+      SELECT * FROM trades WHERE id = ?
+    `).bind(tradeId).first()
+    
+    if (!trade) {
+      return c.json({ success: false, error: 'Trade not found' }, 404)
+    }
+    
+    if ((trade as any).status === 'CLOSED') {
+      return c.json({ success: false, error: 'Trade already closed' }, 400)
+    }
+    
+    // Calculate P/L
+    const { calculateProfitLoss } = await import('./lib/riskManagement')
+    const pl = calculateProfitLoss(
+      (trade as any).entry_price,
+      exit_price,
+      (trade as any).position_size,
+      (trade as any).trade_type,
+      (trade as any).commission || 0
+    )
+    
+    // Update trade
+    await DB.prepare(`
+      UPDATE trades 
+      SET exit_price = ?,
+          exit_time = datetime('now'),
+          exit_reason = ?,
+          profit_loss = ?,
+          profit_loss_pct = ?,
+          pips_gained = ?,
+          status = 'CLOSED',
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      exit_price,
+      exit_reason,
+      pl.profit_loss,
+      pl.profit_loss_pct,
+      pl.pips,
+      tradeId
+    ).run()
+    
+    // Update account balance
+    await DB.prepare(`
+      UPDATE trading_accounts 
+      SET current_balance = current_balance + ?,
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(pl.profit_loss, (trade as any).account_id).run()
+    
+    return c.json({
+      success: true,
+      profit_loss: pl.profit_loss,
+      profit_loss_pct: pl.profit_loss_pct,
+      pips: pl.pips
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Get open trades
+app.get('/api/trading/trades/open', async (c) => {
+  const { DB } = c.env
+  const accountId = c.req.query('account_id') || '1'
+  
+  try {
+    const trades = await DB.prepare(`
+      SELECT * FROM trades 
+      WHERE account_id = ? AND status = 'OPEN'
+      ORDER BY entry_time DESC
+    `).bind(accountId).all()
+    
+    return c.json({ success: true, trades: trades.results || [] })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Get trade history
+app.get('/api/trading/trades/history', async (c) => {
+  const { DB } = c.env
+  const accountId = c.req.query('account_id') || '1'
+  const limit = parseInt(c.req.query('limit') || '50')
+  
+  try {
+    const trades = await DB.prepare(`
+      SELECT * FROM trades 
+      WHERE account_id = ?
+      ORDER BY entry_time DESC
+      LIMIT ?
+    `).bind(accountId, limit).all()
+    
+    return c.json({ success: true, trades: trades.results || [] })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Get portfolio statistics
+app.get('/api/trading/stats', async (c) => {
+  const { DB } = c.env
+  const accountId = c.req.query('account_id') || '1'
+  
+  try {
+    const trades = await DB.prepare(`
+      SELECT * FROM trades 
+      WHERE account_id = ? AND status = 'CLOSED'
+    `).bind(accountId).all()
+    
+    const { calculatePortfolioMetrics } = await import('./lib/riskManagement')
+    const stats = calculatePortfolioMetrics(trades.results as any)
+    
+    return c.json({ success: true, stats })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Run backtest
+app.post('/api/trading/backtest', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const config = await c.req.json()
+    
+    // Get historical market data
+    const candles = await DB.prepare(`
+      SELECT timestamp, open, high, low, close, volume 
+      FROM market_data 
+      WHERE timeframe = ?
+      ORDER BY timestamp ASC
+    `).bind(config.timeframe || '1h').all()
+    
+    if (!candles.results || candles.results.length < 200) {
+      return c.json({
+        success: false,
+        error: `Not enough historical data. Need at least 200 candles, got ${candles.results?.length || 0}`
+      }, 400)
+    }
+    
+    // Get position sizing rules
+    const rules = await DB.prepare(`
+      SELECT * FROM position_sizing_rules 
+      WHERE account_id = 1 AND is_active = 1
+      ORDER BY confidence_min DESC
+    `).all()
+    
+    // Run backtest
+    const { runBacktest, formatBacktestResults } = await import('./lib/backtesting')
+    
+    const result = await runBacktest(
+      candles.results as any,
+      {
+        start_date: config.start_date || '2024-01-01',
+        end_date: config.end_date || new Date().toISOString().split('T')[0],
+        starting_balance: config.starting_balance || 10000,
+        min_confidence: config.min_confidence || 75,
+        use_mtf_confirmation: config.use_mtf_confirmation !== false,
+        use_news_filter: config.use_news_filter !== false,
+        timeframe: config.timeframe || '1h',
+        commission_per_trade: config.commission_per_trade || 0
+      },
+      rules.results as any
+    )
+    
+    // Save backtest to database
+    await DB.prepare(`
+      INSERT INTO backtest_runs (
+        run_name, start_date, end_date, starting_balance,
+        min_confidence, use_mtf_confirmation, use_news_filter, timeframe,
+        total_trades, winning_trades, win_rate, net_profit, total_return_pct,
+        max_drawdown_pct, profit_factor, sharpe_ratio,
+        trades_json, equity_curve_json, status, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', datetime('now'))
+    `).bind(
+      config.run_name || `Backtest ${new Date().toISOString()}`,
+      result.config.start_date,
+      result.config.end_date,
+      result.starting_balance,
+      result.config.min_confidence,
+      result.config.use_mtf_confirmation ? 1 : 0,
+      result.config.use_news_filter ? 1 : 0,
+      result.config.timeframe,
+      result.total_trades,
+      result.winning_trades,
+      result.win_rate,
+      result.net_profit,
+      result.total_return_pct,
+      result.max_drawdown_pct,
+      result.profit_factor,
+      result.sharpe_ratio,
+      JSON.stringify(result.trades),
+      JSON.stringify(result.equity_curve)
+    ).run()
+    
+    return c.json({
+      success: true,
+      result,
+      formatted: formatBacktestResults(result)
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message, stack: error.stack }, 500)
+  }
+})
+
+// Get backtest history
+app.get('/api/trading/backtest/history', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const runs = await DB.prepare(`
+      SELECT id, run_name, start_date, end_date, starting_balance,
+             total_trades, winning_trades, win_rate, net_profit, total_return_pct,
+             max_drawdown_pct, profit_factor, created_at, completed_at
+      FROM backtest_runs 
+      ORDER BY created_at DESC 
+      LIMIT 20
+    `).all()
+    
+    return c.json({ success: true, runs: runs.results || [] })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 export default app
