@@ -846,6 +846,148 @@ app.post('/api/market/fetch', async (c) => {
   }
 })
 
+// Fetch multi-timeframe market data (Phase 3: 90% Accuracy)
+app.post('/api/market/fetch-mtf', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    // Get Twelve Data API key from settings
+    const settingsResult = await DB.prepare(`
+      SELECT setting_value FROM user_settings 
+      WHERE setting_key = 'twelve_data_api_key'
+    `).first();
+    
+    let apiKey = (settingsResult as any)?.setting_value || '70140f57bea54c5e90768de696487d8f';
+    
+    if (!apiKey || apiKey === 'your_key_here' || apiKey === '') {
+      return c.json({ 
+        success: false, 
+        error: 'Twelve Data API key not configured.',
+        count: 0 
+      });
+    }
+    
+    const symbol = 'XAU/USD';
+    
+    // Timeframes to fetch: 5m, 15m, 1h, 4h, daily
+    const timeframes = [
+      { interval: '5min', dbKey: '5m', outputsize: 100 },
+      { interval: '15min', dbKey: '15m', outputsize: 100 },
+      { interval: '1h', dbKey: '1h', outputsize: 100 },
+      { interval: '4h', dbKey: '4h', outputsize: 100 },
+      { interval: '1day', dbKey: 'daily', outputsize: 100 }
+    ];
+    
+    let totalCount = 0;
+    const results: any = {};
+    
+    // Fetch each timeframe
+    for (const tf of timeframes) {
+      const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${tf.interval}&apikey=${apiKey}&outputsize=${tf.outputsize}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data['code'] && data['status'] === 'error') {
+        results[tf.dbKey] = { success: false, error: data['message'], count: 0 };
+        continue;
+      }
+      
+      if (!data['values'] || !Array.isArray(data['values'])) {
+        results[tf.dbKey] = { success: false, error: 'No data', count: 0 };
+        continue;
+      }
+      
+      const values = data['values'];
+      let count = 0;
+      const candles: Candle[] = [];
+      
+      for (const item of values) {
+        const candle = {
+          timestamp: item.datetime,
+          open: parseFloat(item.open),
+          high: parseFloat(item.high),
+          low: parseFloat(item.low),
+          close: parseFloat(item.close),
+          volume: 0
+        };
+        
+        candles.push(candle);
+        
+        await DB.prepare(`
+          INSERT INTO market_data (timestamp, open, high, low, close, volume, timeframe)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT DO NOTHING
+        `).bind(candle.timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume, tf.dbKey).run();
+        
+        count++;
+      }
+      
+      // Calculate indicators for this timeframe
+      if (candles.length >= 50) {
+        const indicators = calculateIndicators(candles.reverse());
+        
+        if (indicators) {
+          await DB.prepare(`
+            INSERT INTO multi_timeframe_indicators 
+            (timestamp, timeframe, rsi_14, macd, macd_signal, macd_histogram,
+             sma_20, sma_50, sma_200, ema_12, ema_26,
+             bb_upper, bb_middle, bb_lower, atr_14,
+             stochastic_k, stochastic_d, adx, plus_di, minus_di,
+             ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b,
+             parabolic_sar, vwap, fib_382, fib_500, fib_618)
+            VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            tf.dbKey,
+            indicators.rsi_14,
+            indicators.macd,
+            indicators.macd_signal,
+            indicators.macd_histogram,
+            indicators.sma_20,
+            indicators.sma_50,
+            indicators.sma_200,
+            indicators.ema_12,
+            indicators.ema_26,
+            indicators.bb_upper,
+            indicators.bb_middle,
+            indicators.bb_lower,
+            indicators.atr_14,
+            indicators.stochastic_k,
+            indicators.stochastic_d,
+            indicators.adx,
+            indicators.plus_di,
+            indicators.minus_di,
+            indicators.ichimoku_tenkan,
+            indicators.ichimoku_kijun,
+            indicators.ichimoku_senkou_a,
+            indicators.ichimoku_senkou_b,
+            indicators.parabolic_sar,
+            indicators.vwap,
+            indicators.fib_382,
+            indicators.fib_500,
+            indicators.fib_618
+          ).run();
+        }
+      }
+      
+      results[tf.dbKey] = { success: true, count };
+      totalCount += count;
+      
+      // Small delay to avoid API rate limits
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    return c.json({ 
+      success: true, 
+      totalCount,
+      timeframes: results,
+      message: 'Multi-timeframe data fetched successfully'
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+})
+
 // Generate signal manually
 app.post('/api/signals/generate', async (c) => {
   const { DB } = c.env;
@@ -894,6 +1036,187 @@ app.post('/api/signals/generate', async (c) => {
 })
 
 // Force generate signal and send to Telegram
+// Generate signal with multi-timeframe confirmation (Phase 3: 90% Accuracy)
+app.post('/api/signals/generate-mtf', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    // Import multi-timeframe functions
+    const { analyzeTimeframeAlignment, validateMultiTimeframeSignal, formatAlignmentReport } = await import('./lib/multiTimeframeAnalysis');
+    
+    // Get indicators for all timeframes
+    const timeframes = ['5m', '15m', '1h', '4h', 'daily'];
+    const mtfIndicators: any = {};
+    
+    for (const tf of timeframes) {
+      const indicatorData = await DB.prepare(`
+        SELECT * FROM multi_timeframe_indicators 
+        WHERE timeframe = ?
+        ORDER BY timestamp DESC 
+        LIMIT 1
+      `).bind(tf).first();
+      
+      if (indicatorData) {
+        mtfIndicators[tf] = indicatorData;
+      }
+    }
+    
+    // Need at least 3 timeframes
+    const availableTimeframes = Object.keys(mtfIndicators).length;
+    if (availableTimeframes < 3) {
+      return c.json({ 
+        success: false, 
+        error: `Need at least 3 timeframes. Found: ${availableTimeframes}. Please fetch multi-timeframe data first.`,
+        available: Object.keys(mtfIndicators)
+      });
+    }
+    
+    // Get current price from 1h timeframe
+    const marketData = await DB.prepare(`
+      SELECT * FROM market_data 
+      WHERE timeframe = '1h'
+      ORDER BY timestamp DESC 
+      LIMIT 1
+    `).first();
+    
+    if (!marketData) {
+      return c.json({ success: false, error: 'No market data available' });
+    }
+    
+    const currentPrice = (marketData as any).close;
+    
+    // Analyze timeframe alignment
+    const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice);
+    
+    // Get base signal from 1h indicators
+    const h1Indicators = mtfIndicators['1h'];
+    const dayTradeSignal = generateSignal(currentPrice, h1Indicators, 'day_trade');
+    const swingTradeSignal = generateSignal(currentPrice, h1Indicators, 'swing_trade');
+    
+    // Validate signals with multi-timeframe confirmation
+    const dayValidation = validateMultiTimeframeSignal(dayTradeSignal.signal_type, alignment);
+    const swingValidation = validateMultiTimeframeSignal(swingTradeSignal.signal_type, alignment);
+    
+    // Apply multi-timeframe confidence boost
+    const dayTradeMTF = {
+      ...dayTradeSignal,
+      base_confidence: dayTradeSignal.confidence,
+      mtf_confidence: dayValidation.confidence,
+      final_confidence: Math.min(95, dayValidation.confidence),
+      isValid: dayValidation.isValid,
+      mtf_reason: dayValidation.reason,
+      alignment_score: alignment.score,
+      alignment_type: alignment.type,
+      reason: `${dayTradeSignal.reason}, MTF: ${dayValidation.reason}`
+    };
+    
+    const swingTradeMTF = {
+      ...swingTradeSignal,
+      base_confidence: swingTradeSignal.confidence,
+      mtf_confidence: swingValidation.confidence,
+      final_confidence: Math.min(95, swingValidation.confidence),
+      isValid: swingValidation.isValid,
+      mtf_reason: swingValidation.reason,
+      alignment_score: alignment.score,
+      alignment_type: alignment.type,
+      reason: `${swingTradeSignal.reason}, MTF: ${swingValidation.reason}`
+    };
+    
+    // Get Telegram settings
+    const settings = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings
+      WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+    `).all();
+    
+    const config: any = {};
+    for (const row of settings.results || []) {
+      config[(row as any).setting_key] = (row as any).setting_value;
+    }
+    
+    let telegramSent = false;
+    let sentSignals: any[] = [];
+    
+    // Only send valid signals to Telegram
+    if (config.telegram_bot_token && config.telegram_chat_id) {
+      if (dayTradeMTF.isValid && dayTradeMTF.signal_type !== 'HOLD') {
+        const daySuccess = await sendTelegramMessage(
+          { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+          `🎯 MULTI-TIMEFRAME CONFIRMED\n\n${formatTradeSignal({
+            ...dayTradeMTF,
+            timestamp: new Date().toISOString()
+          })}\n\n📊 ${formatAlignmentReport(alignment)}`
+        );
+        
+        if (daySuccess) {
+          sentSignals.push('day_trade');
+          telegramSent = true;
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD') {
+        const swingSuccess = await sendTelegramMessage(
+          { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+          `🎯 MULTI-TIMEFRAME CONFIRMED\n\n${formatTradeSignal({
+            ...swingTradeMTF,
+            timestamp: new Date().toISOString()
+          })}\n\n📊 ${formatAlignmentReport(alignment)}`
+        );
+        
+        if (swingSuccess) {
+          sentSignals.push('swing_trade');
+          telegramSent = true;
+        }
+      }
+    }
+    
+    // Store in mtf_signals table
+    for (const signal of [dayTradeMTF, swingTradeMTF]) {
+      if (signal.isValid) {
+        await DB.prepare(`
+          INSERT INTO mtf_signals 
+          (timestamp, signal_type, trading_style, price, stop_loss, 
+           take_profit_1, take_profit_2, take_profit_3, 
+           base_confidence, mtf_confidence, final_confidence,
+           alignment_score, alignment_type, reason, telegram_sent)
+          VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          signal.signal_type,
+          signal.trading_style,
+          signal.price,
+          signal.stop_loss,
+          signal.take_profit_1,
+          signal.take_profit_2,
+          signal.take_profit_3,
+          signal.base_confidence,
+          signal.mtf_confidence,
+          signal.final_confidence,
+          signal.alignment_score,
+          signal.alignment_type,
+          signal.reason,
+          telegramSent ? 1 : 0
+        ).run();
+      }
+    }
+    
+    return c.json({ 
+      success: true,
+      signals: {
+        day_trade: dayTradeMTF,
+        swing_trade: swingTradeMTF
+      },
+      alignment,
+      alignment_report: formatAlignmentReport(alignment),
+      telegram_sent: telegramSent,
+      sent_to_telegram: sentSignals,
+      available_timeframes: Object.keys(mtfIndicators)
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message, stack: error.stack }, 500);
+  }
+})
+
 app.post('/api/signals/generate-now', async (c) => {
   const { DB } = c.env;
   
