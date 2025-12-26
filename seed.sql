@@ -3,7 +3,7 @@ INSERT OR IGNORE INTO user_settings (setting_key, setting_value) VALUES
   ('telegram_bot_token', ''),
   ('telegram_chat_id', ''),
   ('alpha_vantage_api_key', 'J5LBTD5UCBAB1PBG'),
-  ('twelve_data_api_key', ''),
+  ('twelve_data_api_key', '70140f57bea54c5e90768de696487d8f'),
   ('news_api_key', ''),
   ('day_trade_enabled', 'true'),
   ('swing_trade_enabled', 'true'),

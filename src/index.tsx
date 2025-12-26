@@ -20,7 +20,7 @@ app.get('/', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Gold Trading System (GLD ETF)</title>
+        <title>Gold/USD Trading System (XAU/USD)</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -34,7 +34,7 @@ app.get('/', (c) => {
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <i class="fas fa-chart-line text-yellow-500 text-3xl"></i>
-                            <h1 class="text-2xl font-bold text-yellow-500">Gold Trading System (GLD ETF)</h1>
+                            <h1 class="text-2xl font-bold text-yellow-500">Gold/USD Trading System (XAU/USD)</h1>
                         </div>
                         <div class="flex items-center space-x-4">
                             <div id="currentPrice" class="text-2xl font-bold text-green-400">
@@ -419,7 +419,7 @@ app.get('/api/market/latest', async (c) => {
   try {
     const result = await DB.prepare(`
       SELECT * FROM market_data 
-      WHERE timeframe = '1d'
+      WHERE timeframe = '1h'
       ORDER BY timestamp DESC 
       LIMIT 50
     `).all();
@@ -519,78 +519,72 @@ app.post('/api/market/fetch', async (c) => {
   const { DB } = c.env;
   
   try {
-    // Get API key from settings or environment
+    // Get Twelve Data API key from settings
     const settingsResult = await DB.prepare(`
       SELECT setting_value FROM user_settings 
-      WHERE setting_key = 'alpha_vantage_api_key'
+      WHERE setting_key = 'twelve_data_api_key'
     `).first();
     
-    let apiKey = (settingsResult as any)?.setting_value || 'J5LBTD5UCBAB1PBG';
+    let apiKey = (settingsResult as any)?.setting_value || '70140f57bea54c5e90768de696487d8f';
     
-    // If still empty or placeholder, use demo
+    // If still empty or placeholder, return error
     if (!apiKey || apiKey === 'your_key_here' || apiKey === '') {
-      apiKey = 'demo';
+      return c.json({ 
+        success: false, 
+        error: 'Twelve Data API key not configured. Please add it in settings.',
+        count: 0 
+      });
     }
     
-    // Use GLD (Gold ETF) instead of direct Gold/USD forex
-    // Free tier supports daily stock data, not intraday forex
-    const symbol = 'GLD'; // SPDR Gold Trust ETF (tracks gold prices)
+    // Use real XAU/USD (Gold Spot / US Dollar) from Twelve Data
+    const symbol = 'XAU/USD';
+    const interval = '1h'; // 1-hour candles for better analysis
     
-    // Fetch daily data (free tier) - compact gives ~100 days which is enough for our indicators
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
+    // Fetch hourly data (800 calls/day on free tier!)
+    const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&apikey=${apiKey}&outputsize=100`;
     
     const response = await fetch(url);
     const data = await response.json();
     
-    if (data['Error Message']) {
+    if (data['code'] && data['status'] === 'error') {
       return c.json({ 
         success: false, 
-        error: data['Error Message'],
+        error: data['message'] || 'Twelve Data API error',
         count: 0 
       });
     }
     
-    if (data['Note']) {
+    if (!data['values'] || !Array.isArray(data['values'])) {
       return c.json({ 
         success: false, 
-        error: 'API limit reached (25 calls/day on free tier). Please wait 24 hours or upgrade.',
+        error: 'No data available from Twelve Data API',
         count: 0 
       });
     }
     
-    if (data['Information'] && data['Information'].includes('premium')) {
-      return c.json({ 
-        success: false, 
-        error: 'Premium endpoint required. Please check your API configuration.',
-        count: 0 
-      });
-    }
-    
-    const timeSeries = data['Time Series (Daily)'];
-    if (!timeSeries) {
-      return c.json({ success: false, error: 'No data available from Alpha Vantage', count: 0 });
-    }
+    const values = data['values'];
     
     let count = 0;
     const candles: Candle[] = [];
     
-    for (const [timestamp, values] of Object.entries(timeSeries)) {
+    // Twelve Data returns array of values, not object
+    for (const item of values) {
       const candle = {
-        timestamp,
-        open: parseFloat((values as any)['1. open']),
-        high: parseFloat((values as any)['2. high']),
-        low: parseFloat((values as any)['3. low']),
-        close: parseFloat((values as any)['4. close']),
-        volume: parseFloat((values as any)['5. volume'] || '0')
+        timestamp: item.datetime,
+        open: parseFloat(item.open),
+        high: parseFloat(item.high),
+        low: parseFloat(item.low),
+        close: parseFloat(item.close),
+        volume: 0 // Twelve Data doesn't provide volume for forex
       };
       
       candles.push(candle);
       
       await DB.prepare(`
         INSERT INTO market_data (timestamp, open, high, low, close, volume, timeframe)
-        VALUES (?, ?, ?, ?, ?, ?, '1d')
+        VALUES (?, ?, ?, ?, ?, ?, '1h')
         ON CONFLICT DO NOTHING
-      `).bind(timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume).run();
+      `).bind(candle.timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume).run();
       
       count++;
     }
@@ -605,7 +599,7 @@ app.post('/api/market/fetch', async (c) => {
           (timestamp, timeframe, rsi_14, macd, macd_signal, macd_histogram,
            sma_20, sma_50, sma_200, ema_12, ema_26,
            bb_upper, bb_middle, bb_lower, atr_14)
-          VALUES (datetime('now'), '1d', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (datetime('now'), '1h', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           indicators.rsi_14,
           indicators.macd,
@@ -685,7 +679,7 @@ app.post('/api/signals/generate', async (c) => {
     // Get recent market data
     const marketData = await DB.prepare(`
       SELECT * FROM market_data 
-      WHERE timeframe = '1d'
+      WHERE timeframe = '1h'
       ORDER BY timestamp DESC 
       LIMIT 200
     `).all();
