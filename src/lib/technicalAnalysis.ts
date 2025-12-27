@@ -143,7 +143,7 @@ export function calculateBollingerBands(prices: number[], period: number = 20, s
 
 // Calculate Average True Range (ATR)
 export function calculateATR(candles: Candle[], period: number = 14): number {
-  if (candles.length < period + 1) return 0;
+  if (candles.length < period + 1) return 10.0; // Default minimum ATR for gold
   
   const trueRanges = [];
   for (let i = 1; i < candles.length; i++) {
@@ -159,7 +159,15 @@ export function calculateATR(candles: Candle[], period: number = 14): number {
     trueRanges.push(tr);
   }
   
-  return calculateSMA(trueRanges, period);
+  const atr = calculateSMA(trueRanges, period);
+  
+  // CRITICAL FIX: Minimum ATR floor for Gold/USD
+  // Gold typically moves $8-15 per hour in normal market conditions
+  // Without this floor, low-quality or stale data creates microscopic stops
+  // that get hit by normal market noise
+  const minimumATR = 10.0;  // Minimum $10 ATR for gold trading
+  
+  return Math.max(atr, minimumATR);
 }
 
 // ============================================================================
@@ -564,12 +572,20 @@ export function generateSignal(
   }
   
   // ========================================================================
-  // IMPROVED STOP LOSS & TAKE PROFIT (using Parabolic SAR + ATR)
+  // FIXED STOP LOSS & TAKE PROFIT (Pure ATR-based for reliability)
   // ========================================================================
   
-  const atrMultiplier = tradingStyle === 'day_trade' ? 1.5 : 2.5;
-  const stopLossDistance = indicators.atr_14 * atrMultiplier;
-  const takeProfitDistance = indicators.atr_14 * (atrMultiplier * 2);
+  // Stop loss: tighter for day trades, wider for swing trades
+  const stopLossMultiplier = tradingStyle === 'day_trade' ? 1.5 : 2.0;
+  
+  // Take profit: aim for 2:1 reward-to-risk minimum
+  const takeProfitMultiplier1 = tradingStyle === 'day_trade' ? 3.0 : 4.0; // R:R = 2:1
+  const takeProfitMultiplier2 = tradingStyle === 'day_trade' ? 4.0 : 5.5; // R:R = 2.67:1
+  const takeProfitMultiplier3 = tradingStyle === 'day_trade' ? 5.0 : 7.0; // R:R = 3.33:1
+  
+  // Maximum stop loss: never risk more than 1% per trade
+  const maxStopLossPct = 1.0;
+  const maxStopLossAmount = currentPrice * (maxStopLossPct / 100);
   
   let stopLoss: number;
   let takeProfit1: number;
@@ -577,23 +593,29 @@ export function generateSignal(
   let takeProfit3: number;
   
   if (signalType === 'BUY') {
-    // Use Parabolic SAR for better stop loss placement
-    stopLoss = Math.min(
-      currentPrice - stopLossDistance,
-      indicators.parabolic_sar * 0.995 // Slightly below SAR
-    );
-    takeProfit1 = currentPrice + takeProfitDistance;
-    takeProfit2 = currentPrice + takeProfitDistance * 1.5;
-    takeProfit3 = currentPrice + takeProfitDistance * 2;
+    // Calculate stop loss based on ATR only (removed buggy Parabolic SAR)
+    const atrStopLoss = currentPrice - (indicators.atr_14 * stopLossMultiplier);
+    
+    // Apply maximum stop loss limit (1% max risk)
+    stopLoss = Math.max(atrStopLoss, currentPrice - maxStopLossAmount);
+    
+    // Calculate take profits with good risk:reward ratios
+    takeProfit1 = currentPrice + (indicators.atr_14 * takeProfitMultiplier1);
+    takeProfit2 = currentPrice + (indicators.atr_14 * takeProfitMultiplier2);
+    takeProfit3 = currentPrice + (indicators.atr_14 * takeProfitMultiplier3);
+    
   } else if (signalType === 'SELL') {
-    // Use Parabolic SAR for better stop loss placement
-    stopLoss = Math.max(
-      currentPrice + stopLossDistance,
-      indicators.parabolic_sar * 1.005 // Slightly above SAR
-    );
-    takeProfit1 = currentPrice - takeProfitDistance;
-    takeProfit2 = currentPrice - takeProfitDistance * 1.5;
-    takeProfit3 = currentPrice - takeProfitDistance * 2;
+    // Calculate stop loss based on ATR only
+    const atrStopLoss = currentPrice + (indicators.atr_14 * stopLossMultiplier);
+    
+    // Apply maximum stop loss limit (1% max risk)
+    stopLoss = Math.min(atrStopLoss, currentPrice + maxStopLossAmount);
+    
+    // Calculate take profits with good risk:reward ratios
+    takeProfit1 = currentPrice - (indicators.atr_14 * takeProfitMultiplier1);
+    takeProfit2 = currentPrice - (indicators.atr_14 * takeProfitMultiplier2);
+    takeProfit3 = currentPrice - (indicators.atr_14 * takeProfitMultiplier3);
+    
   } else {
     stopLoss = currentPrice;
     takeProfit1 = currentPrice;
