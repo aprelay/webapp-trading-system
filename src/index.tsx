@@ -548,6 +548,14 @@ app.get('/', (c) => {
                             message += '⚠️ SKIP - ' + day.mtf_reason;
                         }
                         
+                        // Telegram Status
+                        message += '\\n\\n';
+                        if (res.data.telegram_sent) {
+                            message += '📱 ✅ Sent to Telegram!';
+                        } else {
+                            message += '📱 ⚠️ Telegram not configured (check settings)';
+                        }
+                        
                         alert(message);
                         await refreshData();
                     } else {

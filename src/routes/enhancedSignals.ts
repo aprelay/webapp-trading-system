@@ -22,6 +22,7 @@ import { detectChartPatterns, type PatternDetectionResult } from '../lib/pattern
 import { detectMarketRegime, type RegimeAnalysis } from '../lib/regimeDetection'
 import { generateMLPredictions, type MLPredictionResult } from '../lib/mlPrediction'
 import { calculateProbabilityOfProfit, type ProfitProbability } from '../lib/probabilityOfProfit'
+import { sendTelegramMessage } from '../lib/telegram'
 
 type Bindings = {
   DB: D1Database
@@ -372,13 +373,137 @@ app.post('/enhanced', async (c) => {
     }
     
     // ============================================================
-    // STEP 9: RETURN RESULTS
+    // STEP 9: SEND TO TELEGRAM
+    // ============================================================
+    
+    let telegramSent = false
+    
+    try {
+      // Get Telegram settings
+      const settings = await DB.prepare(`
+        SELECT setting_key, setting_value FROM user_settings
+        WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+      `).all()
+      
+      const config: any = {}
+      for (const row of settings.results || []) {
+        config[(row as any).setting_key] = (row as any).setting_value
+      }
+      
+      if (config.telegram_bot_token && config.telegram_chat_id) {
+        // Build comprehensive Telegram message
+        const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' })
+        
+        let message = `🏦 *HEDGE FUND GRADE SIGNAL*\n⏰ ${timestamp} UTC\n\n`
+        
+        // Risk Warnings
+        if (riskWarning) {
+          message += `⚠️ *RISK ALERTS*\n${riskWarning}\n\n`
+        }
+        
+        // Multi-Timeframe Alignment
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+        message += `📊 *MULTI-TIMEFRAME ALIGNMENT*\n`
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+        message += `${alignment.type} (${alignment.score}/5 timeframes)\n`
+        message += `Confidence Boost: +${alignment.confidenceBoost}%\n\n`
+        
+        for (const trend of alignment.trends) {
+          const icon = trend.trend === 'BULLISH' ? '📈' : trend.trend === 'BEARISH' ? '📉' : '➡️'
+          message += `${icon} *${trend.timeframe}*: ${trend.trend} (${trend.confidence.toFixed(0)}%)\n`
+        }
+        
+        // Day Trade Signal
+        message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+        message += `📈 *DAY TRADE SIGNAL*\n`
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+        message += `${enhancedDaySignal.isValid ? '✅' : '❌'} *${enhancedDaySignal.signal_type}* (${enhancedDaySignal.enhanced_confidence.toFixed(0)}% confidence)\n\n`
+        
+        message += `*Entry:* $${enhancedDaySignal.price.toFixed(2)}\n`
+        message += `*Stop Loss:* $${enhancedDaySignal.stop_loss.toFixed(2)} (${((enhancedDaySignal.stop_loss / enhancedDaySignal.price - 1) * 100).toFixed(2)}%)\n`
+        message += `*TP1:* $${enhancedDaySignal.take_profit_1.toFixed(2)} (${((enhancedDaySignal.take_profit_1 / enhancedDaySignal.price - 1) * 100).toFixed(2)}%)\n`
+        message += `*TP2:* $${enhancedDaySignal.take_profit_2.toFixed(2)} (${((enhancedDaySignal.take_profit_2 / enhancedDaySignal.price - 1) * 100).toFixed(2)}%)\n`
+        message += `*TP3:* $${enhancedDaySignal.take_profit_3.toFixed(2)} (${((enhancedDaySignal.take_profit_3 / enhancedDaySignal.price - 1) * 100).toFixed(2)}%)\n\n`
+        
+        // Confidence Breakdown
+        message += `*📊 Confidence Breakdown:*\n`
+        message += `Base: ${enhancedDaySignal.base_confidence.toFixed(0)}%\n`
+        message += `MTF: ${enhancedDaySignal.mtf_confidence.toFixed(0)}%\n`
+        if (patternBoost > 0) message += `Pattern: +${patternBoost.toFixed(0)}%\n`
+        if (regimeBoost > 0) message += `Regime: +${regimeBoost.toFixed(0)}%\n`
+        if (mlBoost > 0) message += `ML: +${mlBoost.toFixed(0)}%\n`
+        if (popBoost > 0) message += `PoP: +${popBoost.toFixed(0)}%\n`
+        message += `*FINAL: ${enhancedDaySignal.enhanced_confidence.toFixed(0)}%*\n\n`
+        
+        // Market Regime
+        if (regime) {
+          message += `🌡️ *Market Regime:* ${regime.trend || 'N/A'}\n`
+          message += `Volatility: ${regime.volatility}\n`
+          message += `Should Trade: ${regime.should_trade ? '✅ YES' : '❌ NO'}\n\n`
+        }
+        
+        // ML Prediction
+        if (mlPrediction && mlPrediction.overall_direction !== 'NEUTRAL') {
+          message += `🤖 *ML Prediction:* ${mlPrediction.overall_direction}\n`
+          if (mlPrediction.predictions[0]?.predicted_price) {
+            message += `1h Target: $${mlPrediction.predictions[0].predicted_price.toFixed(2)}\n`
+          }
+          message += `\n`
+        }
+        
+        // Profit Probability
+        if (profitProb) {
+          message += `🎯 *Probability of Profit:*\n`
+          message += `TP1: ${profitProb.tp1_probability.toFixed(0)}%\n`
+          message += `TP2: ${profitProb.tp2_probability.toFixed(0)}%\n`
+          message += `TP3: ${profitProb.tp3_probability.toFixed(0)}%\n`
+          message += `Expected Value: ${profitProb.expected_value.toFixed(2)}R\n\n`
+        }
+        
+        // Risk Metrics
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+        message += `⚡ *RISK METRICS*\n`
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+        message += `VaR(95%): $${var95.toFixed(2)}\n`
+        message += `VaR(99%): $${var99.toFixed(2)}\n`
+        message += `Drawdown: ${drawdownPct.toFixed(2)}%\n`
+        message += `Portfolio Heat: ${portfolioHeat.toFixed(1)}%\n\n`
+        
+        // Recommendation
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+        message += `💡 *RECOMMENDATION*\n`
+        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+        
+        if (enhancedDaySignal.isValid && enhancedDaySignal.signal_type !== 'HOLD') {
+          message += `✅ *EXECUTE ${enhancedDaySignal.signal_type}*\n`
+          message += `All hedge fund features aligned!\n`
+        } else {
+          message += `⚠️ *SKIP TRADE*\n`
+          message += `Reason: ${enhancedDaySignal.mtf_reason}\n`
+        }
+        
+        message += `\n🌐 Dashboard: ${c.req.url.replace('/api/signals/enhanced/enhanced', '')}`
+        
+        // Send to Telegram
+        telegramSent = await sendTelegramMessage(
+          { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+          message
+        )
+      }
+    } catch (e: any) {
+      console.error('[ENHANCED] Telegram error (optional):', e.message)
+      // Telegram is optional, continue without it
+    }
+    
+    // ============================================================
+    // STEP 10: RETURN RESULTS
     // ============================================================
     
     return c.json({
       success: true,
       timestamp: new Date().toISOString(),
       current_price: currentPrice,
+      telegram_sent: telegramSent,
       
       // Signals
       day_trade: enhancedDaySignal,
