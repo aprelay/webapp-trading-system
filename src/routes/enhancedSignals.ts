@@ -55,10 +55,14 @@ const app = new Hono<{ Bindings: Bindings }>()
 app.post('/enhanced', async (c) => {
   const { DB } = c.env
   
+  console.log('[ENHANCED] Starting request, DB:', !!DB)
+  
   try {
     // ============================================================
     // STEP 1: FETCH ALL MULTI-TIMEFRAME DATA
     // ============================================================
+    
+    console.log('[ENHANCED] Step 1: Fetching MTF data')
     
     const timeframes = ['5m', '15m', '1h', '4h', 'daily']
     const mtfIndicators: any = {}
@@ -66,36 +70,24 @@ app.post('/enhanced', async (c) => {
     
     try {
       for (const tf of timeframes) {
+        console.log(`[ENHANCED] Fetching indicators for ${tf}`)
         try {
-          // Get indicators - use .all() instead of .first() to avoid D1 typing issues
-          const indicatorsQuery = await DB.prepare(`
-            SELECT 
-              timeframe, rsi_14, macd, macd_signal, macd_histogram,
-              sma_20, sma_50, sma_200, ema_12, ema_26,
-              bb_upper, bb_middle, bb_lower, atr_14,
-              stochastic_k, stochastic_d, adx, plus_di, minus_di,
-              ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b,
-              parabolic_sar, vwap, fib_382, fib_500, fib_618
-            FROM multi_timeframe_indicators 
+          // Get indicators - use the EXACT same query as the working automation endpoint
+          const indicatorData = await DB.prepare(`
+            SELECT * FROM multi_timeframe_indicators 
             WHERE timeframe = ?
             ORDER BY timestamp DESC 
             LIMIT 1
-          `).bind(tf).all()
+          `).bind(tf).first()
           
-          // Get first result from array
-          if (indicatorsQuery.results && indicatorsQuery.results.length > 0) {
-            const indicatorsResult = indicatorsQuery.results[0] as any
-            
-            // Validate required fields exist
-            if (indicatorsResult && 
-                typeof indicatorsResult.rsi_14 === 'number' &&
-                typeof indicatorsResult.macd === 'number' &&
-                typeof indicatorsResult.atr_14 === 'number') {
-              mtfIndicators[tf] = indicatorsResult
-            }
+          console.log(`[ENHANCED] Got indicator for ${tf}:`, !!indicatorData, indicatorData ? `rsi=${indicatorData.rsi_14}` : 'null')
+          
+          // Use same validation as automation endpoint
+          if (indicatorData) {
+            mtfIndicators[tf] = indicatorData
           }
         } catch (e: any) {
-          console.error(`Error fetching indicators for ${tf}:`, e.message)
+          console.error(`[ENHANCED] Error fetching indicators for ${tf}:`, e.message)
         }
         
         try {
@@ -176,23 +168,21 @@ app.post('/enhanced', async (c) => {
       }, 400)
     }
     
-    let alignment
-    try {
-      alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
-    } catch (e: any) {
-      return c.json({
-        success: false,
-        error: `Error analyzing MTF alignment: ${e.message}`,
-        stack: e.stack,
-        debug: {
-          hasIndicators: Object.keys(mtfIndicators),
-          sampleIndicator: mtfIndicators['1h'] ? {
-            rsi: typeof mtfIndicators['1h'].rsi_14,
-            macd: typeof mtfIndicators['1h'].macd  
-          } : 'missing'
-        }
-      }, 500)
-    }
+    console.log('[ENHANCED] About to analyze alignment')
+    console.log('[ENHANCED] mtfIndicators keys:', Object.keys(mtfIndicators))
+    console.log('[ENHANCED] Sample 1h indicator:', mtfIndicators['1h'] ? {
+      rsi: mtfIndicators['1h'].rsi_14,
+      macd: mtfIndicators['1h'].macd,
+      sma_20: mtfIndicators['1h'].sma_20
+    } : 'missing')
+    
+    const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
+    
+    console.log('[ENHANCED] Alignment computed:', alignment.type, 'score:', alignment.score)
+    
+    console.log('[ENHANCED] About to call generateSignal')
+    console.log('[ENHANCED] h1Indicators:', !!h1Indicators, h1Indicators ? `rsi=${h1Indicators.rsi_14}` : 'null')
+    console.log('[ENHANCED] h1Indicators keys:', h1Indicators ? Object.keys(h1Indicators).join(', ') : 'none')
     
     const baseDaySignal = generateSignal(currentPrice, h1Indicators, 'day_trade')
     const baseSwingSignal = generateSignal(currentPrice, h1Indicators, 'swing_trade')

@@ -41,6 +41,16 @@ export function determineTrend(
   indicators: TechnicalIndicators,
   currentPrice: number
 ): TimeframeTrend {
+  // Defensive check
+  if (!indicators) {
+    console.error('[determineTrend] indicators is null/undefined!')
+    throw new Error('Indicators is undefined')
+  }
+  if (indicators.rsi_14 === undefined) {
+    console.error('[determineTrend] rsi_14 is undefined! Indicators:', Object.keys(indicators))
+    throw new Error('rsi_14 is undefined in indicators')
+  }
+  
   let bullishPoints = 0
   let bearishPoints = 0
   let totalWeight = 0
@@ -132,17 +142,26 @@ export function analyzeTimeframeAlignment(
   indicators: MultiTimeframeIndicators,
   currentPrice: number
 ): TimeframeAlignment {
+  console.log('[analyzeTimeframeAlignment] START')
+  console.log('[analyzeTimeframeAlignment] indicators keys:', Object.keys(indicators || {}))
+  console.log('[analyzeTimeframeAlignment] currentPrice:', currentPrice)
+  
   const trends: TimeframeTrend[] = []
 
   // Analyze each timeframe
   const timeframes: Timeframe[] = ['5m', '15m', '1h', '4h', 'daily']
   
   for (const tf of timeframes) {
+    console.log(`[analyzeTimeframeAlignment] Processing ${tf}`)
     const ind = indicators[tf]
     if (ind) {
+      console.log(`[analyzeTimeframeAlignment] ${tf} has indicators, calling determineTrend`)
+      console.log(`[analyzeTimeframeAlignment] ${tf} rsi_14:`, ind.rsi_14, typeof ind.rsi_14)
       const trend = determineTrend(ind, currentPrice)
       trend.timeframe = tf
       trends.push(trend)
+    } else {
+      console.log(`[analyzeTimeframeAlignment] ${tf} missing indicators`)
     }
   }
 
