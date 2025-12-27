@@ -486,49 +486,66 @@ app.get('/', (c) => {
                     const res = await axios.post('/api/signals/enhanced/enhanced');
                     
                     if (res.data.success) {
-                        const { signals, positions, risk_metrics } = res.data;
-                        const day = signals.day_trade;
-                        const swing = signals.swing_trade;
+                        // API returns day_trade and swing_trade directly (not nested in signals)
+                        const day = res.data.day_trade;
+                        const swing = res.data.swing_trade;
+                        const alignment = res.data.alignment;
+                        const risk_metrics = res.data.risk_metrics;
+                        const regime = res.data.regime;
+                        const ml = res.data.ml_prediction;
+                        const pop = res.data.profit_probability;
                         
                         let message = '🏦 HEDGE FUND GRADE SIGNAL\\n\\n';
                         
                         // Risk Warnings
-                        if (risk_metrics.warnings && risk_metrics.warnings.length > 0) {
-                            message += '⚠️ RISK ALERTS:\\n';
-                            risk_metrics.warnings.forEach(w => message += w + '\\n');
-                            message += '\\n';
+                        if (day.risk_warning) {
+                            message += '⚠️ RISK ALERT: ' + day.risk_warning + '\\n\\n';
                         }
+                        
+                        // Multi-Timeframe Alignment
+                        message += '📊 MTF ALIGNMENT: ' + alignment.type + ' (' + alignment.score + '/5)\\n\\n';
                         
                         // Day Trade
                         message += '📈 DAY TRADE:\\n';
-                        message += (day.isValid ? '✅' : '❌') + ' ' + day.signal_type + ' (' + day.final_confidence.toFixed(0) + '%)\\n';
+                        message += (day.isValid ? '✅' : '❌') + ' ' + day.signal_type + ' (' + day.enhanced_confidence.toFixed(0) + '%)\\n';
                         message += 'Entry: $' + day.price.toFixed(2) + '\\n';
                         message += 'Stop: $' + day.stop_loss.toFixed(2) + '\\n';
-                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + ' (' + day.probability.tp1_probability.toFixed(0) + '% PoP)\\n';
-                        message += 'Position: ' + positions.day_trade.units + ' lots\\n';
-                        message += 'Risk: $' + positions.day_trade.risk_amount + ' (' + positions.day_trade.risk_pct + '%)\\n\\n';
+                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
                         
                         // Confidence Breakdown
-                        message += 'Confidence Breakdown:\\n';
+                        message += '\\nConfidence Breakdown:\\n';
                         message += 'Base: ' + day.base_confidence.toFixed(0) + '%\\n';
-                        message += 'MTF: +' + (day.mtf_confidence - day.base_confidence).toFixed(0) + '%\\n';
-                        if (day.pattern_boost !== 0) message += 'Patterns: ' + (day.pattern_boost > 0 ? '+' : '') + day.pattern_boost.toFixed(0) + '%\\n';
-                        if (day.regime_boost !== 0) message += 'Regime: ' + (day.regime_boost > 0 ? '+' : '') + day.regime_boost.toFixed(0) + '%\\n';
-                        if (day.ml_boost !== 0) message += 'ML: ' + (day.ml_boost > 0 ? '+' : '') + day.ml_boost.toFixed(0) + '%\\n';
-                        if (day.pop_boost !== 0) message += 'PoP: ' + (day.pop_boost > 0 ? '+' : '') + day.pop_boost.toFixed(0) + '%\\n';
-                        message += 'FINAL: ' + day.final_confidence.toFixed(0) + '%\\n\\n';
+                        message += 'MTF: ' + day.mtf_confidence.toFixed(0) + '%\\n';
+                        if (day.pattern_boost > 0) message += 'Pattern: +' + day.pattern_boost.toFixed(0) + '%\\n';
+                        if (day.regime_boost > 0) message += 'Regime: +' + day.regime_boost.toFixed(0) + '%\\n';
+                        if (day.ml_boost > 0) message += 'ML: +' + day.ml_boost.toFixed(0) + '%\\n';
+                        if (day.pop_boost > 0) message += 'PoP: +' + day.pop_boost.toFixed(0) + '%\\n';
+                        message += 'FINAL: ' + day.enhanced_confidence.toFixed(0) + '%\\n\\n';
+                        
+                        // Market Regime
+                        if (regime) {
+                            message += '🌡️ REGIME: ' + (regime.trend || 'N/A') + ' | Volatility: ' + regime.volatility + '\\n';
+                            message += 'Should Trade: ' + (regime.should_trade ? '✅ YES' : '❌ NO') + '\\n\\n';
+                        }
+                        
+                        // ML Prediction
+                        if (ml && ml.direction !== 'NEUTRAL') {
+                            message += '🤖 ML: ' + ml.direction + '\\n\\n';
+                        }
                         
                         // Risk Metrics
                         message += '⚡ RISK METRICS:\\n';
                         message += 'VaR(95%): $' + risk_metrics.var_95.toFixed(2) + '\\n';
                         message += 'VaR(99%): $' + risk_metrics.var_99.toFixed(2) + '\\n';
-                        message += 'Drawdown: ' + risk_metrics.drawdown.drawdown_pct.toFixed(2) + '%\\n';
-                        message += 'Portfolio Heat: ' + risk_metrics.portfolio_heat.heat_pct.toFixed(1) + '%\\n\\n';
+                        message += 'Drawdown: ' + risk_metrics.drawdown_pct.toFixed(2) + '%\\n';
+                        message += 'Portfolio Heat: ' + risk_metrics.portfolio_heat_pct.toFixed(1) + '%\\n\\n';
                         
-                        if (res.data.telegram_sent) {
-                            message += '📱 Sent to Telegram!';
+                        // Recommendation
+                        message += '💡 RECOMMENDATION:\\n';
+                        if (day.isValid && day.signal_type !== 'HOLD') {
+                            message += '✅ EXECUTE ' + day.signal_type;
                         } else {
-                            message += '⚠️ Telegram not sent (check settings)';
+                            message += '⚠️ SKIP - ' + day.mtf_reason;
                         }
                         
                         alert(message);
