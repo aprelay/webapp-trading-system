@@ -64,49 +64,82 @@ app.post('/enhanced', async (c) => {
     const mtfIndicators: any = {}
     const mtfCandles: any = {}
     
-    for (const tf of timeframes) {
-      // Get indicators
-      const indicators = await DB.prepare(`
-        SELECT * FROM multi_timeframe_indicators 
-        WHERE timeframe = ?
-        ORDER BY timestamp DESC 
-        LIMIT 1
-      `).bind(tf).first()
-      
-      if (indicators) {
-        mtfIndicators[tf] = indicators
+    try {
+      for (const tf of timeframes) {
+        try {
+          // Get indicators - explicitly select all fields
+          const indicatorsResult = await DB.prepare(`
+            SELECT 
+              timeframe, rsi_14, macd, macd_signal, macd_histogram,
+              sma_20, sma_50, sma_200, ema_12, ema_26,
+              bb_upper, bb_middle, bb_lower, atr_14,
+              stochastic_k, stochastic_d, adx, plus_di, minus_di,
+              ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b,
+              parabolic_sar, vwap, fib_382, fib_500, fib_618
+            FROM multi_timeframe_indicators 
+            WHERE timeframe = ?
+            ORDER BY timestamp DESC 
+            LIMIT 1
+          `).bind(tf).first()
+          
+          // Only add if we got valid data with required fields
+          if (indicatorsResult && typeof indicatorsResult === 'object' && 'rsi_14' in indicatorsResult) {
+            mtfIndicators[tf] = indicatorsResult
+          }
+        } catch (e: any) {
+          console.error(`Error fetching indicators for ${tf}:`, e.message)
+        }
+        
+        try {
+          // Get candles for pattern detection and ML
+          const candles = await DB.prepare(`
+            SELECT timestamp, open, high, low, close, volume 
+            FROM market_data 
+            WHERE timeframe = ?
+            ORDER BY timestamp DESC 
+            LIMIT 100
+          `).bind(tf).all()
+          
+          if (candles.results && candles.results.length > 0) {
+            mtfCandles[tf] = (candles.results as any[]).reverse().map(r => ({
+              timestamp: r.timestamp,
+              open: r.open,
+              high: r.high,
+              low: r.low,
+              close: r.close,
+              volume: r.volume || 0
+            }))
+          }
+        } catch (e: any) {
+          console.error(`Error fetching candles for ${tf}:`, e.message)
+        }
       }
-      
-      // Get candles for pattern detection and ML
-      const candles = await DB.prepare(`
-        SELECT timestamp, open, high, low, close, volume 
-        FROM market_data 
-        WHERE timeframe = ?
-        ORDER BY timestamp DESC 
-        LIMIT 100
-      `).bind(tf).all()
-      
-      if (candles.results && candles.results.length > 0) {
-        mtfCandles[tf] = (candles.results as any[]).reverse().map(r => ({
-          timestamp: r.timestamp,
-          open: r.open,
-          high: r.high,
-          low: r.low,
-          close: r.close,
-          volume: r.volume || 0
-        }))
-      }
+    } catch (e: any) {
+      return c.json({
+        success: false,
+        error: `Error fetching data: ${e.message}`,
+        stack: e.stack
+      }, 500)
     }
     
-    // Need at least 3 timeframes
-    if (Object.keys(mtfIndicators).length < 3) {
+    // Need at least 3 timeframes AND must have 1h
+    if (Object.keys(mtfIndicators).length < 3 || !mtfIndicators['1h']) {
       return c.json({ 
         success: false, 
-        error: 'Not enough timeframe data. Need at least 3 timeframes.' 
+        error: `Not enough timeframe data. Need at least 3 timeframes including 1h. Have: ${Object.keys(mtfIndicators).join(', ')}`,
+        debug: {
+          hasOneHour: !!mtfIndicators['1h'],
+          totalTimeframes: Object.keys(mtfIndicators).length,
+          availableTimeframes: Object.keys(mtfIndicators)
+        }
       }, 400)
     }
     
-    const currentPrice = (mtfIndicators['1h'] as any)?.close || 0
+    // Get current price from the most recent 1h candle
+    const currentPrice = mtfCandles['1h'] && mtfCandles['1h'].length > 0 
+      ? mtfCandles['1h'][mtfCandles['1h'].length - 1].close 
+      : 0
+    
     if (currentPrice === 0) {
       return c.json({ success: false, error: 'Current price not available' }, 400)
     }
@@ -115,8 +148,16 @@ app.post('/enhanced', async (c) => {
     // STEP 2: MULTI-TIMEFRAME ANALYSIS (Phase 3)
     // ============================================================
     
-    const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
     const h1Indicators = mtfIndicators['1h']
+    
+    if (!h1Indicators) {
+      return c.json({ 
+        success: false, 
+        error: `1h indicators not found. Available timeframes: ${Object.keys(mtfIndicators).join(', ')}` 
+      }, 400)
+    }
+    
+    const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
     
     const baseDaySignal = generateSignal(currentPrice, h1Indicators, 'day_trade')
     const baseSwingSignal = generateSignal(currentPrice, h1Indicators, 'swing_trade')
