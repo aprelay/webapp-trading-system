@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { calculateIndicators, generateSignal, type Candle } from './lib/technicalAnalysis'
 import { sendTelegramMessage, formatTradeSignal, formatMarketUpdate } from './lib/telegram'
+import enhancedSignalsRouter from './routes/enhancedSignals'
 
 type Bindings = {
   DB: D1Database;
@@ -11,6 +12,9 @@ const app = new Hono<{ Bindings: Bindings }>()
 
 // Enable CORS for all API routes
 app.use('/api/*', cors())
+
+// Mount enhanced signals router (hedge fund features)
+app.route('/api/signals/enhanced', enhancedSignalsRouter)
 
 // Homepage - Dashboard
 app.get('/', (c) => {
@@ -196,6 +200,9 @@ app.get('/', (c) => {
                         </button>
                         <button onclick="generateSignalNow()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-chart-line mr-2"></i>Generate Signal NOW
+                        </button>
+                        <button onclick="generateEnhancedSignal()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold transition">
+                            <i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal
                         </button>
                     </div>
                 </div>
@@ -467,6 +474,75 @@ app.get('/', (c) => {
                     alert('❌ Error: ' + error.message);
                     event.target.disabled = false;
                     event.target.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
+                }
+            }
+
+            async function generateEnhancedSignal() {
+                try {
+                    const btn = event.target;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
+                    
+                    const res = await axios.post('/api/signals/enhanced/enhanced');
+                    
+                    if (res.data.success) {
+                        const { signals, positions, risk_metrics } = res.data;
+                        const day = signals.day_trade;
+                        const swing = signals.swing_trade;
+                        
+                        let message = '🏦 HEDGE FUND GRADE SIGNAL\\n\\n';
+                        
+                        // Risk Warnings
+                        if (risk_metrics.warnings && risk_metrics.warnings.length > 0) {
+                            message += '⚠️ RISK ALERTS:\\n';
+                            risk_metrics.warnings.forEach(w => message += w + '\\n');
+                            message += '\\n';
+                        }
+                        
+                        // Day Trade
+                        message += '📈 DAY TRADE:\\n';
+                        message += (day.isValid ? '✅' : '❌') + ' ' + day.signal_type + ' (' + day.final_confidence.toFixed(0) + '%)\\n';
+                        message += 'Entry: $' + day.price.toFixed(2) + '\\n';
+                        message += 'Stop: $' + day.stop_loss.toFixed(2) + '\\n';
+                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + ' (' + day.probability.tp1_probability.toFixed(0) + '% PoP)\\n';
+                        message += 'Position: ' + positions.day_trade.units + ' lots\\n';
+                        message += 'Risk: $' + positions.day_trade.risk_amount + ' (' + positions.day_trade.risk_pct + '%)\\n\\n';
+                        
+                        // Confidence Breakdown
+                        message += 'Confidence Breakdown:\\n';
+                        message += 'Base: ' + day.base_confidence.toFixed(0) + '%\\n';
+                        message += 'MTF: +' + (day.mtf_confidence - day.base_confidence).toFixed(0) + '%\\n';
+                        if (day.pattern_boost !== 0) message += 'Patterns: ' + (day.pattern_boost > 0 ? '+' : '') + day.pattern_boost.toFixed(0) + '%\\n';
+                        if (day.regime_boost !== 0) message += 'Regime: ' + (day.regime_boost > 0 ? '+' : '') + day.regime_boost.toFixed(0) + '%\\n';
+                        if (day.ml_boost !== 0) message += 'ML: ' + (day.ml_boost > 0 ? '+' : '') + day.ml_boost.toFixed(0) + '%\\n';
+                        if (day.pop_boost !== 0) message += 'PoP: ' + (day.pop_boost > 0 ? '+' : '') + day.pop_boost.toFixed(0) + '%\\n';
+                        message += 'FINAL: ' + day.final_confidence.toFixed(0) + '%\\n\\n';
+                        
+                        // Risk Metrics
+                        message += '⚡ RISK METRICS:\\n';
+                        message += 'VaR(95%): $' + risk_metrics.var_95.toFixed(2) + '\\n';
+                        message += 'VaR(99%): $' + risk_metrics.var_99.toFixed(2) + '\\n';
+                        message += 'Drawdown: ' + risk_metrics.drawdown.drawdown_pct.toFixed(2) + '%\\n';
+                        message += 'Portfolio Heat: ' + risk_metrics.portfolio_heat.heat_pct.toFixed(1) + '%\\n\\n';
+                        
+                        if (res.data.telegram_sent) {
+                            message += '📱 Sent to Telegram!';
+                        } else {
+                            message += '⚠️ Telegram not sent (check settings)';
+                        }
+                        
+                        alert(message);
+                        await refreshData();
+                    } else {
+                        alert('❌ Error: ' + res.data.error);
+                    }
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal';
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                    event.target.disabled = false;
+                    event.target.innerHTML = '<i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal';
                 }
             }
 
