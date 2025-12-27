@@ -67,8 +67,8 @@ app.post('/enhanced', async (c) => {
     try {
       for (const tf of timeframes) {
         try {
-          // Get indicators - explicitly select all fields
-          const indicatorsResult = await DB.prepare(`
+          // Get indicators - use .all() instead of .first() to avoid D1 typing issues
+          const indicatorsQuery = await DB.prepare(`
             SELECT 
               timeframe, rsi_14, macd, macd_signal, macd_histogram,
               sma_20, sma_50, sma_200, ema_12, ema_26,
@@ -80,11 +80,19 @@ app.post('/enhanced', async (c) => {
             WHERE timeframe = ?
             ORDER BY timestamp DESC 
             LIMIT 1
-          `).bind(tf).first()
+          `).bind(tf).all()
           
-          // Only add if we got valid data with required fields
-          if (indicatorsResult && typeof indicatorsResult === 'object' && 'rsi_14' in indicatorsResult) {
-            mtfIndicators[tf] = indicatorsResult
+          // Get first result from array
+          if (indicatorsQuery.results && indicatorsQuery.results.length > 0) {
+            const indicatorsResult = indicatorsQuery.results[0] as any
+            
+            // Validate required fields exist
+            if (indicatorsResult && 
+                typeof indicatorsResult.rsi_14 === 'number' &&
+                typeof indicatorsResult.macd === 'number' &&
+                typeof indicatorsResult.atr_14 === 'number') {
+              mtfIndicators[tf] = indicatorsResult
+            }
           }
         } catch (e: any) {
           console.error(`Error fetching indicators for ${tf}:`, e.message)
@@ -130,10 +138,21 @@ app.post('/enhanced', async (c) => {
         debug: {
           hasOneHour: !!mtfIndicators['1h'],
           totalTimeframes: Object.keys(mtfIndicators).length,
-          availableTimeframes: Object.keys(mtfIndicators)
+          availableTimeframes: Object.keys(mtfIndicators),
+          oneHourSample: mtfIndicators['1h'] ? {
+            hasRsi: typeof mtfIndicators['1h'].rsi_14,
+            hasMacd: typeof mtfIndicators['1h'].macd,
+            hasAtr: typeof mtfIndicators['1h'].atr_14
+          } : null
         }
       }, 400)
     }
+    
+    console.log('MTF Indicators loaded:', {
+      timeframes: Object.keys(mtfIndicators),
+      oneHour: mtfIndicators['1h'] ? 'present' : 'missing',
+      rsi: mtfIndicators['1h']?.rsi_14
+    })
     
     // Get current price from the most recent 1h candle
     const currentPrice = mtfCandles['1h'] && mtfCandles['1h'].length > 0 
@@ -157,7 +176,23 @@ app.post('/enhanced', async (c) => {
       }, 400)
     }
     
-    const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
+    let alignment
+    try {
+      alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
+    } catch (e: any) {
+      return c.json({
+        success: false,
+        error: `Error analyzing MTF alignment: ${e.message}`,
+        stack: e.stack,
+        debug: {
+          hasIndicators: Object.keys(mtfIndicators),
+          sampleIndicator: mtfIndicators['1h'] ? {
+            rsi: typeof mtfIndicators['1h'].rsi_14,
+            macd: typeof mtfIndicators['1h'].macd  
+          } : 'missing'
+        }
+      }, 500)
+    }
     
     const baseDaySignal = generateSignal(currentPrice, h1Indicators, 'day_trade')
     const baseSwingSignal = generateSignal(currentPrice, h1Indicators, 'swing_trade')
