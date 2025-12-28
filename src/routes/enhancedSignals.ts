@@ -23,6 +23,7 @@ import { detectMarketRegime, type RegimeAnalysis } from '../lib/regimeDetection'
 import { generateMLPredictions, type MLPredictionResult } from '../lib/mlPrediction'
 import { calculateProbabilityOfProfit, type ProfitProbability } from '../lib/probabilityOfProfit'
 import { sendTelegramMessage } from '../lib/telegram'
+import { checkTradingSafety, calculateCalendarImpact, formatEvent } from '../lib/economicCalendar'
 
 type Bindings = {
   DB: D1Database
@@ -105,6 +106,29 @@ app.post('/enhanced', async (c) => {
     
     if (!currentPrice) {
       return c.json({ success: false, error: 'Current price not available' }, 400)
+    }
+    
+    // ============================================================
+    // STEP 1.5: ECONOMIC CALENDAR CHECK (CRITICAL!)
+    // ============================================================
+    console.log('[ENHANCED] Step 1.5: Checking economic calendar')
+    
+    const safety = checkTradingSafety()
+    const calendarImpact = calculateCalendarImpact()
+    
+    let calendarWarning = null
+    let forceHold = false
+    
+    if (safety.riskLevel === 'danger') {
+      // CRITICAL: Major event nearby - force HOLD
+      forceHold = true
+      calendarWarning = safety.reason
+      console.log('[ENHANCED] ⚠️ CALENDAR DANGER:', safety.reason)
+    } else if (safety.riskLevel === 'caution') {
+      calendarWarning = safety.reason
+      console.log('[ENHANCED] ⚠️ CALENDAR CAUTION:', safety.reason)
+    } else {
+      console.log('[ENHANCED] ✅ Calendar safe:', safety.reason)
     }
     
     // ============================================================
@@ -373,6 +397,36 @@ app.post('/enhanced', async (c) => {
     }
     
     // ============================================================
+    // STEP 8.5: APPLY ECONOMIC CALENDAR OVERRIDE
+    // ============================================================
+    
+    if (forceHold) {
+      // CRITICAL: Major economic event - force all signals to HOLD
+      enhancedDaySignal.signal_type = 'HOLD'
+      enhancedSwingSignal.signal_type = 'HOLD'
+      enhancedDaySignal.enhanced_confidence = 50
+      enhancedSwingSignal.enhanced_confidence = 50
+      enhancedDaySignal.reasoning = calendarWarning || 'Economic event nearby - trading paused'
+      enhancedSwingSignal.reasoning = calendarWarning || 'Economic event nearby - trading paused'
+      console.log('[ENHANCED] ⚠️ SIGNALS FORCED TO HOLD due to calendar')
+    } else if (calendarImpact.adjustment < 0) {
+      // Apply confidence adjustment for nearby events
+      enhancedDaySignal.enhanced_confidence = Math.max(50, enhancedDaySignal.enhanced_confidence + calendarImpact.adjustment)
+      enhancedSwingSignal.enhanced_confidence = Math.max(50, enhancedSwingSignal.enhanced_confidence + calendarImpact.adjustment)
+      console.log('[ENHANCED] Applied calendar adjustment:', calendarImpact.adjustment)
+    }
+    
+    // Add calendar info to signals
+    enhancedDaySignal.calendar_check = {
+      risk_level: safety.riskLevel,
+      should_trade: safety.shouldTrade,
+      reason: safety.reason,
+      confidence_adjustment: calendarImpact.adjustment,
+      upcoming_events: safety.upcomingEvents.slice(0, 3).map(e => formatEvent(e))
+    }
+    enhancedSwingSignal.calendar_check = enhancedDaySignal.calendar_check
+    
+    // ============================================================
     // STEP 9: SEND TO TELEGRAM
     // ============================================================
     
@@ -395,6 +449,20 @@ app.post('/enhanced', async (c) => {
         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' })
         
         let message = `🏦 *HEDGE FUND GRADE SIGNAL*\n⏰ ${timestamp} UTC\n\n`
+        
+        // Economic Calendar Warning (PRIORITY!)
+        if (safety.riskLevel === 'danger') {
+          message += `🚨 *ECONOMIC CALENDAR ALERT*\n`
+          message += `${safety.reason}\n`
+          message += `*→ NO TRADING RECOMMENDED*\n\n`
+        } else if (safety.riskLevel === 'caution') {
+          message += `⚠️ *ECONOMIC CALENDAR WARNING*\n`
+          message += `${safety.reason}\n`
+          message += `*→ Reduce position size by 50%*\n\n`
+        } else if (safety.upcomingEvents.length > 0) {
+          message += `📅 *Economic Calendar:* ✅ Safe to trade\n`
+          message += `Next event: ${formatEvent(safety.upcomingEvents[0])}\n\n`
+        }
         
         // Risk Warnings
         if (riskWarning) {

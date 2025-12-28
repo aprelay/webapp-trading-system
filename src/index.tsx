@@ -6,6 +6,7 @@ import enhancedSignalsRouter from './routes/enhancedSignals'
 import tradesRouter from './routes/trades'
 import calendarRouter from './routes/calendar'
 import backtestRouter from './routes/backtest'
+import telegramCommandsRouter from './routes/telegramCommands'
 
 type Bindings = {
   DB: D1Database;
@@ -21,6 +22,7 @@ app.route('/api/signals/enhanced', enhancedSignalsRouter)
 app.route('/api/trades', tradesRouter)
 app.route('/api/calendar', calendarRouter)
 app.route('/api/backtest', backtestRouter)
+app.route('/api/telegram', telegramCommandsRouter)
 
 // Homepage - Dashboard
 app.get('/', (c) => {

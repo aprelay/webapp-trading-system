@@ -27,15 +27,14 @@ app.post('/run', async (c) => {
     const result = await DB.prepare(`
       SELECT timestamp, open, high, low, close, volume
       FROM market_data
-      WHERE symbol = 'XAU/USD'
-      AND interval = '1h'
+      WHERE timeframe = '1h'
       ORDER BY timestamp ASC
     `).all()
     
     if (result.results.length < 200) {
       return c.json({
         success: false,
-        error: `Not enough historical data. Have ${result.results.length} candles, need at least 200`
+        error: `Not enough historical data. Have ${result.results.length} candles, need at least 200. System has been collecting data since Dec 26 - wait a few more days or reduce timeframe.`
       }, 400)
     }
     
@@ -224,7 +223,7 @@ app.get('/data-availability', async (c) => {
         MIN(timestamp) as earliest_date,
         MAX(timestamp) as latest_date
       FROM market_data
-      WHERE symbol = 'XAU/USD' AND interval = '1h'
+      WHERE timeframe = '1h'
     `).first() as any
     
     if (!result || result.total_candles === 0) {
