@@ -726,7 +726,7 @@ app.get('/', (c) => {
                     });
                     
                     if (res.data.success) {
-                        const r = res.data.results;
+                        const r = res.data.result;
                         
                         // Format results
                         let html = '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">';
