@@ -3,6 +3,9 @@ import { cors } from 'hono/cors'
 import { calculateIndicators, generateSignal, type Candle } from './lib/technicalAnalysis'
 import { sendTelegramMessage, formatTradeSignal, formatMarketUpdate } from './lib/telegram'
 import enhancedSignalsRouter from './routes/enhancedSignals'
+import tradesRouter from './routes/trades'
+import calendarRouter from './routes/calendar'
+import backtestRouter from './routes/backtest'
 
 type Bindings = {
   DB: D1Database;
@@ -13,8 +16,11 @@ const app = new Hono<{ Bindings: Bindings }>()
 // Enable CORS for all API routes
 app.use('/api/*', cors())
 
-// Mount enhanced signals router (hedge fund features)
+// Mount API routers
 app.route('/api/signals/enhanced', enhancedSignalsRouter)
+app.route('/api/trades', tradesRouter)
+app.route('/api/calendar', calendarRouter)
+app.route('/api/backtest', backtestRouter)
 
 // Homepage - Dashboard
 app.get('/', (c) => {
