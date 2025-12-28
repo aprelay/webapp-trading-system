@@ -212,6 +212,19 @@ app.get('/', (c) => {
                         <button onclick="generateEnhancedSignal()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal
                         </button>
+                        <button onclick="runBacktest()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold transition">
+                            <i class="fas fa-history mr-2"></i>📊 Run Backtest
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Backtest Results Panel -->
+                <div id="backtestResults" class="bg-gradient-to-r from-indigo-900 to-indigo-800 p-6 rounded-lg border-2 border-indigo-500 mt-6 hidden">
+                    <h3 class="text-2xl font-bold text-white mb-4">
+                        <i class="fas fa-chart-bar mr-2"></i>Backtest Results
+                    </h3>
+                    <div id="backtestDetails" class="space-y-4">
+                        <!-- Results will be inserted here -->
                     </div>
                 </div>
 
@@ -688,6 +701,123 @@ app.get('/', (c) => {
                 } finally {
                     btn.disabled = false;
                     buttonText.innerHTML = 'Analyze & Notify';
+                }
+            }
+
+            // Run Backtest
+            async function runBacktest() {
+                const resultsDiv = document.getElementById('backtestResults');
+                const detailsDiv = document.getElementById('backtestDetails');
+                
+                // Show panel and loading state
+                resultsDiv.classList.remove('hidden');
+                detailsDiv.innerHTML = '<div class="text-center text-white">' +
+                    '<i class="fas fa-spinner fa-spin text-4xl mb-4"></i>' +
+                    '<p class="text-lg">Running backtest on historical data...</p>' +
+                    '<p class="text-sm text-indigo-300 mt-2">This may take 30-60 seconds</p>' +
+                    '</div>';
+                
+                try {
+                    const res = await axios.post('/api/backtest/run', {
+                        min_confidence: 75,
+                        use_mtf_confirmation: true,
+                        use_news_filter: false,
+                        starting_balance: 10000
+                    });
+                    
+                    if (res.data.success) {
+                        const r = res.data.results;
+                        
+                        // Format results
+                        let html = '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">';
+                        
+                        // Key Metrics
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg">';
+                        html += '<div class="text-indigo-300 text-sm">Total Trades</div>';
+                        html += '<div class="text-2xl font-bold text-white">' + r.total_trades + '</div>';
+                        html += '</div>';
+                        
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg">';
+                        html += '<div class="text-indigo-300 text-sm">Win Rate</div>';
+                        html += '<div class="text-2xl font-bold ' + (r.win_rate >= 70 ? 'text-green-400' : r.win_rate >= 60 ? 'text-yellow-400' : 'text-red-400') + '">';
+                        html += r.win_rate.toFixed(1) + '%</div>';
+                        html += '</div>';
+                        
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg">';
+                        html += '<div class="text-indigo-300 text-sm">Net Profit</div>';
+                        html += '<div class="text-2xl font-bold ' + (r.net_profit > 0 ? 'text-green-400' : 'text-red-400') + '">';
+                        html += (r.net_profit > 0 ? '+' : '') + '$' + r.net_profit.toFixed(2) + '</div>';
+                        html += '</div>';
+                        
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg">';
+                        html += '<div class="text-indigo-300 text-sm">Total Return</div>';
+                        html += '<div class="text-2xl font-bold ' + (r.total_return_pct > 0 ? 'text-green-400' : 'text-red-400') + '">';
+                        html += (r.total_return_pct > 0 ? '+' : '') + r.total_return_pct.toFixed(2) + '%</div>';
+                        html += '</div>';
+                        
+                        html += '</div>';
+                        
+                        // Detailed Metrics
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg">';
+                        html += '<h4 class="font-bold text-white mb-3">Performance Metrics</h4>';
+                        html += '<div class="grid grid-cols-2 gap-3 text-sm">';
+                        
+                        html += '<div><span class="text-indigo-300">Winning Trades:</span> <span class="text-white font-semibold">' + r.winning_trades + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Losing Trades:</span> <span class="text-white font-semibold">' + r.losing_trades + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Avg Win:</span> <span class="text-green-400 font-semibold">+$' + r.avg_win.toFixed(2) + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Avg Loss:</span> <span class="text-red-400 font-semibold">-$' + Math.abs(r.avg_loss).toFixed(2) + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Largest Win:</span> <span class="text-green-400 font-semibold">+$' + r.largest_win.toFixed(2) + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Largest Loss:</span> <span class="text-red-400 font-semibold">-$' + Math.abs(r.largest_loss).toFixed(2) + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Max Drawdown:</span> <span class="text-white font-semibold">' + r.max_drawdown_pct.toFixed(2) + '%</span></div>';
+                        html += '<div><span class="text-indigo-300">Profit Factor:</span> <span class="text-white font-semibold">' + r.profit_factor.toFixed(2) + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Sharpe Ratio:</span> <span class="text-white font-semibold">' + r.sharpe_ratio.toFixed(2) + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Expectancy:</span> <span class="text-white font-semibold">$' + r.expectancy.toFixed(2) + '</span></div>';
+                        
+                        html += '</div></div>';
+                        
+                        // Balance Progress
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg mt-4">';
+                        html += '<h4 class="font-bold text-white mb-3">Balance Progress</h4>';
+                        html += '<div class="flex justify-between text-sm">';
+                        html += '<div><span class="text-indigo-300">Starting:</span> <span class="text-white font-semibold">$' + r.starting_balance.toFixed(2) + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Peak:</span> <span class="text-green-400 font-semibold">$' + r.peak_balance.toFixed(2) + '</span></div>';
+                        html += '<div><span class="text-indigo-300">Ending:</span> <span class="text-white font-semibold">$' + r.ending_balance.toFixed(2) + '</span></div>';
+                        html += '</div></div>';
+                        
+                        // Verdict
+                        html += '<div class="mt-4 p-4 rounded-lg ' + (r.win_rate >= 70 && r.profit_factor >= 2.0 ? 'bg-green-900 bg-opacity-50 border border-green-500' : r.win_rate >= 60 ? 'bg-yellow-900 bg-opacity-50 border border-yellow-500' : 'bg-red-900 bg-opacity-50 border border-red-500') + '">';
+                        html += '<h4 class="font-bold text-white mb-2">Verdict:</h4>';
+                        
+                        if (r.win_rate >= 70 && r.profit_factor >= 2.0) {
+                            html += '<div class="text-green-300">✅ <strong>STRATEGY VALIDATED</strong> - Excellent performance! Win rate > 70% and Profit Factor > 2.0</div>';
+                            html += '<div class="text-green-200 text-sm mt-2">This strategy is ready for paper trading and live execution.</div>';
+                        } else if (r.win_rate >= 60 && r.profit_factor >= 1.5) {
+                            html += '<div class="text-yellow-300">⚠️ <strong>GOOD PERFORMANCE</strong> - Strategy shows promise but needs refinement.</div>';
+                            html += '<div class="text-yellow-200 text-sm mt-2">Consider increasing confidence threshold or adding filters.</div>';
+                        } else {
+                            html += '<div class="text-red-300">❌ <strong>NEEDS IMPROVEMENT</strong> - Performance below target.</div>';
+                            html += '<div class="text-red-200 text-sm mt-2">Adjust strategy parameters before live trading.</div>';
+                        }
+                        
+                        html += '</div>';
+                        
+                        // Execution time
+                        html += '<div class="text-center text-indigo-300 text-sm mt-4">';
+                        html += 'Backtest completed in ' + r.execution_time_ms + 'ms';
+                        html += '</div>';
+                        
+                        detailsDiv.innerHTML = html;
+                    } else {
+                        detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
+                            '<i class="fas fa-exclamation-triangle mr-2"></i>' +
+                            '<strong>Error:</strong> ' + (res.data.error || 'Backtest failed') +
+                            '</div>';
+                    }
+                } catch (error) {
+                    detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
+                        '<i class="fas fa-exclamation-triangle mr-2"></i>' +
+                        '<strong>Error:</strong> ' + error.message +
+                        '</div>';
                 }
             }
 
