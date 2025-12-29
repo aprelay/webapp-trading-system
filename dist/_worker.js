@@ -580,7 +580,7 @@ Example: /close_trade 1 4580 TP1
                         <button onclick="runBacktest()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-history mr-2"></i>📊 Run Backtest
                         </button>
-                        <button onclick="runAIAnalysis()" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-lg">
+                        <button onclick="runAIAnalysis(event)" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-lg">
                             <i class="fas fa-brain mr-2"></i>🤖 AI Market Analysis
                         </button>
                     </div>
@@ -1200,8 +1200,8 @@ Example: /close_trade 1 4580 TP1
             }
 
             // AI Market Analysis
-            async function runAIAnalysis() {
-                const btn = event.target;
+            async function runAIAnalysis(event) {
+                const btn = event.target.closest('button');
                 const originalText = btn.innerHTML;
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing Market...';
