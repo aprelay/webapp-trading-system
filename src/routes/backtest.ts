@@ -7,6 +7,7 @@ import { Hono } from 'hono'
 import { D1Database } from '@cloudflare/workers-types'
 import { runBacktest, BacktestConfig, formatBacktestResults } from '../lib/backtesting'
 import { Candle } from '../lib/technicalAnalysis'
+import { sendTelegramMessage } from '../lib/telegram'
 
 type Bindings = {
   DB: D1Database
@@ -100,11 +101,116 @@ app.post('/run', async (c) => {
       JSON.stringify(backtestResult.equity_curve),
     ).run()
     
+    // Send Telegram notification
+    let telegramSent = false
+    try {
+      const settingsResult = await DB.prepare(`
+        SELECT setting_key, setting_value FROM user_settings 
+        WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+      `).all()
+      
+      const settings: any = {}
+      settingsResult.results.forEach((row: any) => {
+        if (row.setting_key === 'telegram_bot_token') settings.telegram_bot_token = row.setting_value
+        if (row.setting_key === 'telegram_chat_id') settings.telegram_chat_id = row.setting_value
+      })
+      
+      if (settings.telegram_bot_token && settings.telegram_chat_id) {
+        const r = backtestResult
+        
+        // Determine verdict
+        let verdict = ''
+        let verdictIcon = ''
+        if (r.total_trades < 10) {
+          verdict = '⏳ INSUFFICIENT DATA'
+          verdictIcon = '⏳'
+        } else if (r.total_trades < 50) {
+          verdict = '⚠️ SMALL SAMPLE SIZE'
+          verdictIcon = '⚠️'
+        } else if (r.win_rate >= 70 && r.profit_factor >= 2.0) {
+          verdict = '✅ STRATEGY VALIDATED'
+          verdictIcon = '✅'
+        } else if (r.win_rate >= 60) {
+          verdict = '⚠️ GOOD PERFORMANCE'
+          verdictIcon = '⚠️'
+        } else {
+          verdict = '❌ NEEDS IMPROVEMENT'
+          verdictIcon = '❌'
+        }
+        
+        const message = `
+🎯 *BACKTEST COMPLETE*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 *PERFORMANCE SUMMARY*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*Total Trades:* ${r.total_trades}
+*Win Rate:* ${r.win_rate.toFixed(1)}% (${r.winning_trades}W / ${r.losing_trades}L)
+*Net Profit:* ${r.net_profit > 0 ? '+' : ''}$${r.net_profit.toFixed(2)}
+*Total Return:* ${r.total_return_pct > 0 ? '+' : ''}${r.total_return_pct.toFixed(2)}%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 *PROFIT METRICS*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*Average Win:* +$${r.avg_win.toFixed(2)}
+*Average Loss:* -$${Math.abs(r.avg_loss).toFixed(2)}
+*Largest Win:* +$${r.largest_win.toFixed(2)}
+*Largest Loss:* -$${Math.abs(r.largest_loss).toFixed(2)}
+*Profit Factor:* ${r.profit_factor.toFixed(2)}
+*Expectancy:* $${r.expectancy.toFixed(2)} per trade
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ *RISK METRICS*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*Max Drawdown:* ${r.max_drawdown_pct.toFixed(2)}%
+*Sharpe Ratio:* ${r.sharpe_ratio.toFixed(2)}
+*Max Consecutive Wins:* ${r.max_consecutive_wins}
+*Max Consecutive Losses:* ${r.max_consecutive_losses}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+💵 *BALANCE PROGRESSION*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*Starting:* $${r.starting_balance.toFixed(2)}
+*Peak:* $${r.peak_balance.toFixed(2)}
+*Ending:* $${r.ending_balance.toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+${verdictIcon} *VERDICT*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${verdict}
+
+${r.total_trades < 10 ? '⚠️ Only ' + r.total_trades + ' trades executed. Need 50+ for validation.' : 
+  r.total_trades < 50 ? '⚠️ Need 50+ trades for reliable results. Keep collecting data.' :
+  r.win_rate >= 70 && r.profit_factor >= 2.0 ? '✅ Ready for paper trading!' :
+  r.win_rate >= 60 ? '⚠️ Consider increasing confidence threshold or adding filters.' :
+  '❌ Adjust strategy parameters before live trading.'}
+
+⏱️ Execution Time: ${r.execution_time_ms}ms
+📅 Backtest ID: ${saveResult.meta.last_row_id}
+        `.trim()
+        
+        const success = await sendTelegramMessage(
+          { botToken: settings.telegram_bot_token, chatId: settings.telegram_chat_id },
+          message
+        )
+        
+        telegramSent = success
+      }
+    } catch (telegramError) {
+      console.error('[BACKTEST] Telegram send failed:', telegramError)
+    }
+    
     return c.json({
       success: true,
       backtest_id: saveResult.meta.last_row_id,
       result: backtestResult,
-      formatted: formatBacktestResults(backtestResult)
+      formatted: formatBacktestResults(backtestResult),
+      telegram_sent: telegramSent
     })
   } catch (error: any) {
     console.error('[BACKTEST ERROR]', error)
