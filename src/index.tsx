@@ -7,6 +7,7 @@ import tradesRouter from './routes/trades'
 import calendarRouter from './routes/calendar'
 import backtestRouter from './routes/backtest'
 import telegramCommandsRouter from './routes/telegramCommands'
+import aiAnalysisRouter from './routes/aiAnalysis'
 
 type Bindings = {
   DB: D1Database;
@@ -23,6 +24,7 @@ app.route('/api/trades', tradesRouter)
 app.route('/api/calendar', calendarRouter)
 app.route('/api/backtest', backtestRouter)
 app.route('/api/telegram', telegramCommandsRouter)
+app.route('/api/ai', aiAnalysisRouter)
 
 // Homepage - Dashboard
 app.get('/', (c) => {
@@ -215,6 +217,9 @@ app.get('/', (c) => {
                         <button onclick="runBacktest()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-history mr-2"></i>📊 Run Backtest
                         </button>
+                        <button onclick="runAIAnalysis()" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-lg">
+                            <i class="fas fa-brain mr-2"></i>🤖 AI Market Analysis
+                        </button>
                     </div>
                 </div>
 
@@ -225,6 +230,16 @@ app.get('/', (c) => {
                     </h3>
                     <div id="backtestDetails" class="space-y-4">
                         <!-- Results will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- AI Market Analysis Panel -->
+                <div id="aiAnalysisResults" class="bg-gradient-to-r from-cyan-900 to-blue-900 p-6 rounded-lg border-2 border-cyan-400 mt-6 hidden">
+                    <h3 class="text-2xl font-bold text-white mb-4">
+                        <i class="fas fa-brain mr-2"></i>🤖 AI Market Analysis
+                    </h3>
+                    <div id="aiAnalysisDetails" class="space-y-4 text-white">
+                        <!-- Analysis will be inserted here -->
                     </div>
                 </div>
 
@@ -814,6 +829,129 @@ app.get('/', (c) => {
                             '</div>';
                     }
                 } catch (error) {
+                    detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
+                        '<i class="fas fa-exclamation-triangle mr-2"></i>' +
+                        '<strong>Error:</strong> ' + error.message +
+                        '</div>';
+                }
+            }
+
+            // AI Market Analysis
+            async function runAIAnalysis() {
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing Market...';
+                
+                const statusDiv = document.getElementById('status');
+                const resultsDiv = document.getElementById('aiAnalysisResults');
+                const detailsDiv = document.getElementById('aiAnalysisDetails');
+                
+                resultsDiv.classList.remove('hidden');
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                try {
+                    statusDiv.innerHTML = '<div class="bg-cyan-900 bg-opacity-50 border border-cyan-500 p-4 rounded-lg text-white"><i class="fas fa-brain fa-spin mr-2"></i>AI analyzing market conditions...</div>';
+                    
+                    const res = await axios.post('/api/ai/market-analysis');
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    
+                    if (res.data.success) {
+                        const analysis = res.data.analysis;
+                        
+                        let html = '';
+                        
+                        // Current Market Status
+                        html += '<div class="bg-gradient-to-r from-cyan-800 to-blue-800 p-5 rounded-lg border border-cyan-400 mb-4">';
+                        html += '<h4 class="text-xl font-bold text-white mb-3"><i class="fas fa-chart-line mr-2"></i>Current Market Status</h4>';
+                        html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4">';
+                        html += '<div class="text-center"><div class="text-cyan-300 text-sm">Price</div><div class="text-2xl font-bold text-white">$' + analysis.current_price.toFixed(2) + '</div></div>';
+                        html += '<div class="text-center"><div class="text-cyan-300 text-sm">Signal</div><div class="text-2xl font-bold ' + (analysis.signal === 'BUY' ? 'text-green-400' : analysis.signal === 'SELL' ? 'text-red-400' : 'text-yellow-400') + '">' + analysis.signal + '</div></div>';
+                        html += '<div class="text-center"><div class="text-cyan-300 text-sm">Confidence</div><div class="text-2xl font-bold text-white">' + analysis.confidence + '%</div></div>';
+                        html += '<div class="text-center"><div class="text-cyan-300 text-sm">Volatility</div><div class="text-2xl font-bold ' + (analysis.volatility === 'EXTREME' ? 'text-red-400' : analysis.volatility === 'HIGH' ? 'text-orange-400' : 'text-green-400') + '">' + analysis.volatility + '</div></div>';
+                        html += '</div></div>';
+                        
+                        // MTF Analysis
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg mb-4">';
+                        html += '<h4 class="font-bold text-white mb-3"><i class="fas fa-layer-group mr-2"></i>Multi-Timeframe Alignment: ' + analysis.mtf_alignment.type + ' (' + analysis.mtf_alignment.score + '/5)</h4>';
+                        html += '<div class="space-y-2">';
+                        for (const tf of analysis.mtf_alignment.trends) {
+                            const icon = tf.trend === 'BULLISH' ? '📈' : tf.trend === 'BEARISH' ? '📉' : '➡️';
+                            const color = tf.trend === 'BULLISH' ? 'text-green-400' : tf.trend === 'BEARISH' ? 'text-red-400' : 'text-gray-400';
+                            html += '<div class="flex justify-between"><span>' + icon + ' <span class="' + color + ' font-semibold">' + tf.timeframe + '</span>: ' + tf.trend + '</span><span class="text-cyan-300">' + tf.confidence.toFixed(0) + '% confidence</span></div>';
+                        }
+                        html += '</div></div>';
+                        
+                        // Key Levels
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg mb-4">';
+                        html += '<h4 class="font-bold text-white mb-3"><i class="fas fa-crosshairs mr-2"></i>Key Levels</h4>';
+                        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+                        
+                        html += '<div><div class="text-red-300 font-semibold mb-2">🔴 Resistance Levels:</div>';
+                        for (const level of analysis.key_levels.resistance) {
+                            html += '<div class="text-red-400 ml-4">$' + level.toFixed(2) + '</div>';
+                        }
+                        html += '</div>';
+                        
+                        html += '<div><div class="text-green-300 font-semibold mb-2">🟢 Support Levels:</div>';
+                        for (const level of analysis.key_levels.support) {
+                            html += '<div class="text-green-400 ml-4">$' + level.toFixed(2) + '</div>';
+                        }
+                        html += '</div>';
+                        
+                        html += '</div></div>';
+                        
+                        // 3 Scenarios
+                        html += '<div class="bg-white bg-opacity-10 p-4 rounded-lg mb-4">';
+                        html += '<h4 class="font-bold text-white mb-3"><i class="fas fa-sitemap mr-2"></i>Market Scenarios</h4>';
+                        html += '<div class="space-y-3">';
+                        
+                        for (const scenario of analysis.scenarios) {
+                            const bgColor = scenario.name.includes('BULLISH') ? 'bg-green-900 bg-opacity-30 border-green-500' : scenario.name.includes('BEARISH') ? 'bg-red-900 bg-opacity-30 border-red-500' : 'bg-yellow-900 bg-opacity-30 border-yellow-500';
+                            html += '<div class="border ' + bgColor + ' p-3 rounded-lg">';
+                            html += '<div class="flex justify-between mb-2">';
+                            html += '<div class="font-semibold text-white">' + scenario.name + '</div>';
+                            html += '<div class="text-cyan-300">' + scenario.probability + '% Probability</div>';
+                            html += '</div>';
+                            html += '<div class="text-sm text-gray-300">' + scenario.description + '</div>';
+                            if (scenario.trigger) {
+                                html += '<div class="text-xs text-cyan-200 mt-2">Trigger: ' + scenario.trigger + '</div>';
+                            }
+                            html += '</div>';
+                        }
+                        
+                        html += '</div></div>';
+                        
+                        // Recommendation
+                        html += '<div class="p-4 rounded-lg ' + (analysis.recommendation.action === 'BUY' ? 'bg-green-900 bg-opacity-50 border border-green-500' : analysis.recommendation.action === 'SELL' ? 'bg-red-900 bg-opacity-50 border border-red-500' : 'bg-yellow-900 bg-opacity-50 border border-yellow-500') + '">';
+                        html += '<h4 class="font-bold text-white mb-2"><i class="fas fa-lightbulb mr-2"></i>AI Recommendation</h4>';
+                        html += '<div class="text-lg font-semibold text-white mb-2">' + (analysis.recommendation.action === 'WAIT' ? '⏰ WAIT' : analysis.recommendation.action === 'BUY' ? '📈 BUY' : '📉 SELL') + '</div>';
+                        html += '<div class="text-gray-200">' + analysis.recommendation.reason + '</div>';
+                        if (analysis.recommendation.entry_range) {
+                            html += '<div class="mt-3 grid grid-cols-2 gap-2 text-sm">';
+                            html += '<div><span class="text-cyan-300">Entry Range:</span> <span class="text-white">$' + analysis.recommendation.entry_range + '</span></div>';
+                            if (analysis.recommendation.stop_loss) {
+                                html += '<div><span class="text-cyan-300">Stop Loss:</span> <span class="text-red-400">$' + analysis.recommendation.stop_loss + '</span></div>';
+                            }
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                        
+                        detailsDiv.innerHTML = html;
+                        statusDiv.innerHTML = '<div class="bg-green-900 bg-opacity-50 border border-green-500 p-4 rounded-lg text-white"><i class="fas fa-check-circle mr-2"></i>AI Analysis Complete! ' + (analysis.telegram_sent ? '📱 Sent to Telegram' : '') + '</div>';
+                    } else {
+                        detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
+                            '<i class="fas fa-exclamation-triangle mr-2"></i>' +
+                            '<strong>Error:</strong> ' + (res.data.error || 'Analysis failed') +
+                            '</div>';
+                        statusDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white"><i class="fas fa-times-circle mr-2"></i>Analysis failed</div>';
+                    }
+                } catch (error) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    statusDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white"><i class="fas fa-exclamation-triangle mr-2"></i><strong>Error:</strong> ' + error.message + '</div>';
                     detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
                         '<i class="fas fa-exclamation-triangle mr-2"></i>' +
                         '<strong>Error:</strong> ' + error.message +
