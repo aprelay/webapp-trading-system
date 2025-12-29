@@ -569,6 +569,10 @@ app.post('/enhanced', async (c) => {
         if (regimeBoost > 0) message += `Regime: +${regimeBoost.toFixed(0)}%\n`
         if (mlBoost > 0) message += `ML: +${mlBoost.toFixed(0)}%\n`
         if (popBoost > 0) message += `PoP: +${popBoost.toFixed(0)}%\n`
+        if (liquidityBoost !== 0 || liquidityPenalty !== 0) {
+          const liquidityAdjust = liquidityBoost + liquidityPenalty
+          message += `Liquidity: ${liquidityAdjust >= 0 ? '+' : ''}${liquidityAdjust.toFixed(0)}%\n`
+        }
         message += `*FINAL: ${enhancedDaySignal.enhanced_confidence.toFixed(0)}%*\n\n`
         
         // Market Regime
@@ -594,6 +598,34 @@ app.post('/enhanced', async (c) => {
           message += `TP2: ${profitProb.tp2_probability.toFixed(0)}%\n`
           message += `TP3: ${profitProb.tp3_probability.toFixed(0)}%\n`
           message += `Expected Value: ${profitProb.expected_value.toFixed(2)}R\n\n`
+        }
+        
+        // Liquidity Analysis
+        if (liquidityMetrics) {
+          const liqEmoji = liquidityMetrics.liquidity_score >= 80 ? '🟢' :
+                          liquidityMetrics.liquidity_score >= 70 ? '🟡' :
+                          liquidityMetrics.liquidity_score >= 50 ? '🟠' : '🔴'
+          
+          message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+          message += `🌊 *LIQUIDITY ANALYSIS*\n`
+          message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+          message += `${liqEmoji} *Score:* ${liquidityMetrics.liquidity_score}/100\n`
+          message += `🕐 *Session:* ${liquidityMetrics.session}\n`
+          message += `📊 *Time Zone:* ${liquidityMetrics.time_of_day_zone} LIQUIDITY\n`
+          message += `📈 *Volume:* ${liquidityMetrics.volume_trend} (${liquidityMetrics.volume_percentile}%)\n`
+          message += `💰 *Spread:* ~${liquidityMetrics.estimated_spread_pips} pips\n`
+          message += `📉 *Price Impact:* ~${liquidityMetrics.price_impact_bps} bps\n`
+          message += `✅ *Optimal:* ${liquidityMetrics.optimal_for_trading ? 'YES' : 'NO'}\n\n`
+          
+          if (liquidityMetrics.warnings.length > 0) {
+            message += `⚠️ *Liquidity Warnings:*\n`
+            for (const warning of liquidityMetrics.warnings) {
+              message += `${warning}\n`
+            }
+            message += `\n`
+          }
+          
+          message += `💡 ${liquidityMetrics.recommendation}\n\n`
         }
         
         // Risk Metrics
