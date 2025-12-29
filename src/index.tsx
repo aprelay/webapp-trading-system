@@ -838,7 +838,15 @@ app.get('/', (c) => {
 
             // AI Market Analysis
             async function runAIAnalysis(event) {
+                console.log('🤖 AI Analysis button clicked!', event);
+                
                 const btn = event.target.closest('button');
+                if (!btn) {
+                    console.error('Button not found!');
+                    alert('Button error - please refresh the page');
+                    return;
+                }
+                
                 const originalText = btn.innerHTML;
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing Market...';
@@ -847,13 +855,25 @@ app.get('/', (c) => {
                 const resultsDiv = document.getElementById('aiAnalysisResults');
                 const detailsDiv = document.getElementById('aiAnalysisDetails');
                 
+                if (!statusDiv || !resultsDiv || !detailsDiv) {
+                    console.error('Required divs not found!', { statusDiv, resultsDiv, detailsDiv });
+                    alert('Page error - please refresh');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    return;
+                }
+                
+                console.log('✅ All elements found, calling API...');
+                
                 resultsDiv.classList.remove('hidden');
                 resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 
                 try {
                     statusDiv.innerHTML = '<div class="bg-cyan-900 bg-opacity-50 border border-cyan-500 p-4 rounded-lg text-white"><i class="fas fa-brain fa-spin mr-2"></i>AI analyzing market conditions...</div>';
                     
+                    console.log('📡 Calling /api/ai/market-analysis...');
                     const res = await axios.post('/api/ai/market-analysis');
+                    console.log('✅ API response received:', res.data);
                     
                     btn.disabled = false;
                     btn.innerHTML = originalText;
@@ -949,6 +969,7 @@ app.get('/', (c) => {
                         statusDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white"><i class="fas fa-times-circle mr-2"></i>Analysis failed</div>';
                     }
                 } catch (error) {
+                    console.error('❌ AI Analysis error:', error);
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                     statusDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white"><i class="fas fa-exclamation-triangle mr-2"></i><strong>Error:</strong> ' + error.message + '</div>';
