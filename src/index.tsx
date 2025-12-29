@@ -1608,27 +1608,81 @@ app.post('/api/signals/generate-now', async (c) => {
   const { DB } = c.env;
   
   try {
-    // Get recent market data
-    const marketData = await DB.prepare(`
-      SELECT * FROM market_data 
-      WHERE timeframe = '1h'
-      ORDER BY timestamp DESC 
-      LIMIT 200
+    console.log('[GENERATE-NOW] Step 1: Fetching FRESH data from Twelve Data API')
+    
+    // ============================================================
+    // STEP 1: FETCH FRESH DATA (like Auto Scanner does)
+    // ============================================================
+    const settingsResult = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings
+      WHERE setting_key IN ('twelve_data_api_key')
     `).all();
     
-    if (!marketData.results || marketData.results.length < 50) {
-      return c.json({ success: false, error: 'Not enough data. Please fetch market data first.' });
+    let apiKey = '';
+    for (const row of settingsResult.results || []) {
+      if ((row as any).setting_key === 'twelve_data_api_key') {
+        apiKey = (row as any).setting_value;
+      }
     }
     
-    const candles = (marketData.results as any[]).reverse().map(row => ({
-      timestamp: row.timestamp,
-      open: row.open,
-      high: row.high,
-      low: row.low,
-      close: row.close,
-      volume: row.volume
-    }));
+    let candles: Candle[];
+    let usedFreshData = false;
     
+    if (apiKey && apiKey !== 'your_api_key_here') {
+      // Fetch fresh data from Twelve Data API
+      console.log('[GENERATE-NOW] Fetching FRESH data from Twelve Data API')
+      try {
+        const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1h&outputsize=100&apikey=${apiKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.values && data.values.length >= 50) {
+          // Convert API data to candles
+          candles = data.values.reverse().map((item: any) => ({
+            timestamp: item.datetime,
+            open: parseFloat(item.open),
+            high: parseFloat(item.high),
+            low: parseFloat(item.low),
+            close: parseFloat(item.close),
+            volume: parseFloat(item.volume) || 0
+          }));
+          usedFreshData = true;
+          console.log('[GENERATE-NOW] ✅ Fresh data fetched! Price:', candles[candles.length - 1].close)
+        } else {
+          console.log('[GENERATE-NOW] ⚠️ API returned insufficient data, falling back to database')
+        }
+      } catch (apiError: any) {
+        console.error('[GENERATE-NOW] API fetch failed:', apiError.message)
+      }
+    }
+    
+    // Fallback to database if no fresh data
+    if (!candles!) {
+      console.log('[GENERATE-NOW] Using database data (may be stale)')
+      const marketData = await DB.prepare(`
+        SELECT * FROM market_data 
+        WHERE timeframe = '1h'
+        ORDER BY timestamp DESC 
+        LIMIT 200
+      `).all();
+      
+      if (!marketData.results || marketData.results.length < 50) {
+        return c.json({ success: false, error: 'Not enough data. Please configure Twelve Data API key or fetch market data first.' });
+      }
+      
+      candles = (marketData.results as any[]).reverse().map(row => ({
+        timestamp: row.timestamp,
+        open: row.open,
+        high: row.high,
+        low: row.low,
+        close: row.close,
+        volume: row.volume
+      }));
+    }
+    
+    // ============================================================
+    // STEP 2: CALCULATE INDICATORS AND GENERATE SIGNALS
+    // ============================================================
     const indicators = calculateIndicators(candles);
     if (!indicators) {
       return c.json({ success: false, error: 'Failed to calculate indicators' });
@@ -1637,6 +1691,8 @@ app.post('/api/signals/generate-now', async (c) => {
     const currentPrice = candles[candles.length - 1].close;
     const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
     const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
+    
+    console.log('[GENERATE-NOW] Signals generated - Day:', dayTradeSignal.signal_type, 'Swing:', swingTradeSignal.signal_type)
     
     // Get Telegram settings
     const settings = await DB.prepare(`
