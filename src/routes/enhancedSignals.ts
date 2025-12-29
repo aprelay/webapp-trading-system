@@ -21,7 +21,7 @@ import { calculateDrawdownStatus, calculatePortfolioHeat, calculateVaR } from '.
 import { detectChartPatterns, type PatternDetectionResult } from '../lib/patternDetection'
 import { detectMarketRegime, type RegimeAnalysis } from '../lib/regimeDetection'
 import { generateMLPredictions, type MLPredictionResult } from '../lib/mlPrediction'
-import { calculateProbabilityOfProfit, type ProfitProbability } from '../lib/probabilityOfProfit'
+import { calculateProbabilityOfProfit, type ProbabilityResult } from '../lib/probabilityOfProfit'
 import { sendTelegramMessage } from '../lib/telegram'
 import { checkTradingSafety, calculateCalendarImpact, formatEvent } from '../lib/economicCalendar'
 
@@ -94,9 +94,29 @@ app.post('/enhanced', async (c) => {
       }, 400)
     }
     
+    // ============================================================
+    // DATA FRESHNESS CHECK (NEW!)
+    // ============================================================
+    const dataFreshnessWarnings: string[] = []
+    
+    // Check 1h indicator freshness (most critical)
+    if (mtfIndicators['1h'] && mtfIndicators['1h'].timestamp) {
+      const h1Timestamp = new Date(mtfIndicators['1h'].timestamp).getTime()
+      const now = Date.now()
+      const ageMinutes = (now - h1Timestamp) / (1000 * 60)
+      
+      if (ageMinutes > 60) {
+        dataFreshnessWarnings.push(`⚠️ WARNING: 1h data is ${ageMinutes.toFixed(0)} minutes old (>60 min)`)
+      } else if (ageMinutes > 30) {
+        dataFreshnessWarnings.push(`⚠️ CAUTION: 1h data is ${ageMinutes.toFixed(0)} minutes old (>30 min)`)
+      }
+      
+      console.log(`[ENHANCED] Data freshness: 1h indicators are ${ageMinutes.toFixed(1)} minutes old`)
+    }
+    
     // Get current price from latest 1h candle
     const marketData = await DB.prepare(`
-      SELECT close FROM market_data 
+      SELECT close, timestamp FROM market_data 
       WHERE timeframe = '1h'
       ORDER BY timestamp DESC 
       LIMIT 1
@@ -106,6 +126,18 @@ app.post('/enhanced', async (c) => {
     
     if (!currentPrice) {
       return c.json({ success: false, error: 'Current price not available' }, 400)
+    }
+    
+    // Check price data freshness
+    if ((marketData as any)?.timestamp) {
+      const priceTimestamp = new Date((marketData as any).timestamp).getTime()
+      const priceAgeMinutes = (Date.now() - priceTimestamp) / (1000 * 60)
+      
+      if (priceAgeMinutes > 60) {
+        dataFreshnessWarnings.push(`⚠️ WARNING: Price data is ${priceAgeMinutes.toFixed(0)} minutes old`)
+      }
+      
+      console.log(`[ENHANCED] Price freshness: ${priceAgeMinutes.toFixed(1)} minutes old`)
     }
     
     // ============================================================
@@ -272,21 +304,17 @@ app.post('/enhanced', async (c) => {
     
     let popBoost = 0
     let popReason = ''
-    let profitProb: ProfitProbability | null = null
+    let profitProb: ProbabilityResult | null = null
     
     if (mtfCandles['1h'] && Array.isArray(mtfCandles['1h']) && mtfCandles['1h'].length >= 50) {
       try {
         const h1IndicatorsForPoP = calculateIndicators(mtfCandles['1h'])
         if (h1IndicatorsForPoP) {
+          // Call PoP with correct parameters: (signal, indicators, candles)
           profitProb = calculateProbabilityOfProfit(
-            mtfCandles['1h'],
-            h1IndicatorsForPoP,
-            baseDaySignal.price,
-            baseDaySignal.stop_loss,
-            baseDaySignal.take_profit_1,
-            baseDaySignal.take_profit_2,
-            baseDaySignal.take_profit_3,
-            baseDaySignal.signal_type === 'BUY'
+            baseDaySignal,  // TradeSignal with price, stop_loss, take_profit_1/2/3, signal_type
+            h1IndicatorsForPoP,  // TechnicalIndicators
+            mtfCandles['1h']  // Candle[]
           )
           
           // Boost based on TP1 probability (most conservative)

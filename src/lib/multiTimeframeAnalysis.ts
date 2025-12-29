@@ -234,10 +234,26 @@ export function validateMultiTimeframeSignal(
 
   const { trends, type, confidenceBoost } = alignment
 
-  // Find higher timeframe trends
+  // Find all timeframe trends
   const dailyTrend = trends.find(t => t.timeframe === 'daily')
   const h4Trend = trends.find(t => t.timeframe === '4h')
   const h1Trend = trends.find(t => t.timeframe === '1h')
+  const m15Trend = trends.find(t => t.timeframe === '15m')
+  const m5Trend = trends.find(t => t.timeframe === '5m')
+
+  // **NEW LOGIC: Allow lower timeframes to override when they ALL strongly agree**
+  // If 5m, 15m, and 1h ALL agree with signal AND any has strength > 70
+  const lowerTimeframesAlign = 
+    (signalType === 'BUY' && 
+     m5Trend?.trend === 'BULLISH' && 
+     m15Trend?.trend === 'BULLISH' && 
+     h1Trend?.trend === 'BULLISH' &&
+     (m5Trend.strength > 70 || m15Trend.strength > 70 || h1Trend.strength > 70)) ||
+    (signalType === 'SELL' && 
+     m5Trend?.trend === 'BEARISH' && 
+     m15Trend?.trend === 'BEARISH' && 
+     h1Trend?.trend === 'BEARISH' &&
+     (m5Trend.strength > 70 || m15Trend.strength > 70 || h1Trend.strength > 70))
 
   // For BUY signals
   if (signalType === 'BUY') {
@@ -281,6 +297,16 @@ export function validateMultiTimeframeSignal(
         isValid: true,
         confidence: 75 + confidenceBoost,
         reason: `Strong multi-timeframe BULLISH alignment (${alignment.score}/${trends.length})`
+      }
+    }
+
+    // **NEW: Allow lower timeframe override for MIXED alignment**
+    // If lower timeframes (5m, 15m, 1h) ALL agree strongly, allow trade
+    if (type === 'MIXED' && lowerTimeframesAlign) {
+      return {
+        isValid: true,
+        confidence: 70 + confidenceBoost,
+        reason: `Lower timeframes (5m/15m/1h) strongly aligned BUY - immediate opportunity (${alignment.score}/${trends.length})`
       }
     }
 
@@ -343,6 +369,16 @@ export function validateMultiTimeframeSignal(
         isValid: true,
         confidence: 75 + confidenceBoost,
         reason: `Strong multi-timeframe BEARISH alignment (${alignment.score}/${trends.length})`
+      }
+    }
+
+    // **NEW: Allow lower timeframe override for MIXED alignment**
+    // If lower timeframes (5m, 15m, 1h) ALL agree strongly, allow trade
+    if (type === 'MIXED' && lowerTimeframesAlign) {
+      return {
+        isValid: true,
+        confidence: 70 + confidenceBoost,
+        reason: `Lower timeframes (5m/15m/1h) strongly aligned SELL - immediate opportunity (${alignment.score}/${trends.length})`
       }
     }
 
