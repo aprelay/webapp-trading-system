@@ -34,6 +34,13 @@ export async function sendTelegramMessage(config: TelegramConfig, message: strin
   }
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 export function formatTradeSignal(signal: any): string {
   const emoji = signal.signal_type === 'BUY' ? '🟢' : signal.signal_type === 'SELL' ? '🔴' : '⚪';
   const style = signal.trading_style === 'day_trade' ? '📊 Day Trade' : '📈 Swing Trade';
@@ -53,7 +60,7 @@ ${style}
 🛡️ <b>Stop Loss:</b> $${signal.stop_loss.toFixed(2)}
 
 📝 <b>Reason:</b>
-${signal.reason}
+${escapeHtml(signal.reason)}
 
 ⏰ ${new Date().toLocaleString()}
   `.trim();
