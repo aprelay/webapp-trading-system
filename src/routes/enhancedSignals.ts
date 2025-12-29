@@ -478,6 +478,15 @@ app.post('/enhanced', async (c) => {
         
         let message = `🏦 *HEDGE FUND GRADE SIGNAL*\n⏰ ${timestamp} UTC\n\n`
         
+        // DATA FRESHNESS WARNING (CRITICAL!)
+        if (dataFreshnessWarnings.length > 0) {
+          message += `⚠️ *DATA FRESHNESS WARNING*\n`
+          for (const warning of dataFreshnessWarnings) {
+            message += `${warning}\n`
+          }
+          message += `*→ Click "Generate Signal NOW" for fresh data*\n\n`
+        }
+        
         // Economic Calendar Warning (PRIORITY!)
         if (safety.riskLevel === 'danger') {
           message += `🚨 *ECONOMIC CALENDAR ALERT*\n`
