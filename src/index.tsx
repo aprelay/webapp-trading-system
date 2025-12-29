@@ -217,7 +217,7 @@ app.get('/', (c) => {
                         <button onclick="runBacktest()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-history mr-2"></i>📊 Run Backtest
                         </button>
-                        <button onclick="runAIAnalysis(event)" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-lg">
+                        <button onclick="runAIAnalysis(event)" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-lg" id="aiAnalysisBtn">
                             <i class="fas fa-brain mr-2"></i>🤖 AI Market Analysis
                         </button>
                     </div>
@@ -980,6 +980,9 @@ app.get('/', (c) => {
                 }
             }
 
+            // Make functions globally accessible for onclick handlers
+            window.runAIAnalysis = runAIAnalysis;
+            
             // Initialize on page load
             init();
         </script>
