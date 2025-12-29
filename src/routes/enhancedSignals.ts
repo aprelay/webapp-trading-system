@@ -1,7 +1,7 @@
 /**
  * Enhanced Signals Endpoint (Hedge Fund Grade)
  * 
- * This endpoint integrates 9 hedge-fund features on top of proven Phase 3 MTF logic:
+ * This endpoint integrates 10 hedge-fund features on top of proven Phase 3 MTF logic:
  * 1. VaR (Value at Risk)
  * 2. Maximum Drawdown Limits
  * 3. Portfolio Heat Monitoring
@@ -11,6 +11,7 @@
  * 7. Probability of Profit
  * 8. Sharpe/Sortino/Calmar Ratios
  * 9. Multi-Timeframe Analysis (baseline: ~90% accuracy)
+ * 10. Liquidity Analysis (NEW)
  */
 
 import { Hono } from 'hono'
@@ -22,6 +23,7 @@ import { detectChartPatterns, type PatternDetectionResult } from '../lib/pattern
 import { detectMarketRegime, type RegimeAnalysis } from '../lib/regimeDetection'
 import { generateMLPredictions, type MLPredictionResult } from '../lib/mlPrediction'
 import { calculateProbabilityOfProfit, type ProbabilityResult } from '../lib/probabilityOfProfit'
+import { calculateLiquidityScore, formatLiquidityAnalysis, type LiquidityMetrics } from '../lib/liquidityAnalysis'
 import { sendTelegramMessage } from '../lib/telegram'
 import { checkTradingSafety, calculateCalendarImpact, formatEvent } from '../lib/economicCalendar'
 
@@ -332,6 +334,35 @@ app.post('/enhanced', async (c) => {
     }
     
     // ============================================================
+    // STEP 6.5: LIQUIDITY ANALYSIS (Hedge Fund Feature #10)
+    // ============================================================
+    
+    let liquidityMetrics: LiquidityMetrics | null = null
+    let liquidityBoost = 0
+    let liquidityPenalty = 0
+    
+    if (mtfCandles['1h'] && Array.isArray(mtfCandles['1h']) && mtfCandles['1h'].length >= 20) {
+      try {
+        liquidityMetrics = calculateLiquidityScore(mtfCandles['1h'])
+        
+        // Adjust confidence based on liquidity
+        if (liquidityMetrics.liquidity_score >= 80) {
+          liquidityBoost = 5  // Excellent liquidity
+        } else if (liquidityMetrics.liquidity_score >= 70) {
+          liquidityBoost = 0  // Good liquidity (no change)
+        } else if (liquidityMetrics.liquidity_score >= 50) {
+          liquidityPenalty = -5  // Moderate liquidity (reduce confidence)
+        } else {
+          liquidityPenalty = -10  // Poor liquidity (significant penalty)
+        }
+        
+        console.log(`[LIQUIDITY] Score: ${liquidityMetrics.liquidity_score}/100, Session: ${liquidityMetrics.session}, Adjust: ${liquidityBoost + liquidityPenalty}%`)
+      } catch (e: any) {
+        console.error('[ENHANCED] Liquidity Analysis error:', e.message)
+      }
+    }
+    
+    // ============================================================
     // STEP 7: RISK METRICS (VaR, Drawdown, Portfolio Heat)
     // ============================================================
     
@@ -392,7 +423,7 @@ app.post('/enhanced', async (c) => {
     // STEP 8: APPLY ALL BOOSTS
     // ============================================================
     
-    const totalBoost = patternBoost + regimeBoost + mlBoost + popBoost
+    const totalBoost = patternBoost + regimeBoost + mlBoost + popBoost + liquidityBoost + liquidityPenalty
     
     const enhancedDaySignal = {
       ...baseDaySignal,
@@ -635,6 +666,21 @@ app.post('/enhanced', async (c) => {
         tp2: profitProb.tp2_probability,
         tp3: profitProb.tp3_probability,
         expected_value: profitProb.expected_value
+      } : null,
+      
+      // Liquidity metrics
+      liquidity: liquidityMetrics ? {
+        score: liquidityMetrics.liquidity_score,
+        session: liquidityMetrics.session,
+        time_zone: liquidityMetrics.time_of_day_zone,
+        volume_trend: liquidityMetrics.volume_trend,
+        volume_percentile: liquidityMetrics.volume_percentile,
+        estimated_spread_pips: liquidityMetrics.estimated_spread_pips,
+        price_impact_bps: liquidityMetrics.price_impact_bps,
+        market_depth_score: liquidityMetrics.market_depth_score,
+        optimal_for_trading: liquidityMetrics.optimal_for_trading,
+        warnings: liquidityMetrics.warnings,
+        recommendation: liquidityMetrics.recommendation
       } : null,
       
       // Risk metrics
