@@ -851,12 +851,11 @@ app.get('/', (c) => {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing Market...';
                 
-                const statusDiv = document.getElementById('status');
                 const resultsDiv = document.getElementById('aiAnalysisResults');
                 const detailsDiv = document.getElementById('aiAnalysisDetails');
                 
-                if (!statusDiv || !resultsDiv || !detailsDiv) {
-                    console.error('Required divs not found!', { statusDiv, resultsDiv, detailsDiv });
+                if (!resultsDiv || !detailsDiv) {
+                    console.error('Required divs not found!', { resultsDiv, detailsDiv });
                     alert('Page error - please refresh');
                     btn.disabled = false;
                     btn.innerHTML = originalText;
@@ -869,7 +868,7 @@ app.get('/', (c) => {
                 resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 
                 try {
-                    statusDiv.innerHTML = '<div class="bg-cyan-900 bg-opacity-50 border border-cyan-500 p-4 rounded-lg text-white"><i class="fas fa-brain fa-spin mr-2"></i>AI analyzing market conditions...</div>';
+                    detailsDiv.innerHTML = '<div class="bg-cyan-900 bg-opacity-50 border border-cyan-500 p-4 rounded-lg text-white"><i class="fas fa-brain fa-spin mr-2"></i>AI analyzing market conditions...</div>';
                     
                     console.log('📡 Calling /api/ai/market-analysis...');
                     const res = await axios.post('/api/ai/market-analysis');
@@ -960,19 +959,16 @@ app.get('/', (c) => {
                         html += '</div>';
                         
                         detailsDiv.innerHTML = html;
-                        statusDiv.innerHTML = '<div class="bg-green-900 bg-opacity-50 border border-green-500 p-4 rounded-lg text-white"><i class="fas fa-check-circle mr-2"></i>AI Analysis Complete! ' + (analysis.telegram_sent ? '📱 Sent to Telegram' : '') + '</div>';
                     } else {
                         detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
                             '<i class="fas fa-exclamation-triangle mr-2"></i>' +
                             '<strong>Error:</strong> ' + (res.data.error || 'Analysis failed') +
                             '</div>';
-                        statusDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white"><i class="fas fa-times-circle mr-2"></i>Analysis failed</div>';
                     }
                 } catch (error) {
                     console.error('❌ AI Analysis error:', error);
                     btn.disabled = false;
                     btn.innerHTML = originalText;
-                    statusDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white"><i class="fas fa-exclamation-triangle mr-2"></i><strong>Error:</strong> ' + error.message + '</div>';
                     detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
                         '<i class="fas fa-exclamation-triangle mr-2"></i>' +
                         '<strong>Error:</strong> ' + error.message +
