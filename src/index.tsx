@@ -494,7 +494,7 @@ app.get('/', (c) => {
             // Send Test A-Grade Alert
             async function sendTestAlert() {
                 try {
-                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\n\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\n\nContinue?')) {
+                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\\n\\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\\n\\nContinue?')) {
                         return;
                     }
                     
@@ -508,9 +508,9 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
                     
                     if (res.data.success) {
-                        alert('✅ Test A-grade alert sent!\n\nCheck your Telegram to see what real alerts will look like.\n\n📊 Grade: A (87%)\n🟢 Signal: BUY\n💰 Entry: $4386.50\n🛡️ Stop: $4401.50\n🎯 TP1: $4356.20\n\nThis is a SAMPLE alert for testing purposes.');
+                        alert('✅ Test A-grade alert sent!\\n\\nCheck your Telegram to see what real alerts will look like.\\n\\n📊 Grade: A (87%)\\n🟢 Signal: BUY\\n💰 Entry: $4386.50\\n🛡️ Stop: $4401.50\\n🎯 TP1: $4356.20\\n\\nThis is a SAMPLE alert for testing purposes.');
                     } else {
-                        alert('❌ Failed to send test alert.\n\n' + res.data.error + '\n\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                        alert('❌ Failed to send test alert.\\n\\n' + res.data.error + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
@@ -555,38 +555,42 @@ app.get('/', (c) => {
                         
                         // Left column: Grade and Signal
                         html += '<div>';
-                        html += \`<div class="mb-3">
-                                    <p class="text-xs text-green-300 mb-1">GRADE</p>
-                                    <p class="text-3xl font-bold text-white">\${gradeEmoji} \${scan.grade}</p>
-                                    <p class="text-sm text-green-300">\${scan.score}/100 points</p>
-                                  </div>\`;
-                        html += \`<div class="mb-3">
-                                    <p class="text-xs text-green-300 mb-1">SIGNAL</p>
-                                    <p class="text-2xl font-bold \${signalColor}">\${scan.signal}</p>
-                                    <p class="text-sm text-green-300">Confidence: \${scan.confidence}%</p>
-                                  </div>\`;
-                        html += \`<div>
-                                    <p class="text-xs text-green-300 mb-1">LAYERS PASSED</p>
-                                    <p class="text-xl font-bold text-white">\${scan.layers_passed}/7</p>
-                                  </div>\`;
+                        html += '<div class="mb-3">';
+                        html += '<p class="text-xs text-green-300 mb-1">GRADE</p>';
+                        html += '<p class="text-3xl font-bold text-white">' + gradeEmoji + ' ' + scan.grade + '</p>';
+                        html += '<p class="text-sm text-green-300">' + scan.score + '/100 points</p>';
+                        html += '</div>';
+                        
+                        html += '<div class="mb-3">';
+                        html += '<p class="text-xs text-green-300 mb-1">SIGNAL</p>';
+                        html += '<p class="text-2xl font-bold ' + signalColor + '">' + scan.signal + '</p>';
+                        html += '<p class="text-sm text-green-300">Confidence: ' + scan.confidence + '%</p>';
+                        html += '</div>';
+                        
+                        html += '<div>';
+                        html += '<p class="text-xs text-green-300 mb-1">LAYERS PASSED</p>';
+                        html += '<p class="text-xl font-bold text-white">' + scan.layers_passed + '/7</p>';
+                        html += '</div>';
                         html += '</div>';
                         
                         // Right column: Trade Setup
                         html += '<div>';
-                        html += \`<div class="mb-3">
-                                    <p class="text-xs text-green-300 mb-1">ENTRY</p>
-                                    <p class="text-xl font-bold text-white">$\${scan.entry.toFixed(2)}</p>
-                                  </div>\`;
-                        html += \`<div class="mb-3">
-                                    <p class="text-xs text-green-300 mb-1">STOP LOSS</p>
-                                    <p class="text-lg font-bold text-red-400">$\${scan.stop_loss.toFixed(2)}</p>
-                                  </div>\`;
-                        html += \`<div>
-                                    <p class="text-xs text-green-300 mb-1">TARGETS</p>
-                                    <p class="text-sm text-white">TP1: $\${scan.targets[0].toFixed(2)}</p>
-                                    <p class="text-sm text-white">TP2: $\${scan.targets[1].toFixed(2)}</p>
-                                    <p class="text-sm text-white">TP3: $\${scan.targets[2].toFixed(2)}</p>
-                                  </div>\`;
+                        html += '<div class="mb-3">';
+                        html += '<p class="text-xs text-green-300 mb-1">ENTRY</p>';
+                        html += '<p class="text-xl font-bold text-white">$' + scan.entry.toFixed(2) + '</p>';
+                        html += '</div>';
+                        
+                        html += '<div class="mb-3">';
+                        html += '<p class="text-xs text-green-300 mb-1">STOP LOSS</p>';
+                        html += '<p class="text-lg font-bold text-red-400">$' + scan.stop_loss.toFixed(2) + '</p>';
+                        html += '</div>';
+                        
+                        html += '<div>';
+                        html += '<p class="text-xs text-green-300 mb-1">TARGETS</p>';
+                        html += '<p class="text-sm text-white">TP1: $' + scan.targets[0].toFixed(2) + '</p>';
+                        html += '<p class="text-sm text-white">TP2: $' + scan.targets[1].toFixed(2) + '</p>';
+                        html += '<p class="text-sm text-white">TP3: $' + scan.targets[2].toFixed(2) + '</p>';
+                        html += '</div>';
                         html += '</div>';
                         
                         html += '</div>';
@@ -621,11 +625,11 @@ app.get('/', (c) => {
                         resultsDiv.classList.remove('hidden');
                         
                         // Update status
-                        statusDiv.innerHTML = \`✅ Scan complete at \${new Date(res.data.timestamp).toLocaleTimeString()} - Grade: \${gradeEmoji} \${scan.grade}\`;
+                        statusDiv.innerHTML = '✅ Scan complete at ' + new Date(res.data.timestamp).toLocaleTimeString() + ' - Grade: ' + gradeEmoji + ' ' + scan.grade;
                         
                         // Show alert for A-grade
                         if (scan.grade === 'A' || scan.grade === 'A+') {
-                            alert(\`🎯 \${scan.grade}-GRADE SETUP DETECTED!\\n\\nSignal: \${scan.signal}\\nEntry: $\${scan.entry.toFixed(2)}\\nStop: $\${scan.stop_loss.toFixed(2)}\\nTP1: $\${scan.targets[0].toFixed(2)}\\n\\nCheck dashboard for full details!\`);
+                            alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\\n\\nSignal: ' + scan.signal + '\\nEntry: $' + scan.entry.toFixed(2) + '\\nStop: $' + scan.stop_loss.toFixed(2) + '\\nTP1: $' + scan.targets[0].toFixed(2) + '\\n\\nCheck dashboard for full details!');
                         }
                     } else {
                         alert('❌ Scanner error: ' + res.data.error);
