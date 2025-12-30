@@ -27,6 +27,10 @@ import {
   isPressureAligned,
   getVolumePressureMessage 
 } from '../lib/volumeAnalysis'
+import {
+  detectCandlestickPatterns,
+  arePatternsAligned
+} from '../lib/candlePatterns'
 
 type Bindings = {
   DB: D1Database
@@ -653,6 +657,24 @@ async function analyze7Layers(
   }
   
   layers.push(getVolumePressureMessage(pressure, signal))
+  
+  // ============================================================
+  // PHASE 2 NEW LAYERS (12-15)
+  // ============================================================
+  
+  // Layer 12: Candlestick Patterns
+  const patterns = detectCandlestickPatterns(candles5m.slice(-3))
+  const { aligned: patternAligned, strongestPattern } = arePatternsAligned(patterns, signal)
+  
+  if (patternAligned && strongestPattern) {
+    score += 12
+    layersPassed++
+    layers.push(`✅ Layer 12: ${strongestPattern.name} (${strongestPattern.strength}/100)`)
+  } else if (patterns.length > 0 && patterns[0].type === 'INDECISION') {
+    layers.push(`⚠️ Layer 12: ${patterns[0].name} (indecision, wait)`)
+  } else {
+    layers.push(`❌ Layer 12: No clear candlestick pattern`)
+  }
   
   // Calculate grade
   let grade = 'C'
