@@ -45,6 +45,15 @@ import {
   isMTFAligned,
   formatMTFMessage
 } from '../lib/multiTimeframeConfirmation'
+import {
+  getOrFetchDXYData,
+  analyzeDXYCorrelation,
+  isDXYAligned
+} from '../lib/dxyCorrelation'
+import {
+  getOrFetchCrossAssetData,
+  analyzeCrossAssets
+} from '../lib/crossAssetAnalysis'
 
 type Bindings = {
   DB: D1Database
@@ -741,6 +750,49 @@ async function analyze7Layers(
   }
   
   layers.push(formatMTFMessage(mtf, mtfAligned))
+  
+  // ============================================================
+  // PHASE 3 NEW LAYERS (16-20)
+  // ============================================================
+  
+  // Layer 18: DXY Correlation
+  // Get Twelve Data API key from settings
+  const apiKeyResult = await DB.prepare(`
+    SELECT setting_value FROM user_settings
+    WHERE setting_key = 'twelve_data_api_key'
+  `).first()
+  
+  const apiKey = (apiKeyResult as any)?.setting_value || '70140f57bea54c5e90768de696487d8f'
+  
+  // Fetch or get cached DXY data
+  const dxyCandles = await getOrFetchDXYData(DB, apiKey, 15)
+  const dxyAnalysis = analyzeDXYCorrelation(dxyCandles, signal)
+  const dxyAligned = isDXYAligned(dxyAnalysis, signal)
+  
+  if (dxyAligned && dxyAnalysis.strength >= 60) {
+    score += 5
+    layersPassed++
+    layers.push(`✅ Layer 18: ${dxyAnalysis.description}`)
+  } else if (dxyAnalysis.goldSignalSupport !== 'NEUTRAL') {
+    layers.push(`⚠️ Layer 18: ${dxyAnalysis.description} (not aligned)`)
+  } else {
+    layers.push(`ℹ️ Layer 18: DXY flat (neutral for Gold)`)
+  }
+  
+  // Layer 19: Cross-Asset Confirmation (Silver & Oil)
+  const silverCandles = await getOrFetchCrossAssetData(DB, apiKey, 'SILVER', 15)
+  const oilCandles = await getOrFetchCrossAssetData(DB, apiKey, 'OIL', 15)
+  
+  const crossAsset = analyzeCrossAssets(silverCandles, oilCandles, signal)
+  
+  if (crossAsset.aligned && crossAsset.alignmentCount >= 1) {
+    const points = crossAsset.alignmentCount === 2 ? 5 : 3
+    score += points
+    layersPassed++
+    layers.push(`✅ Layer 19: ${crossAsset.description} (${crossAsset.strength}/100)`)
+  } else {
+    layers.push(`❌ Layer 19: ${crossAsset.description}`)
+  }
   
   // Calculate grade
   let grade = 'C'
