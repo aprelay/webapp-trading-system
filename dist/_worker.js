@@ -854,11 +854,11 @@ Example: /close_trade 1 4580 TP1
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
                     
-                    const res = await axios.post('/api/signals/generate-now');
+                    const res = await axios.post('/api/signals/enhanced/enhanced');
                     
                     if (res.data.success) {
-                        const day = res.data.signals.day_trade;
-                        const swing = res.data.signals.swing_trade;
+                        const day = res.data.day_trade;
+                        const swing = res.data.swing_trade;
                         
                         let message = '✅ Signals Generated!\\n\\n';
                         message += '📊 DAY TRADE:\\n';
