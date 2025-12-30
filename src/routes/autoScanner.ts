@@ -15,6 +15,18 @@ import { calculateIndicators, generateSignal, type Candle } from '../lib/technic
 import { sendTelegramMessage } from '../lib/telegram'
 import { calculateLiquidityScore, type LiquidityMetrics } from '../lib/liquidityAnalysis'
 import { checkTradingSafety, formatEvent } from '../lib/economicCalendar'
+import { 
+  checkIntradayTimingBoost, 
+  getDayOfWeekBias, 
+  checkATRExpansion,
+  type IntradayBoost,
+  type DayBias 
+} from '../lib/timeAnalysis'
+import { 
+  calculateVolumePressure, 
+  isPressureAligned,
+  getVolumePressureMessage 
+} from '../lib/volumeAnalysis'
 
 type Bindings = {
   DB: D1Database
@@ -579,20 +591,81 @@ async function analyze7Layers(
     layers.push(`❌ Layer 7: ADX ${i5m.adx.toFixed(1)} (weak trend)`)
   }
   
+  // Determine signal early for Phase 1 layers
+  let signal: 'BUY' | 'SELL' | 'HOLD' = 'HOLD'
+  if ((isBullish || isBearish) && layersPassed >= 5) {
+    signal = isBullish ? 'BUY' : 'SELL'
+  }
+  
+  // ============================================================
+  // PHASE 1 NEW LAYERS (8-11)
+  // ============================================================
+  
+  // Layer 8: Intraday Time Patterns (London/NY Opens)
+  const now = new Date()
+  const timingBoost = checkIntradayTimingBoost(now)
+  
+  if (timingBoost.hasBoost) {
+    score += 8
+    layersPassed++
+    layers.push(`✅ Layer 8: ${timingBoost.reason} (+${timingBoost.boost}% win)`)
+  } else {
+    layers.push(`ℹ️ Layer 8: ${timingBoost.reason}`)
+  }
+  
+  // Layer 9: Day-of-Week Bias (Tue-Thu boost)
+  const dayBias = getDayOfWeekBias(now)
+  
+  if (dayBias.hasBoost) {
+    score += 5
+    layersPassed++
+    layers.push(`✅ Layer 9: ${dayBias.reason} (+${dayBias.boost}% win)`)
+  } else {
+    layers.push(`ℹ️ Layer 9: ${dayBias.reason}`)
+  }
+  
+  // Layer 10: ATR Expansion Filter
+  const atr = parseNum(indicators5m.atr_14, currentPrice * 0.01)
+  const avgATR = candles5m.slice(-20).reduce((sum, c) => {
+    const candleRange = c.high - c.low
+    return sum + candleRange
+  }, 0) / 20
+  
+  const isExpanding = checkATRExpansion(atr, avgATR)
+  
+  if (isExpanding) {
+    score += 7
+    layersPassed++
+    const expansion = ((atr / avgATR - 1) * 100).toFixed(1)
+    layers.push(`✅ Layer 10: ATR expanding ${expansion}% (high volatility)`)
+  } else {
+    const compression = ((1 - atr / avgATR) * 100).toFixed(1)
+    layers.push(`❌ Layer 10: ATR compressed ${compression}% (skip low volatility)`)
+  }
+  
+  // Layer 11: Tick Volume Pressure
+  const pressure = calculateVolumePressure(candles5m.slice(-20))
+  const pressureAligned = isPressureAligned(pressure, signal)
+  
+  if (pressureAligned && pressure.strength >= 60) {
+    score += 10
+    layersPassed++
+  }
+  
+  layers.push(getVolumePressureMessage(pressure, signal))
+  
   // Calculate grade
   let grade = 'C'
   if (score >= 90) grade = 'A+'
   else if (score >= 80) grade = 'A'
   else if (score >= 70) grade = 'B'
   
-  // Determine signal
-  let signal = 'HOLD'
-  if ((isBullish || isBearish) && layersPassed >= 5) {
+  // Re-evaluate signal with all layers (including Phase 1)
+  if ((isBullish || isBearish) && layersPassed >= 7) {
     signal = isBullish ? 'BUY' : 'SELL'
   }
   
-  // Calculate stops and targets
-  const atr = parseNum(indicators5m.atr_14, currentPrice * 0.01)
+  // Calculate stops and targets (atr already calculated in Layer 10)
   const stopDistance = Math.max(atr * 1.5, currentPrice * 0.003) // Min 0.3%
   
   const stopLoss = signal === 'BUY' 
