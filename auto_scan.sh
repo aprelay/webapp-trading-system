@@ -1,40 +1,17 @@
 #!/bin/bash
-# Gold/USD Trading System - Automatic Market Scanner
-# This script automatically generates trading signals and sends them to Telegram
+
+# 5-Minute Assassin Auto-Scanner
+# Runs every 5 minutes automatically
 
 while true; do
-    echo "=========================================="
-    echo "$(date): Scanning market..."
-    echo "=========================================="
-    
-    # Fetch latest market data
-    echo "Fetching market data..."
-    curl -s -X POST http://localhost:3000/api/market/fetch
-    echo ""
-    
-    # Wait 2 seconds
-    sleep 2
-    
-    # Generate signals and send to Telegram
-    echo ""
-    echo "Generating trading signals..."
-    response=$(curl -s -X POST http://localhost:3000/api/signals/generate-now)
-    echo "$response" | python3 -m json.tool
-    
-    # Check if signals were sent
-    if echo "$response" | grep -q '"telegram_sent": true'; then
-        echo ""
-        echo "✅ Signals sent to Telegram successfully!"
-    else
-        echo ""
-        echo "⚠️  No Telegram alerts sent (check configuration)"
-    fi
-    
-    echo ""
-    echo "Next scan in 15 minutes..."
-    echo "=========================================="
-    echo ""
-    
-    # Wait 15 minutes (900 seconds)
-    sleep 900
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Running 5m scan..."
+  
+  # Call the scanner endpoint
+  curl -s -X POST http://localhost:3000/api/scanner/scan | jq '.scan_result // .message'
+  
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Scan complete. Waiting 5 minutes..."
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  
+  # Wait 5 minutes (300 seconds)
+  sleep 300
 done

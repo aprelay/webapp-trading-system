@@ -4,6 +4,7 @@ import { calculateIndicators, generateSignal, type Candle } from './lib/technica
 import { sendTelegramMessage, formatTradeSignal, formatMarketUpdate } from './lib/telegram'
 import enhancedSignalsRouter from './routes/enhancedSignals'
 import simpleSignalsRouter from './routes/simpleSignals'
+import autoScannerRouter from './routes/autoScanner'
 import tradesRouter from './routes/trades'
 import calendarRouter from './routes/calendar'
 import backtestRouter from './routes/backtest'
@@ -22,6 +23,7 @@ app.use('/api/*', cors())
 // Mount API routers
 app.route('/api/signals/enhanced', enhancedSignalsRouter)
 app.route('/api/signals/simple', simpleSignalsRouter)
+app.route('/api/scanner', autoScannerRouter)
 app.route('/api/trades', tradesRouter)
 app.route('/api/calendar', calendarRouter)
 app.route('/api/backtest', backtestRouter)
