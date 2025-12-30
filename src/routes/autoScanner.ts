@@ -382,6 +382,9 @@ app.post('/test-alert', async (c) => {
     }
     
     // Create test analysis data
+    const currentPrice = 4386.50
+    const stopDistance = 15.0 // $15 stop distance for test
+    
     const testAnalysis = {
       grade: 'A',
       signal: 'BUY',
@@ -397,17 +400,16 @@ app.post('/test-alert', async (c) => {
         '✅ Layer 6: No major news',
         '❌ Layer 7: ADX 72.3 (extreme, reversal risk)'
       ],
-      stopLoss: 4401.50,
-      tp1: 4356.20,
-      tp2: 4341.30,
-      tp3: 4326.40,
+      // BUY signal: Stop BELOW entry, Targets ABOVE entry
+      stopLoss: currentPrice - stopDistance,     // 4371.50 (BELOW entry)
+      tp1: currentPrice + (stopDistance * 2),    // 4416.50 (2R - ABOVE entry)
+      tp2: currentPrice + (stopDistance * 3),    // 4431.50 (3R - ABOVE entry)
+      tp3: currentPrice + (stopDistance * 4),    // 4446.50 (4R - ABOVE entry)
       liquidityScore: 89,
       adx: 72.3,
       rsi: 54.2,
       volumeRatio: 1.9
     }
-    
-    const currentPrice = 4386.50
     
     // Format message
     const message = formatTelegramAlert(testAnalysis, currentPrice)
