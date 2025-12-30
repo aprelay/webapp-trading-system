@@ -600,42 +600,7 @@ app.post('/enhanced', async (c) => {
           message += `Expected Value: ${profitProb.expected_value.toFixed(2)}R\n\n`
         }
         
-        // Liquidity Analysis
-        if (liquidityMetrics) {
-          const liqEmoji = liquidityMetrics.liquidity_score >= 80 ? '🟢' :
-                          liquidityMetrics.liquidity_score >= 70 ? '🟡' :
-                          liquidityMetrics.liquidity_score >= 50 ? '🟠' : '🔴'
-          
-          message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
-          message += `🌊 *LIQUIDITY ANALYSIS*\n`
-          message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
-          message += `${liqEmoji} *Score:* ${liquidityMetrics.liquidity_score}/100\n`
-          message += `🕐 *Session:* ${liquidityMetrics.session}\n`
-          message += `📊 *Time Zone:* ${liquidityMetrics.time_of_day_zone} LIQUIDITY\n`
-          message += `📈 *Volume:* ${liquidityMetrics.volume_trend} (${liquidityMetrics.volume_percentile}%)\n`
-          message += `💰 *Spread:* ~${liquidityMetrics.estimated_spread_pips} pips\n`
-          message += `📉 *Price Impact:* ~${liquidityMetrics.price_impact_bps} bps\n`
-          message += `✅ *Optimal:* ${liquidityMetrics.optimal_for_trading ? 'YES' : 'NO'}\n\n`
-          
-          if (liquidityMetrics.warnings.length > 0) {
-            message += `⚠️ *Liquidity Warnings:*\n`
-            for (const warning of liquidityMetrics.warnings) {
-              message += `${warning}\n`
-            }
-            message += `\n`
-          }
-          
-          message += `💡 ${liquidityMetrics.recommendation}\n\n`
-        }
-        
-        // Risk Metrics
-        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
-        message += `⚡ *RISK METRICS*\n`
-        message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
-        message += `VaR(95%): $${var95.toFixed(2)}\n`
-        message += `VaR(99%): $${var99.toFixed(2)}\n`
-        message += `Drawdown: ${drawdownPct.toFixed(2)}%\n`
-        message += `Portfolio Heat: ${portfolioHeat.toFixed(1)}%\n\n`
+        // Note: Liquidity Analysis moved to Message 2 for better visibility
         
         // Recommendation
         message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
@@ -652,11 +617,83 @@ app.post('/enhanced', async (c) => {
         
         message += `\n🌐 Dashboard: ${c.req.url.replace('/api/signals/enhanced/enhanced', '')}`
         
-        // Send to Telegram
-        telegramSent = await sendTelegramMessage(
+        console.log('[TELEGRAM] Message 1 length:', message.length, 'characters')
+        
+        // Send to Telegram - Message 1 (Main Signal)
+        const sent1 = await sendTelegramMessage(
           { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
           message
         )
+        
+        // Build Message 2 (Liquidity & Risk Details)
+        let message2 = `📊 *ADDITIONAL ANALYSIS*\n━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+        
+        // Liquidity Analysis (PRIORITY - Show First!)
+        if (liquidityMetrics) {
+          const liqEmoji = liquidityMetrics.liquidity_score >= 80 ? '🟢' :
+                          liquidityMetrics.liquidity_score >= 70 ? '🟡' :
+                          liquidityMetrics.liquidity_score >= 50 ? '🟠' : '🔴'
+          
+          message2 += `🌊 *LIQUIDITY ANALYSIS*\n`
+          message2 += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+          message2 += `${liqEmoji} *Score:* ${liquidityMetrics.liquidity_score}/100\n`
+          message2 += `🕐 *Session:* ${liquidityMetrics.session}\n`
+          message2 += `📊 *Time Zone:* ${liquidityMetrics.time_of_day_zone} LIQUIDITY\n`
+          message2 += `📈 *Volume:* ${liquidityMetrics.volume_trend} (${liquidityMetrics.volume_percentile}%)\n`
+          message2 += `💰 *Spread:* ~${liquidityMetrics.estimated_spread_pips} pips\n`
+          message2 += `📉 *Price Impact:* ~${liquidityMetrics.price_impact_bps} bps per $100k\n`
+          message2 += `🎯 *Market Depth:* ${liquidityMetrics.market_depth_score}/100\n`
+          message2 += `✅ *Optimal:* ${liquidityMetrics.optimal_for_trading ? 'YES' : 'NO'}\n\n`
+          
+          if (liquidityMetrics.warnings.length > 0) {
+            message2 += `⚠️ *Liquidity Warnings:*\n`
+            for (const warning of liquidityMetrics.warnings) {
+              message2 += `• ${warning}\n`
+            }
+            message2 += `\n`
+          }
+          
+          message2 += `💡 *Recommendation:*\n${liquidityMetrics.recommendation}\n\n`
+          
+          // Best Trading Times
+          message2 += `⏰ *Best Trading Times (UTC):*\n`
+          message2 += `• London/NY Overlap: 13:00-16:00 ⭐⭐⭐\n`
+          message2 += `• London: 08:00-13:00 ⭐⭐\n`
+          message2 += `• New York: 16:00-22:00 ⭐⭐\n`
+          message2 += `• Asia: 00:00-08:00 ⭐\n\n`
+        }
+        
+        // Risk Metrics
+        message2 += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+        message2 += `⚡ *RISK METRICS*\n`
+        message2 += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
+        message2 += `• VaR(95%): $${var95.toFixed(2)}\n`
+        message2 += `• VaR(99%): $${var99.toFixed(2)}\n`
+        message2 += `• Max Drawdown: ${drawdownPct.toFixed(2)}%\n`
+        message2 += `• Portfolio Heat: ${portfolioHeat.toFixed(1)}%\n\n`
+        
+        // Economic Calendar Summary
+        if (safety.upcomingEvents.length > 0) {
+          message2 += `📅 *Upcoming Events:*\n`
+          for (const event of safety.upcomingEvents.slice(0, 3)) {
+            message2 += `• ${formatEvent(event)}\n`
+          }
+          message2 += `\n`
+        }
+        
+        message2 += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+        message2 += `✅ Signal generated at ${timestamp} UTC\n`
+        message2 += `🤖 Powered by Hedge Fund Grade AI`
+        
+        console.log('[TELEGRAM] Message 2 length:', message2.length, 'characters')
+        
+        // Send Message 2
+        const sent2 = await sendTelegramMessage(
+          { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+          message2
+        )
+        
+        telegramSent = sent1 && sent2
       }
     } catch (e: any) {
       console.error('[ENHANCED] Telegram error (optional):', e.message)
