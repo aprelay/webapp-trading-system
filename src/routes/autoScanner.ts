@@ -31,6 +31,20 @@ import {
   detectCandlestickPatterns,
   arePatternsAligned
 } from '../lib/candlePatterns'
+import {
+  analyzePriceZones,
+  isZoneAligned
+} from '../lib/priceActionZones'
+import {
+  detectDivergence,
+  isDivergenceAligned,
+  formatDivergenceMessage
+} from '../lib/divergenceAnalysis'
+import {
+  analyzeMultiTimeframe,
+  isMTFAligned,
+  formatMTFMessage
+} from '../lib/multiTimeframeConfirmation'
 
 type Bindings = {
   DB: D1Database
@@ -675,6 +689,58 @@ async function analyze7Layers(
   } else {
     layers.push(`❌ Layer 12: No clear candlestick pattern`)
   }
+  
+  // Layer 13: Price Action Zones
+  const zoneAnalysis = analyzePriceZones(candles5m, currentPrice)
+  const zoneAligned = isZoneAligned(zoneAnalysis, signal)
+  
+  if (zoneAligned && zoneAnalysis.nearZone) {
+    score += 8
+    layersPassed++
+    layers.push(`✅ Layer 13: ${zoneAnalysis.description}`)
+  } else if (zoneAnalysis.nearZone) {
+    layers.push(`⚠️ Layer 13: ${zoneAnalysis.description} (not aligned)`)
+  } else {
+    layers.push(`ℹ️ Layer 13: No key zones nearby`)
+  }
+  
+  // Layer 14: RSI/MACD Divergence
+  // Need to fetch recent indicators for divergence analysis
+  const recentIndicators5m = await DB.prepare(`
+    SELECT rsi_14 as rsi, macd, macd_histogram
+    FROM multi_timeframe_indicators
+    WHERE timeframe = '5m'
+    ORDER BY timestamp DESC
+    LIMIT 10
+  `).all()
+  
+  const indicatorData = (recentIndicators5m.results as any[]).map(row => ({
+    rsi: parseFloat(String(row.rsi)) || 50,
+    macd: parseFloat(String(row.macd)) || 0,
+    macd_histogram: parseFloat(String(row.macd_histogram)) || 0
+  })).reverse()
+  
+  const divergence = detectDivergence(indicatorData, candles5m.slice(-10))
+  const trendDirection = isBullish ? 'BULLISH' : isBearish ? 'BEARISH' : 'NEUTRAL'
+  const divAligned = isDivergenceAligned(divergence, signal, trendDirection as any)
+  
+  if (divAligned && divergence.strength >= 70) {
+    score += 9
+    layersPassed++
+  }
+  
+  layers.push(formatDivergenceMessage(divergence, divAligned))
+  
+  // Layer 15: Multi-Timeframe Confirmation
+  const mtf = analyzeMultiTimeframe(indicators5m, indicators15m, indicators1h, currentPrice)
+  const mtfAligned = isMTFAligned(mtf, signal)
+  
+  if (mtfAligned && (mtf.allAligned || mtf.twoAligned)) {
+    score += 6
+    layersPassed++
+  }
+  
+  layers.push(formatMTFMessage(mtf, mtfAligned))
   
   // Calculate grade
   let grade = 'C'
