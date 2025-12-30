@@ -54,6 +54,12 @@ import {
   getOrFetchCrossAssetData,
   analyzeCrossAssets
 } from '../lib/crossAssetAnalysis'
+import {
+  getOrFetchCOTData,
+  analyzeCOT,
+  isCOTAligned,
+  generateMockCOTData
+} from '../lib/cotAnalysis'
 
 type Bindings = {
   DB: D1Database
@@ -794,11 +800,33 @@ async function analyze7Layers(
     layers.push(`❌ Layer 19: ${crossAsset.description}`)
   }
   
-  // Calculate grade
+  // Layer 20: COT (Commitments of Traders) Data
+  // For now, use mock data since CFTC API requires more setup
+  // In production, replace with actual CFTC data fetching
+  const cotPosition = await getOrFetchCOTData(DB)
+  
+  // If no cached COT data, generate mock neutral data for testing
+  const cotData = cotPosition || generateMockCOTData('NEUTRAL')
+  
+  const cotAnalysis = analyzeCOT(cotData, signal)
+  const cotAligned = isCOTAligned(cotAnalysis, signal)
+  
+  if (cotAligned && cotAnalysis.strength >= 70) {
+    const points = cotAnalysis.positioning.includes('EXTREME') ? 7 : 4
+    score += points
+    layersPassed++
+    layers.push(`✅ Layer 20: ${cotAnalysis.description} (${cotAnalysis.strength}/100)`)
+  } else if (cotAnalysis.goldSignalSupport !== 'NEUTRAL') {
+    layers.push(`⚠️ Layer 20: ${cotAnalysis.description} (not aligned)`)
+  } else {
+    layers.push(`ℹ️ Layer 20: ${cotAnalysis.description}`)
+  }
+  
+  // Calculate grade (max score ~180 with all 20 layers)
   let grade = 'C'
-  if (score >= 90) grade = 'A+'
-  else if (score >= 80) grade = 'A'
-  else if (score >= 70) grade = 'B'
+  if (score >= 162) grade = 'A+' // 90% of max
+  else if (score >= 144) grade = 'A'  // 80% of max
+  else if (score >= 126) grade = 'B'  // 70% of max
   
   // Re-evaluate signal with all layers (including Phase 1)
   if ((isBullish || isBearish) && layersPassed >= 7) {
