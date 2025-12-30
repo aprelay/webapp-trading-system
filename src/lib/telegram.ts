@@ -27,6 +27,11 @@ export async function sendTelegramMessage(config: TelegramConfig, message: strin
     });
     
     const data = await response.json();
+    
+    if (!data.ok) {
+      console.error('[Telegram] Send failed:', JSON.stringify(data));
+    }
+    
     return data.ok === true;
   } catch (error) {
     console.error('Failed to send Telegram message:', error);

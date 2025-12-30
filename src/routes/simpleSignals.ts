@@ -160,6 +160,13 @@ app.post('/simple', async (c) => {
         config[(row as any).setting_key] = (row as any).setting_value
       }
       
+      console.log('[SIMPLE] Telegram config:', {
+        hasToken: !!config.telegram_bot_token,
+        hasChat: !!config.telegram_chat_id,
+        tokenLength: config.telegram_bot_token?.length || 0,
+        chatId: config.telegram_chat_id
+      })
+      
       if (config.telegram_bot_token && config.telegram_chat_id) {
         // Build SIMPLE Telegram message (matching your format)
         const emoji = daySignal.signal_type === 'BUY' ? '🟢' : daySignal.signal_type === 'SELL' ? '🔴' : '⚪'
@@ -178,17 +185,26 @@ app.post('/simple', async (c) => {
         message += `🛡️ <b>Stop Loss:</b> $${Number(daySignal.stop_loss).toFixed(2)}\n\n`
         
         message += `📝 <b>Reason:</b>\n`
-        message += String(daySignal.reason) + `\n\n`
+        // Escape HTML characters in reason text (< > & symbols)
+        const escapedReason = String(daySignal.reason)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+        message += escapedReason + `\n\n`
         
         message += `⏰ ${timestamp}`
         
         // Send to Telegram
+        console.log('[SIMPLE] Sending Telegram message, length:', message.length)
         telegramSent = await sendTelegramMessage(
           { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
           message
         )
         
         console.log('[SIMPLE] Telegram sent:', telegramSent)
+        if (!telegramSent) {
+          console.log('[SIMPLE] Telegram send failed - checking response')
+        }
       } else {
         console.log('[SIMPLE] Telegram not configured')
       }
