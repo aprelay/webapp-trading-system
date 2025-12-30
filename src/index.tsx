@@ -2552,13 +2552,16 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
   const { DB } = c.env
   
   try {
+    const body = await c.req.json().catch(() => ({}))
+    const forceFresh = body.force_fresh || false
+    
     const results: any = {
       timestamp: new Date().toISOString(),
       steps: []
     }
     
-    // Step 1: Use Cached Data (FAST MODE)
-    results.steps.push({ step: 1, name: 'Load Cached MTF Data', status: 'running' })
+    // Step 1: Fetch All 5 Timeframes × 100 Candles
+    results.steps.push({ step: 1, name: 'Fetching All 5 Timeframes (100 candles each)', status: 'running' })
     
     // Check if we have recent data (last 5 minutes)
     const recentData = await DB.prepare(`
@@ -2566,12 +2569,13 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
       WHERE timestamp > datetime('now', '-5 minutes')
     `).first()
     
-    const hasRecentData = (recentData as any)?.count > 0
+    const hasRecentData = !forceFresh && (recentData as any)?.count > 0
     let totalCandles = 0
     
     if (!hasRecentData) {
-      // Only fetch if data is stale (older than 5 minutes)
-      results.steps[0].name = 'Fetching Fresh MTF Data'
+      // Fetch fresh data from TwelveData API
+      results.steps[0].name = 'Fetching Fresh MTF Data (5 timeframes \u00d7 100 candles)'
+      results.steps[0].fetching = true
       
       // Get API key
       const apiKeyResult = await DB.prepare(`
@@ -2581,16 +2585,18 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
       
       const apiKey = (apiKeyResult as any)?.setting_value || '70140f57bea54c5e90768de696487d8f'
       
-      // Fetch only essential timeframes (reduced from 5 to 3 for speed)
+      // Fetch all 5 timeframes with 100 candles for accurate signals
       const timeframes = [
         { interval: '5min', dbKey: '5m' },
         { interval: '15min', dbKey: '15m' },
-        { interval: '1h', dbKey: '1h' }
+        { interval: '1h', dbKey: '1h' },
+        { interval: '4h', dbKey: '4h' },
+        { interval: '1day', dbKey: 'daily' }
       ]
       
       for (const tf of timeframes) {
         try {
-          const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${tf.interval}&apikey=${apiKey}&outputsize=50`
+          const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${tf.interval}&apikey=${apiKey}&outputsize=100`
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
           
@@ -2621,7 +2627,7 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
             }
             
             // Calculate and save indicators
-            if (candles.length >= 30) {
+            if (candles.length >= 50) {
               const indicators = calculateIndicators(candles.reverse())
               if (indicators) {
                 await DB.prepare(`
