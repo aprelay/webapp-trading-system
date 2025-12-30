@@ -354,6 +354,84 @@ app.get('/history', async (c) => {
   }
 })
 
+/**
+ * POST /test-alert
+ * 
+ * Send a test A-grade Telegram alert
+ */
+app.post('/test-alert', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    // Get Telegram config
+    const settings = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings
+      WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+    `).all()
+    
+    const config: any = {}
+    for (const row of settings.results || []) {
+      config[(row as any).setting_key] = (row as any).setting_value
+    }
+    
+    if (!config.telegram_bot_token || !config.telegram_chat_id) {
+      return c.json({
+        success: false,
+        error: 'Telegram not configured. Please set Bot Token and Chat ID in settings.'
+      })
+    }
+    
+    // Create test analysis data
+    const testAnalysis = {
+      grade: 'A',
+      signal: 'BUY',
+      confidence: 87,
+      session: 'LONDON',
+      layersPassed: 6,
+      layers: [
+        '✅ Layer 1: Trend Aligned (BULLISH)',
+        '✅ Layer 2: RSI 54, MACD bullish crossover',
+        '✅ Layer 3: Volume spike 1.9x average',
+        '✅ Layer 4: Broke above resistance',
+        '✅ Layer 5: Liquidity 89/100 (LONDON session)',
+        '✅ Layer 6: No major news',
+        '❌ Layer 7: ADX 72.3 (extreme, reversal risk)'
+      ],
+      stopLoss: 4401.50,
+      tp1: 4356.20,
+      tp2: 4341.30,
+      tp3: 4326.40,
+      liquidityScore: 89,
+      adx: 72.3,
+      rsi: 54.2,
+      volumeRatio: 1.9
+    }
+    
+    const currentPrice = 4386.50
+    
+    // Format message
+    const message = formatTelegramAlert(testAnalysis, currentPrice)
+    
+    // Send to Telegram
+    const sent = await sendTelegramMessage(
+      { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+      message
+    )
+    
+    return c.json({
+      success: sent,
+      message: sent ? 'Test A-grade alert sent to Telegram!' : 'Failed to send alert. Check your Telegram settings.'
+    })
+    
+  } catch (error: any) {
+    console.error('[TEST-ALERT] Error:', error)
+    return c.json({
+      success: false,
+      error: error.message
+    }, 500)
+  }
+})
+
 // ============================================================
 // HELPER FUNCTIONS
 // ============================================================

@@ -108,6 +108,42 @@ app.get('/', (c) => {
                     </div>
                 </div>
 
+                <!-- 5M-Assassin Scanner Panel (NEW!) -->
+                <div class="bg-gradient-to-r from-green-900 to-emerald-800 p-6 rounded-lg border-2 border-green-500 mb-6 shadow-xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h2 class="text-2xl font-bold text-white mb-2">
+                                <i class="fas fa-crosshairs mr-3"></i>🎯 5M-Assassin Scanner (Every 5 Minutes)
+                            </h2>
+                            <p class="text-green-100 mb-4">
+                                7-Layer Analysis • A/B/C Grading • Instant Telegram Alerts for A-Grade Setups • Auto-running in background
+                            </p>
+                            <div id="scannerStatus" class="text-sm text-green-200">
+                                🤖 Auto-scanning every 5 minutes... Click button to scan NOW →
+                            </div>
+                        </div>
+                        <button 
+                            id="scan5mButton"
+                            onclick="run5MScan()" 
+                            class="bg-white hover:bg-green-50 text-green-900 px-8 py-4 rounded-lg font-bold text-lg transition shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-bolt mr-2"></i>
+                            <span id="scan5mButtonText">Scan 5M NOW!</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 5M Scan Results Display -->
+                    <div id="scan5mResults" class="mt-6 hidden">
+                        <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                            <h3 class="text-lg font-bold text-white mb-3">
+                                <i class="fas fa-check-circle text-green-400 mr-2"></i>5M Scan Complete
+                            </h3>
+                            <div id="scan5mDetails" class="space-y-2 text-sm text-green-100">
+                                <!-- Results will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Automation Panel -->
                 <div class="bg-gradient-to-r from-yellow-900 to-yellow-800 p-6 rounded-lg border-2 border-yellow-500 mb-6 shadow-xl">
                     <div class="flex items-center justify-between">
@@ -208,6 +244,9 @@ app.get('/', (c) => {
                         </button>
                         <button onclick="testTelegram()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fab fa-telegram mr-2"></i>Test Telegram
+                        </button>
+                        <button onclick="sendTestAlert()" class="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-lg font-semibold transition">
+                            <i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert
                         </button>
                         <button onclick="fetchMarketData()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-download mr-2"></i>Fetch Market Data
@@ -449,6 +488,160 @@ app.get('/', (c) => {
                     }
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
+                }
+            }
+
+            // Send Test A-Grade Alert
+            async function sendTestAlert() {
+                try {
+                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\n\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\n\nContinue?')) {
+                        return;
+                    }
+                    
+                    const btn = event.target;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+                    
+                    const res = await axios.post('/api/scanner/test-alert');
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
+                    
+                    if (res.data.success) {
+                        alert('✅ Test A-grade alert sent!\n\nCheck your Telegram to see what real alerts will look like.\n\n📊 Grade: A (87%)\n🟢 Signal: BUY\n💰 Entry: $4386.50\n🛡️ Stop: $4401.50\n🎯 TP1: $4356.20\n\nThis is a SAMPLE alert for testing purposes.');
+                    } else {
+                        alert('❌ Failed to send test alert.\n\n' + res.data.error + '\n\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                    }
+                } catch (error) {
+                    alert('❌ Error sending test alert: ' + error.message);
+                    event.target.disabled = false;
+                    event.target.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
+                }
+            }
+
+            // 5M-Assassin Scanner Function
+            async function run5MScan() {
+                try {
+                    const btn = document.getElementById('scan5mButton');
+                    const btnText = document.getElementById('scan5mButtonText');
+                    const statusDiv = document.getElementById('scannerStatus');
+                    const resultsDiv = document.getElementById('scan5mResults');
+                    const detailsDiv = document.getElementById('scan5mDetails');
+                    
+                    // Disable button and show loading
+                    btn.disabled = true;
+                    btnText.innerHTML = 'Scanning...';
+                    statusDiv.innerHTML = '⏳ Running 7-layer analysis on 5m timeframe...';
+                    resultsDiv.classList.add('hidden');
+                    
+                    // Call the 5M scanner endpoint
+                    const res = await axios.post('/api/scanner/scan');
+                    
+                    if (res.data.success) {
+                        const scan = res.data.scan_result;
+                        
+                        // Get emoji for grade
+                        const gradeEmoji = scan.grade === 'A+' ? '💎' : 
+                                         scan.grade === 'A' ? '⭐' : 
+                                         scan.grade === 'B' ? '📊' : '❌';
+                        
+                        // Get signal color
+                        const signalColor = scan.signal === 'BUY' ? 'text-green-400' : 
+                                          scan.signal === 'SELL' ? 'text-red-400' : 
+                                          'text-gray-400';
+                        
+                        // Build results HTML
+                        let html = '<div class="grid grid-cols-2 gap-4">';
+                        
+                        // Left column: Grade and Signal
+                        html += '<div>';
+                        html += \`<div class="mb-3">
+                                    <p class="text-xs text-green-300 mb-1">GRADE</p>
+                                    <p class="text-3xl font-bold text-white">\${gradeEmoji} \${scan.grade}</p>
+                                    <p class="text-sm text-green-300">\${scan.score}/100 points</p>
+                                  </div>\`;
+                        html += \`<div class="mb-3">
+                                    <p class="text-xs text-green-300 mb-1">SIGNAL</p>
+                                    <p class="text-2xl font-bold \${signalColor}">\${scan.signal}</p>
+                                    <p class="text-sm text-green-300">Confidence: \${scan.confidence}%</p>
+                                  </div>\`;
+                        html += \`<div>
+                                    <p class="text-xs text-green-300 mb-1">LAYERS PASSED</p>
+                                    <p class="text-xl font-bold text-white">\${scan.layers_passed}/7</p>
+                                  </div>\`;
+                        html += '</div>';
+                        
+                        // Right column: Trade Setup
+                        html += '<div>';
+                        html += \`<div class="mb-3">
+                                    <p class="text-xs text-green-300 mb-1">ENTRY</p>
+                                    <p class="text-xl font-bold text-white">$\${scan.entry.toFixed(2)}</p>
+                                  </div>\`;
+                        html += \`<div class="mb-3">
+                                    <p class="text-xs text-green-300 mb-1">STOP LOSS</p>
+                                    <p class="text-lg font-bold text-red-400">$\${scan.stop_loss.toFixed(2)}</p>
+                                  </div>\`;
+                        html += \`<div>
+                                    <p class="text-xs text-green-300 mb-1">TARGETS</p>
+                                    <p class="text-sm text-white">TP1: $\${scan.targets[0].toFixed(2)}</p>
+                                    <p class="text-sm text-white">TP2: $\${scan.targets[1].toFixed(2)}</p>
+                                    <p class="text-sm text-white">TP3: $\${scan.targets[2].toFixed(2)}</p>
+                                  </div>\`;
+                        html += '</div>';
+                        
+                        html += '</div>';
+                        
+                        // Add Telegram status
+                        if (scan.telegram_sent) {
+                            html += '<div class="mt-3 p-2 bg-green-500 bg-opacity-20 rounded border border-green-500">';
+                            html += '<p class="text-sm text-green-300"><i class="fab fa-telegram mr-2"></i>Telegram alert sent!</p>';
+                            html += '</div>';
+                        } else if (scan.grade === 'A' || scan.grade === 'A+') {
+                            html += '<div class="mt-3 p-2 bg-yellow-500 bg-opacity-20 rounded border border-yellow-500">';
+                            html += '<p class="text-sm text-yellow-300"><i class="fas fa-exclamation-triangle mr-2"></i>Telegram not configured</p>';
+                            html += '</div>';
+                        }
+                        
+                        // Add action message
+                        if (scan.grade === 'A' || scan.grade === 'A+') {
+                            html += '<div class="mt-3 p-3 bg-green-500 bg-opacity-30 rounded border border-green-400">';
+                            html += '<p class="text-sm font-bold text-green-200">🎯 HIGH PROBABILITY SETUP - CONSIDER TRADING!</p>';
+                            html += '</div>';
+                        } else if (scan.grade === 'B') {
+                            html += '<div class="mt-3 p-3 bg-yellow-500 bg-opacity-30 rounded border border-yellow-400">';
+                            html += '<p class="text-sm font-bold text-yellow-200">⚠️ DECENT SETUP - WAIT FOR CONFIRMATION</p>';
+                            html += '</div>';
+                        } else {
+                            html += '<div class="mt-3 p-3 bg-gray-500 bg-opacity-30 rounded border border-gray-400">';
+                            html += '<p class="text-sm font-bold text-gray-200">❌ LOW QUALITY SETUP - SKIP</p>';
+                            html += '</div>';
+                        }
+                        
+                        detailsDiv.innerHTML = html;
+                        resultsDiv.classList.remove('hidden');
+                        
+                        // Update status
+                        statusDiv.innerHTML = \`✅ Scan complete at \${new Date(res.data.timestamp).toLocaleTimeString()} - Grade: \${gradeEmoji} \${scan.grade}\`;
+                        
+                        // Show alert for A-grade
+                        if (scan.grade === 'A' || scan.grade === 'A+') {
+                            alert(\`🎯 \${scan.grade}-GRADE SETUP DETECTED!\\n\\nSignal: \${scan.signal}\\nEntry: $\${scan.entry.toFixed(2)}\\nStop: $\${scan.stop_loss.toFixed(2)}\\nTP1: $\${scan.targets[0].toFixed(2)}\\n\\nCheck dashboard for full details!\`);
+                        }
+                    } else {
+                        alert('❌ Scanner error: ' + res.data.error);
+                        statusDiv.innerHTML = '❌ Scan failed - ' + res.data.error;
+                    }
+                    
+                    // Re-enable button
+                    btn.disabled = false;
+                    btnText.innerHTML = 'Scan 5M NOW!';
+                    
+                } catch (error) {
+                    console.error('5M Scanner error:', error);
+                    alert('❌ Error running 5M scan: ' + error.message);
+                    document.getElementById('scan5mButton').disabled = false;
+                    document.getElementById('scan5mButtonText').innerHTML = 'Scan 5M NOW!';
+                    document.getElementById('scannerStatus').innerHTML = '❌ Error: ' + error.message;
                 }
             }
 
