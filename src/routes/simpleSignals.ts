@@ -133,8 +133,9 @@ app.post('/simple', async (c) => {
     // STEP 3: GENERATE SIGNALS
     // ============================================================
     
-    const daySignal = generateSignal(indicators, candles, 'day_trade')
-    const swingSignal = generateSignal(indicators, candles, 'swing_trade')
+    // Call generateSignal with correct signature: (currentPrice, indicators, tradingStyle)
+    const daySignal = generateSignal(currentPrice, indicators, 'day_trade')
+    const swingSignal = generateSignal(currentPrice, indicators, 'swing_trade')
     
     console.log('[SIMPLE] Generated signals:', {
       day: daySignal.signal_type,
