@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { calculateIndicators, generateSignal, type Candle } from './lib/technicalAnalysis'
 import { sendTelegramMessage, formatTradeSignal, formatMarketUpdate } from './lib/telegram'
 import enhancedSignalsRouter from './routes/enhancedSignals'
+import simpleSignalsRouter from './routes/simpleSignals'
 import tradesRouter from './routes/trades'
 import calendarRouter from './routes/calendar'
 import backtestRouter from './routes/backtest'
@@ -20,6 +21,7 @@ app.use('/api/*', cors())
 
 // Mount API routers
 app.route('/api/signals/enhanced', enhancedSignalsRouter)
+app.route('/api/signals/simple', simpleSignalsRouter)
 app.route('/api/trades', tradesRouter)
 app.route('/api/calendar', calendarRouter)
 app.route('/api/backtest', backtestRouter)
@@ -452,10 +454,25 @@ app.get('/', (c) => {
                 try {
                     const btn = event.target;
                     btn.disabled = true;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching...';
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching ALL Data...';
                     
-                    const res = await axios.post('/api/market/fetch');
-                    alert('✅ Fetched ' + res.data.count + ' candles successfully!');
+                    // Fetch MULTI-TIMEFRAME data (for both simple AND hedge fund signals)
+                    // This fetches 5 timeframes: 5m, 15m, 1h, 4h, daily
+                    // Total: 500 candles + all indicators
+                    const res = await axios.post('/api/market/fetch-mtf');
+                    
+                    if (res.data.success) {
+                        let message = '✅ Market Data Fetched Successfully!\\n\\n';
+                        message += '📊 Fetched ' + res.data.totalCount + ' candles across 5 timeframes\\n\\n';
+                        message += '✅ Ready for:\\n';
+                        message += '   • Generate Signal NOW (simple)\\n';
+                        message += '   • Hedge Fund Signal (all 10 features)\\n\\n';
+                        message += 'Click either button to analyze current market!';
+                        alert(message);
+                    } else {
+                        alert('✅ Partial Success\\n\\nFetched ' + res.data.totalCount + ' candles\\n\\nSome timeframes may have errors. Check console for details.');
+                    }
+                    
                     await refreshData();
                     
                     btn.disabled = false;
@@ -473,29 +490,37 @@ app.get('/', (c) => {
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
                     
-                    const res = await axios.post('/api/signals/enhanced/enhanced');
+                    // Call SIMPLE signal endpoint (not hedge fund)
+                    const res = await axios.post('/api/signals/simple/simple');
                     
                     if (res.data.success) {
                         const day = res.data.day_trade;
                         const swing = res.data.swing_trade;
                         
-                        let message = '✅ Signals Generated!\\n\\n';
-                        message += '📊 DAY TRADE:\\n';
-                        message += 'Signal: ' + day.signal_type + ' (' + day.confidence.toFixed(1) + '%)\\n';
-                        message += 'Entry: $' + day.price.toFixed(2) + '\\n';
-                        message += 'Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n';
-                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + '\\n\\n';
+                        // Format SIMPLE signal (matching Telegram format)
+                        const emoji = day.signal_type === 'BUY' ? '🟢' : day.signal_type === 'SELL' ? '🔴' : '⚪';
                         
-                        message += '📈 SWING TRADE:\\n';
-                        message += 'Signal: ' + swing.signal_type + ' (' + swing.confidence.toFixed(1) + '%)\\n';
-                        message += 'Entry: $' + swing.price.toFixed(2) + '\\n';
-                        message += 'Stop Loss: $' + swing.stop_loss.toFixed(2) + '\\n';
-                        message += 'TP1: $' + swing.take_profit_1.toFixed(2) + '\\n\\n';
+                        let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\\n\\n';
+                        message += '📊 Day Trade\\n';
+                        message += '💰 Price: $' + day.price.toFixed(2) + '\\n';
+                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\\n\\n';
+                        
+                        message += '🎯 Take Profits:\\n';
+                        message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
+                        message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\\n';
+                        message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\\n\\n';
+                        
+                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n\\n';
+                        
+                        message += '📝 Reason:\\n' + day.reason + '\\n\\n';
+                        
+                        const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
+                        message += '⏰ ' + timestamp;
                         
                         if (res.data.telegram_sent) {
-                            message += '📱 Sent to Telegram!';
+                            message += '\\n\\n📱 Sent to Telegram!';
                         } else {
-                            message += '⚠️ Telegram not sent (check settings)';
+                            message += '\\n\\n⚠️ Telegram not configured';
                         }
                         
                         alert(message);
