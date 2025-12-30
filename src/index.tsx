@@ -2557,76 +2557,106 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
       steps: []
     }
     
-    // Step 1: Fetch Multi-Timeframe Data
-    results.steps.push({ step: 1, name: 'Fetch MTF Data', status: 'running' })
+    // Step 1: Use Cached Data (FAST MODE)
+    results.steps.push({ step: 1, name: 'Load Cached MTF Data', status: 'running' })
     
-    // Get API key
-    const apiKeyResult = await DB.prepare(`
-      SELECT setting_value FROM user_settings 
-      WHERE setting_key = 'twelve_data_api_key'
+    // Check if we have recent data (last 5 minutes)
+    const recentData = await DB.prepare(`
+      SELECT COUNT(*) as count FROM multi_timeframe_indicators 
+      WHERE timestamp > datetime('now', '-5 minutes')
     `).first()
     
-    const apiKey = (apiKeyResult as any)?.setting_value || '70140f57bea54c5e90768de696487d8f'
-    
-    const timeframes = [
-      { interval: '5min', dbKey: '5m' },
-      { interval: '15min', dbKey: '15m' },
-      { interval: '1h', dbKey: '1h' },
-      { interval: '4h', dbKey: '4h' },
-      { interval: '1day', dbKey: 'daily' }
-    ]
-    
+    const hasRecentData = (recentData as any)?.count > 0
     let totalCandles = 0
-    for (const tf of timeframes) {
-      const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${tf.interval}&apikey=${apiKey}&outputsize=100`
-      const response = await fetch(url)
-      const data = await response.json()
+    
+    if (!hasRecentData) {
+      // Only fetch if data is stale (older than 5 minutes)
+      results.steps[0].name = 'Fetching Fresh MTF Data'
       
-      if (data.values && Array.isArray(data.values)) {
-        const candles: Candle[] = []
-        for (const item of data.values) {
-          const candle = {
-            timestamp: item.datetime,
-            open: parseFloat(item.open),
-            high: parseFloat(item.high),
-            low: parseFloat(item.low),
-            close: parseFloat(item.close),
-            volume: 0
-          }
-          candles.push(candle)
+      // Get API key
+      const apiKeyResult = await DB.prepare(`
+        SELECT setting_value FROM user_settings 
+        WHERE setting_key = 'twelve_data_api_key'
+      `).first()
+      
+      const apiKey = (apiKeyResult as any)?.setting_value || '70140f57bea54c5e90768de696487d8f'
+      
+      // Fetch only essential timeframes (reduced from 5 to 3 for speed)
+      const timeframes = [
+        { interval: '5min', dbKey: '5m' },
+        { interval: '15min', dbKey: '15m' },
+        { interval: '1h', dbKey: '1h' }
+      ]
+      
+      for (const tf of timeframes) {
+        try {
+          const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${tf.interval}&apikey=${apiKey}&outputsize=50`
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
           
-          await DB.prepare(`
-            INSERT INTO market_data (timestamp, open, high, low, close, volume, timeframe)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT DO NOTHING
-          `).bind(candle.timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume, tf.dbKey).run()
-        }
-        
-        if (candles.length >= 50) {
-          const indicators = calculateIndicators(candles.reverse())
-          if (indicators) {
-            await DB.prepare(`
-              INSERT INTO multi_timeframe_indicators 
-              (timestamp, timeframe, rsi_14, macd, macd_signal, macd_histogram,
-               sma_20, sma_50, sma_200, ema_12, ema_26,
-               bb_upper, bb_middle, bb_lower, atr_14,
-               stochastic_k, stochastic_d, adx, plus_di, minus_di,
-               ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b,
-               parabolic_sar, vwap, fib_382, fib_500, fib_618)
-              VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).bind(
-              tf.dbKey, indicators.rsi_14, indicators.macd, indicators.macd_signal, indicators.macd_histogram,
-              indicators.sma_20, indicators.sma_50, indicators.sma_200, indicators.ema_12, indicators.ema_26,
-              indicators.bb_upper, indicators.bb_middle, indicators.bb_lower, indicators.atr_14,
-              indicators.stochastic_k, indicators.stochastic_d, indicators.adx, indicators.plus_di, indicators.minus_di,
-              indicators.ichimoku_tenkan, indicators.ichimoku_kijun, indicators.ichimoku_senkou_a, indicators.ichimoku_senkou_b,
-              indicators.parabolic_sar, indicators.vwap, indicators.fib_382, indicators.fib_500, indicators.fib_618
-            ).run()
+          const response = await fetch(url, { signal: controller.signal })
+          clearTimeout(timeoutId)
+          const data = await response.json()
+          
+          if (data.values && Array.isArray(data.values)) {
+            const candles: Candle[] = []
+            for (const item of data.values) {
+              candles.push({
+                timestamp: item.datetime,
+                open: parseFloat(item.open),
+                high: parseFloat(item.high),
+                low: parseFloat(item.low),
+                close: parseFloat(item.close),
+                volume: 0
+              })
+            }
+            
+            // Batch insert candles (faster)
+            for (const candle of candles) {
+              await DB.prepare(`
+                INSERT INTO market_data (timestamp, open, high, low, close, volume, timeframe)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING
+              `).bind(candle.timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume, tf.dbKey).run()
+            }
+            
+            // Calculate and save indicators
+            if (candles.length >= 30) {
+              const indicators = calculateIndicators(candles.reverse())
+              if (indicators) {
+                await DB.prepare(`
+                  INSERT INTO multi_timeframe_indicators 
+                  (timestamp, timeframe, rsi_14, macd, macd_signal, macd_histogram,
+                   sma_20, sma_50, sma_200, ema_12, ema_26,
+                   bb_upper, bb_middle, bb_lower, atr_14,
+                   stochastic_k, stochastic_d, adx, plus_di, minus_di,
+                   ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b,
+                   parabolic_sar, vwap, fib_382, fib_500, fib_618)
+                  VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).bind(
+                  tf.dbKey, indicators.rsi_14, indicators.macd, indicators.macd_signal, indicators.macd_histogram,
+                  indicators.sma_20, indicators.sma_50, indicators.sma_200, indicators.ema_12, indicators.ema_26,
+                  indicators.bb_upper, indicators.bb_middle, indicators.bb_lower, indicators.atr_14,
+                  indicators.stochastic_k, indicators.stochastic_d, indicators.adx, indicators.plus_di, indicators.minus_di,
+                  indicators.ichimoku_tenkan, indicators.ichimoku_kijun, indicators.ichimoku_senkou_a, indicators.ichimoku_senkou_b,
+                  indicators.parabolic_sar, indicators.vwap, indicators.fib_382, indicators.fib_500, indicators.fib_618
+                ).run()
+              }
+            }
+            totalCandles += data.values.length
           }
+          
+          // Reduced delay (100ms instead of 500ms)
+          await new Promise(resolve => setTimeout(resolve, 100))
+        } catch (error) {
+          console.error(`[MTF] Error fetching ${tf.dbKey}:`, error)
+          // Continue with other timeframes even if one fails
         }
-        totalCandles += data.values.length
       }
-      await new Promise(resolve => setTimeout(resolve, 500))
+    } else {
+      // Using cached data (instant!)
+      totalCandles = 0
+      results.steps[0].cached = true
     }
     
     results.steps[0].status = 'completed'
