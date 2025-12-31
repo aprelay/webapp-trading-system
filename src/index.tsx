@@ -1713,6 +1713,222 @@ app.post('/api/market/fetch', async (c) => {
   }
 })
 
+// 🚀 ENHANCED CRON ENDPOINT - Full automation with Telegram alerts
+// This endpoint is specifically designed for cron-job.org
+// GET request compatible + Signal generation + Telegram alerts
+app.get('/api/cron/auto-fetch', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    console.log('[CRON] Auto-fetch triggered');
+    
+    // 1. Get API keys and config from settings
+    const settingsRows = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings 
+      WHERE setting_key IN ('twelve_data_api_key', 'telegram_bot_token', 'telegram_chat_id')
+    `).all();
+    
+    const config: any = {};
+    for (const row of settingsRows.results) {
+      config[(row as any).setting_key] = (row as any).setting_value;
+    }
+    
+    const apiKey = config.twelve_data_api_key || '70140f57bea54c5e90768de696487d8f';
+    const telegramBotToken = config.telegram_bot_token;
+    const telegramChatId = config.telegram_chat_id;
+    
+    // 2. Fetch fresh market data
+    const symbol = 'XAU/USD';
+    const interval = '1h';
+    const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&apikey=${apiKey}&outputsize=100`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.code && data.status === 'error') {
+      return c.json({ 
+        success: false, 
+        error: data['message'] || 'API error',
+        telegram_sent: false
+      });
+    }
+    
+    if (!data['values'] || !Array.isArray(data['values'])) {
+      return c.json({ 
+        success: false, 
+        error: 'No data available',
+        telegram_sent: false
+      });
+    }
+    
+    const values = data['values'];
+    
+    // 3. Process and store candles
+    const candles = [];
+    for (const item of values) {
+      const candle = {
+        timestamp: item.datetime,
+        open: parseFloat(item.open),
+        high: parseFloat(item.high),
+        low: parseFloat(item.low),
+        close: parseFloat(item.close),
+        volume: parseInt(item.volume || '0')
+      };
+      
+      await DB.prepare(`
+        INSERT OR REPLACE INTO market_data (timestamp, open, high, low, close, volume, timeframe)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        candle.timestamp,
+        candle.open,
+        candle.high,
+        candle.low,
+        candle.close,
+        candle.volume,
+        '1h'
+      ).run();
+      
+      candles.push(candle);
+    }
+    
+    // 4. Calculate indicators
+    const indicators = calculateIndicators(candles);
+    
+    if (!indicators) {
+      return c.json({ 
+        success: true, 
+        count: candles.length,
+        message: 'Data stored, but insufficient for indicators',
+        telegram_sent: false
+      });
+    }
+    
+    // 5. Generate signals
+    const currentPrice = candles[candles.length - 1].close;
+    
+    const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
+    const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
+    
+    // 6. Check if we should send Telegram alerts
+    const minConfidence = 70;
+    let telegramSent = false;
+    const alertsSent = [];
+    
+    // Only send alerts if Telegram is configured
+    if (telegramBotToken && telegramChatId && 
+        telegramBotToken !== 'your_bot_token_here') {
+      
+      // Check Day Trade signal
+      if (dayTradeSignal.confidence >= minConfidence && 
+          dayTradeSignal.signal_type !== 'HOLD') {
+        
+        const emoji = dayTradeSignal.signal_type === 'BUY' ? '🟢' : '🔴';
+        const message = `${emoji} GOLD/USD ${dayTradeSignal.signal_type} SIGNAL ${emoji}
+
+📊 Day Trade
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
+
+🎯 Take Profits:
+   TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
+   TP2: $${dayTradeSignal.take_profit_2.toFixed(2)}
+   TP3: $${dayTradeSignal.take_profit_3.toFixed(2)}
+
+🛡️ Stop Loss: $${dayTradeSignal.stop_loss.toFixed(2)}
+
+📝 Reason:
+${dayTradeSignal.reason}
+
+⏰ ${new Date().toLocaleString()}`;
+        
+        const success = await sendTelegramMessage({
+          botToken: telegramBotToken,
+          chatId: telegramChatId
+        }, message);
+        
+        if (success) {
+          telegramSent = true;
+          alertsSent.push('Day Trade');
+        }
+      }
+      
+      // Check Swing Trade signal (higher threshold)
+      if (swingTradeSignal.confidence >= 80 && 
+          swingTradeSignal.signal_type !== 'HOLD') {
+        
+        const emoji = swingTradeSignal.signal_type === 'BUY' ? '🟢' : '🔴';
+        const message = `${emoji} GOLD/USD ${swingTradeSignal.signal_type} SIGNAL ${emoji}
+
+📈 Swing Trade
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
+
+🎯 Take Profits:
+   TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
+   TP2: $${swingTradeSignal.take_profit_2.toFixed(2)}
+   TP3: $${swingTradeSignal.take_profit_3.toFixed(2)}
+
+🛡️ Stop Loss: $${swingTradeSignal.stop_loss.toFixed(2)}
+
+📝 Reason:
+${swingTradeSignal.reason}
+
+⏰ ${new Date().toLocaleString()}`;
+        
+        const success = await sendTelegramMessage({
+          botToken: telegramBotToken,
+          chatId: telegramChatId
+        }, message);
+        
+        if (success) {
+          telegramSent = true;
+          alertsSent.push('Swing Trade');
+        }
+      }
+    }
+    
+    console.log(`[CRON] Processed ${candles.length} candles, Telegram: ${telegramSent ? 'SENT' : 'NOT SENT'}`);
+    
+    // 7. Return comprehensive status
+    return c.json({ 
+      success: true,
+      timestamp: new Date().toISOString(),
+      data_fetched: {
+        candles: candles.length,
+        latest_price: currentPrice
+      },
+      signals: {
+        day_trade: {
+          type: dayTradeSignal.signal_type,
+          confidence: dayTradeSignal.confidence,
+          price: currentPrice
+        },
+        swing_trade: {
+          type: swingTradeSignal.signal_type,
+          confidence: swingTradeSignal.confidence,
+          price: currentPrice
+        }
+      },
+      telegram: {
+        configured: !!(telegramBotToken && telegramChatId),
+        sent: telegramSent,
+        alerts: alertsSent
+      },
+      message: telegramSent ? 
+        `✅ Alerts sent: ${alertsSent.join(', ')}` : 
+        '⚪ No alerts (criteria not met or market in HOLD)'
+    });
+    
+  } catch (error: any) {
+    console.error('[CRON] Error:', error);
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      telegram_sent: false
+    }, 500);
+  }
+})
+
 // Fetch multi-timeframe market data (Phase 3: 90% Accuracy)
 app.post('/api/market/fetch-mtf', async (c) => {
   const { DB } = c.env;
