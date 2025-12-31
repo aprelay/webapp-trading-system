@@ -940,6 +940,13 @@ Example: /close_trade 1 4580 TP1
 
             async function refreshData() {
                 try {
+                    // ⚡ CRITICAL: Fetch fresh market data every minute
+                    // This triggers signal generation and Telegram alerts
+                    await axios.post('/api/market/fetch', {
+                        symbol: 'XAU/USD',
+                        interval: '1h'
+                    });
+                    
                     // Load latest signals
                     const signalsRes = await axios.get('/api/signals/recent');
                     displayRecentSignals(signalsRes.data.signals);
