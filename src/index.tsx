@@ -1448,6 +1448,97 @@ app.get('/api/news/events', async (c) => {
   }
 })
 
+// GET endpoint for cron jobs (redirects to POST endpoint)
+app.get('/api/market/fetch', async (c) => {
+  // This endpoint allows GET requests for cron jobs
+  // It internally calls the POST logic
+  const { DB } = c.env;
+  
+  try {
+    // Get Twelve Data API key from settings
+    const settingsResult = await DB.prepare(`
+      SELECT setting_value FROM user_settings 
+      WHERE setting_key = 'twelve_data_api_key'
+    `).first();
+    
+    let apiKey = (settingsResult as any)?.setting_value || '70140f57bea54c5e90768de696487d8f';
+    
+    // Use real XAU/USD (Gold Spot / US Dollar) from Twelve Data
+    const symbol = 'XAU/USD';
+    const interval = '1h';
+    
+    // Fetch data
+    const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&apikey=${apiKey}&outputsize=100`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.code && data.status === 'error') {
+      return c.json({ 
+        success: false, 
+        error: data['message'] || 'Twelve Data API error',
+        count: 0 
+      });
+    }
+    
+    if (!data['values'] || !Array.isArray(data['values'])) {
+      return c.json({ 
+        success: false, 
+        error: 'No data available from Twelve Data API',
+        count: 0 
+      });
+    }
+    
+    const values = data['values'];
+    let count = 0;
+    
+    // Process and store data
+    for (const item of values) {
+      const candle = {
+        timestamp: item.datetime,
+        open: parseFloat(item.open),
+        high: parseFloat(item.high),
+        low: parseFloat(item.low),
+        close: parseFloat(item.close),
+        volume: parseInt(item.volume || '0')
+      };
+      
+      await DB.prepare(`
+        INSERT OR REPLACE INTO market_data (timestamp, open, high, low, close, volume, timeframe)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        candle.timestamp,
+        candle.open,
+        candle.high,
+        candle.low,
+        candle.close,
+        candle.volume,
+        '1h'
+      ).run();
+      
+      count++;
+    }
+    
+    // Generate signals (simplified for GET)
+    const latestCandle = values[0];
+    const currentPrice = parseFloat(latestCandle.close);
+    
+    return c.json({ 
+      success: true, 
+      count,
+      price: currentPrice,
+      message: 'Data fetched successfully from cron job'
+    });
+    
+  } catch (error: any) {
+    console.error('Cron fetch error:', error);
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      count: 0 
+    }, 500);
+  }
+})
+
 // Fetch market data from Alpha Vantage
 app.post('/api/market/fetch', async (c) => {
   const { DB } = c.env;
