@@ -124,7 +124,7 @@ app.get('/', (c) => {
                                 <i class="fas fa-crosshairs mr-3"></i>🎯 5M-Assassin Scanner (Every 5 Minutes)
                             </h2>
                             <p class="text-green-100 mb-4">
-                                7-Layer Analysis • A/B/C Grading • Instant Telegram Alerts for A-Grade Setups • Auto-running in background
+                                21-Layer Analysis (with FVG) • A/B/C Grading • Instant Telegram Alerts for A-Grade Setups • Auto-running in background
                             </p>
                             <div id="scannerStatus" class="text-sm text-green-200">
                                 🤖 Auto-scanning every 5 minutes... Click button to scan NOW →
