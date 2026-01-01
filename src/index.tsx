@@ -648,7 +648,7 @@ app.get('/', (c) => {
                     // Disable button and show loading
                     btn.disabled = true;
                     btnText.innerHTML = 'Scanning...';
-                    statusDiv.innerHTML = '⏳ Running 7-layer analysis on 5m timeframe...';
+                    statusDiv.innerHTML = '⏳ Running 21-layer analysis on 5m timeframe (with FVG)...';
                     resultsDiv.classList.add('hidden');
                     
                     // Call the 5M scanner endpoint
@@ -686,7 +686,7 @@ app.get('/', (c) => {
                         
                         html += '<div>';
                         html += '<p class="text-xs text-green-300 mb-1">LAYERS PASSED</p>';
-                        html += '<p class="text-xl font-bold text-white">' + scan.layers_passed + '/7</p>';
+                        html += '<p class="text-xl font-bold text-white">' + scan.layers_passed + '/21</p>';
                         html += '</div>';
                         html += '</div>';
                         

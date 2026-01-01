@@ -1071,8 +1071,9 @@ async function analyze7Layers(
   else if (score >= 152) grade = 'A'  // 80% of max (190 * 0.8)
   else if (score >= 133) grade = 'B'  // 70% of max (190 * 0.7)
   
-  // Re-evaluate signal with all layers (including Phase 1)
-  if ((isBullish || isBearish) && layersPassed >= 7) {
+  // Re-evaluate signal with all layers (including FVG Layer 21)
+  // Require at least 8 layers passed (38% of 21 layers) for signal confirmation
+  if ((isBullish || isBearish) && layersPassed >= 8) {
     signal = isBullish ? 'BUY' : 'SELL'
   }
   
