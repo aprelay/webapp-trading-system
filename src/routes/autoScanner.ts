@@ -297,6 +297,232 @@ app.post('/scan', async (c) => {
 })
 
 /**
+ * GET /scan
+ * 
+ * Alternative GET endpoint for cron services that prefer GET requests
+ * Performs the same scan as POST /scan
+ */
+app.get('/scan', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    console.log('[5M-SCANNER-GET] Step 1: Creating Date object')
+    const scanStartTime = new Date()
+    console.log('[5M-SCANNER-GET] Step 2: Date object created:', typeof scanStartTime)
+    console.log('[5M-SCANNER-GET] Step 3: Converting to ISO string')
+    const isoString = scanStartTime.toISOString()
+    console.log('[5M-SCANNER-GET] Starting scan at', isoString)
+    
+    console.log('[5M-SCANNER-GET] Step 4: Creating table')
+    // Create scanner_history table if not exists
+    await DB.prepare(`
+      CREATE TABLE IF NOT EXISTS scanner_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME NOT NULL,
+        timeframe TEXT NOT NULL,
+        signal_type TEXT NOT NULL,
+        grade TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        entry_price REAL NOT NULL,
+        stop_loss REAL NOT NULL,
+        take_profit_1 REAL NOT NULL,
+        take_profit_2 REAL NOT NULL,
+        take_profit_3 REAL NOT NULL,
+        confidence INTEGER NOT NULL,
+        layers_passed INTEGER NOT NULL,
+        liquidity_score INTEGER,
+        session TEXT,
+        telegram_sent INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run()
+    
+    console.log('[5M-SCANNER-GET] Step 5: Table created, fetching data')
+    
+    // ============================================================
+    // LAYER 1: FETCH MULTI-TIMEFRAME DATA
+    // ============================================================
+    
+    // Get 5m indicators
+    const indicators5m = await DB.prepare(`
+      SELECT * FROM multi_timeframe_indicators 
+      WHERE timeframe = '5m'
+      ORDER BY timestamp DESC 
+      LIMIT 1
+    `).first()
+    
+    // Get 15m indicators
+    const indicators15m = await DB.prepare(`
+      SELECT * FROM multi_timeframe_indicators 
+      WHERE timeframe = '15m'
+      ORDER BY timestamp DESC 
+      LIMIT 1
+    `).first()
+    
+    // Get 1h indicators
+    const indicators1h = await DB.prepare(`
+      SELECT * FROM multi_timeframe_indicators 
+      WHERE timeframe = '1h'
+      ORDER BY timestamp DESC 
+      LIMIT 1
+    `).first()
+    
+    if (!indicators5m || !indicators15m || !indicators1h) {
+      console.log('[5M-SCANNER-GET] Missing indicators:', {
+        has5m: !!indicators5m,
+        has15m: !!indicators15m,
+        has1h: !!indicators1h
+      })
+      return c.json({
+        success: false,
+        error: 'Insufficient data for scan. Please run /api/market/fetch-mtf first.'
+      })
+    }
+    
+    // Get latest 5m candles for volume analysis
+    const candles5mResult = await DB.prepare(`
+      SELECT timestamp, open, high, low, close, volume 
+      FROM market_data 
+      WHERE timeframe = '5m'
+      ORDER BY timestamp DESC 
+      LIMIT 100
+    `).all()
+    
+    const candles5m = (candles5mResult.results as any[]).map(row => ({
+      timestamp: row.timestamp,
+      open: Number(row.open),
+      high: Number(row.high),
+      low: Number(row.low),
+      close: Number(row.close),
+      volume: Number(row.volume) || 0
+    })).reverse()
+    
+    if (!candles5m || candles5m.length === 0) {
+      return c.json({
+        success: false,
+        error: 'No 5m market data available'
+      })
+    }
+    
+    const currentPrice = candles5m[candles5m.length - 1].close
+    
+    // Run 7-layer analysis
+    const analysis = await analyze7Layers(
+      DB,
+      indicators5m,
+      indicators15m,
+      indicators1h,
+      candles5m,
+      currentPrice
+    )
+    
+    // Save to database
+    const currentTimestamp = new Date().toISOString()
+    
+    await DB.prepare(`
+      INSERT INTO scanner_history 
+      (timestamp, timeframe, signal_type, grade, score, 
+       entry_price, stop_loss, take_profit_1, take_profit_2, take_profit_3,
+       confidence, layers_passed, liquidity_score, session, telegram_sent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      currentTimestamp,
+      '5m',
+      analysis.signal,
+      analysis.grade,
+      analysis.score,
+      currentPrice,
+      analysis.stopLoss,
+      analysis.tp1,
+      analysis.tp2,
+      analysis.tp3,
+      analysis.confidence,
+      analysis.layersPassed,
+      analysis.liquidityScore,
+      analysis.session,
+      0
+    ).run()
+    
+    // Send Telegram alert for A-grade only
+    let telegramSent = false
+    if (analysis.grade === 'A' || analysis.grade === 'A+') {
+      try {
+        const settings = await DB.prepare(`
+          SELECT setting_key, setting_value FROM user_settings
+          WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+        `).all()
+        
+        const config: any = {}
+        for (const row of settings.results || []) {
+          const r = row as any
+          config[r.setting_key] = r.setting_value
+        }
+        
+        const bot_token = config.telegram_bot_token
+        const chat_id = config.telegram_chat_id
+        
+        if (bot_token && chat_id && 
+            bot_token !== 'your_bot_token_here' && 
+            chat_id !== 'your_chat_id_here') {
+          
+          const message = `
+🎯 <b>5M ASSASSIN SCANNER - ${analysis.grade} GRADE SETUP!</b>
+
+📊 <b>Signal:</b> ${analysis.signal === 'BUY' ? '🟢 BUY' : '🔴 SELL'}
+💎 <b>Grade:</b> ${analysis.grade} (Score: ${analysis.score}/250)
+💰 <b>Entry:</b> $${currentPrice.toFixed(2)}
+🛡️ <b>Stop Loss:</b> $${analysis.stopLoss.toFixed(2)}
+
+🎯 <b>Take Profit Targets:</b>
+   TP1: $${analysis.tp1.toFixed(2)}
+   TP2: $${analysis.tp2.toFixed(2)}
+   TP3: $${analysis.tp3.toFixed(2)}
+
+✅ <b>Layers Passed:</b> ${analysis.layersPassed}/20
+📈 <b>Confidence:</b> ${analysis.confidence}%
+💧 <b>Liquidity:</b> ${analysis.liquidityScore}/100
+🕐 <b>Session:</b> ${analysis.session}
+
+⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC
+          `.trim()
+          
+          await sendTelegramMessage(bot_token, chat_id, message)
+          telegramSent = true
+          console.log('[5M-SCANNER-GET] Telegram alert sent for', analysis.grade, 'grade')
+        }
+      } catch (telegramError) {
+        console.error('[5M-SCANNER-GET] Telegram error:', telegramError)
+      }
+    }
+    
+    return c.json({
+      success: true,
+      timestamp: currentTimestamp,
+      scan_result: {
+        grade: analysis.grade,
+        score: analysis.score,
+        signal: analysis.signal,
+        confidence: analysis.confidence,
+        entry: currentPrice,
+        stop_loss: analysis.stopLoss,
+        targets: [analysis.tp1, analysis.tp2, analysis.tp3],
+        layers_passed: analysis.layersPassed,
+        telegram_sent: telegramSent
+      }
+    })
+    
+  } catch (error: any) {
+    console.error('[5M-SCANNER-GET] Fatal error:', error)
+    const errorMessage = error?.message || String(error)
+    console.error('[5M-SCANNER-GET] Error message:', errorMessage)
+    return c.json({
+      success: false,
+      error: errorMessage
+    }, 500)
+  }
+})
+
+/**
  * GET /stats
  * 
  * Get scanner performance statistics
