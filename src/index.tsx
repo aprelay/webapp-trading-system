@@ -595,7 +595,7 @@ app.get('/', (c) => {
             async function testTelegram() {
                 try {
                     const res = await fetchWithTimeout('/api/telegram/test', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-                    if (res.data.success) {
+                    if (res.success) {
                         alert('✅ Telegram test message sent successfully!');
                     } else {
                         alert('❌ Failed to send Telegram message. Check your settings.');
@@ -621,10 +621,10 @@ app.get('/', (c) => {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
                     
-                    if (res.data.success) {
+                    if (res.success) {
                         alert('✅ Test A-grade alert sent!\\n\\nCheck your Telegram to see what real alerts will look like.\\n\\n📊 Grade: A (87%)\\n🟢 Signal: BUY\\n💰 Entry: $4386.50\\n🛡️ Stop: $4401.50\\n🎯 TP1: $4356.20\\n\\nThis is a SAMPLE alert for testing purposes.');
                     } else {
-                        alert('❌ Failed to send test alert.\\n\\n' + res.data.error + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                        alert('❌ Failed to send test alert.\\n\\n' + res.error + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
@@ -651,8 +651,8 @@ app.get('/', (c) => {
                     // Call the 5M scanner endpoint
                     const res = await fetchWithTimeout('/api/scanner/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
-                    if (res.data.success) {
-                        const scan = res.data.scan_result;
+                    if (res.success) {
+                        const scan = res.scan_result;
                         
                         // Get emoji for grade
                         const gradeEmoji = scan.grade === 'A+' ? '💎' : 
@@ -739,15 +739,15 @@ app.get('/', (c) => {
                         resultsDiv.classList.remove('hidden');
                         
                         // Update status
-                        statusDiv.innerHTML = '✅ Scan complete at ' + new Date(res.data.timestamp).toLocaleTimeString() + ' - Grade: ' + gradeEmoji + ' ' + scan.grade;
+                        statusDiv.innerHTML = '✅ Scan complete at ' + new Date(res.timestamp).toLocaleTimeString() + ' - Grade: ' + gradeEmoji + ' ' + scan.grade;
                         
                         // Show alert for A-grade
                         if (scan.grade === 'A' || scan.grade === 'A+') {
                             alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\\n\\nSignal: ' + scan.signal + '\\nEntry: $' + scan.entry.toFixed(2) + '\\nStop: $' + scan.stop_loss.toFixed(2) + '\\nTP1: $' + scan.targets[0].toFixed(2) + '\\n\\nCheck dashboard for full details!');
                         }
                     } else {
-                        alert('❌ Scanner error: ' + res.data.error);
-                        statusDiv.innerHTML = '❌ Scan failed - ' + res.data.error;
+                        alert('❌ Scanner error: ' + res.error);
+                        statusDiv.innerHTML = '❌ Scan failed - ' + res.error;
                     }
                     
                     // Re-enable button
@@ -774,16 +774,16 @@ app.get('/', (c) => {
                     // Total: 500 candles + all indicators
                     const res = await fetchWithTimeout('/api/market/fetch-mtf', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
-                    if (res.data.success) {
+                    if (res.success) {
                         let message = '✅ Market Data Fetched Successfully!\\n\\n';
-                        message += '📊 Fetched ' + res.data.totalCount + ' candles across 5 timeframes\\n\\n';
+                        message += '📊 Fetched ' + res.totalCount + ' candles across 5 timeframes\\n\\n';
                         message += '✅ Ready for:\\n';
                         message += '   • Generate Signal NOW (simple)\\n';
                         message += '   • Hedge Fund Signal (all 10 features)\\n\\n';
                         message += 'Click either button to analyze current market!';
                         alert(message);
                     } else {
-                        alert('✅ Partial Success\\n\\nFetched ' + res.data.totalCount + ' candles\\n\\nSome timeframes may have errors. Check console for details.');
+                        alert('✅ Partial Success\\n\\nFetched ' + res.totalCount + ' candles\\n\\nSome timeframes may have errors. Check console for details.');
                     }
                     
                     await refreshData();
@@ -809,9 +809,9 @@ app.get('/', (c) => {
                     // Call SIMPLE signal endpoint (not hedge fund)
                     const res = await fetchWithTimeout('/api/signals/simple/simple', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
-                    if (res.data.success) {
-                        const day = res.data.day_trade;
-                        const swing = res.data.swing_trade;
+                    if (res.success) {
+                        const day = res.day_trade;
+                        const swing = res.swing_trade;
                         
                         // Format SIMPLE signal (matching Telegram format)
                         const emoji = day.signal_type === 'BUY' ? '🟢' : day.signal_type === 'SELL' ? '🔴' : '⚪';
@@ -833,7 +833,7 @@ app.get('/', (c) => {
                         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
                         message += '⏰ ' + timestamp;
                         
-                        if (res.data.telegram_sent) {
+                        if (res.telegram_sent) {
                             message += '\\n\\n📱 Sent to Telegram!';
                         } else {
                             message += '\\n\\n⚠️ Telegram not configured';
@@ -842,7 +842,7 @@ app.get('/', (c) => {
                         alert(message);
                         await refreshData();
                     } else {
-                        alert('❌ Error: ' + res.data.error);
+                        alert('❌ Error: ' + res.error);
                     }
                     
                     btn.disabled = false;
@@ -864,15 +864,15 @@ app.get('/', (c) => {
                     
                     const res = await fetchWithTimeout('/api/signals/enhanced/enhanced', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
-                    if (res.data.success) {
+                    if (res.success) {
                         // API returns day_trade and swing_trade directly (not nested in signals)
-                        const day = res.data.day_trade;
-                        const swing = res.data.swing_trade;
-                        const alignment = res.data.alignment;
-                        const risk_metrics = res.data.risk_metrics;
-                        const regime = res.data.regime;
-                        const ml = res.data.ml_prediction;
-                        const pop = res.data.profit_probability;
+                        const day = res.day_trade;
+                        const swing = res.swing_trade;
+                        const alignment = res.alignment;
+                        const risk_metrics = res.risk_metrics;
+                        const regime = res.regime;
+                        const ml = res.ml_prediction;
+                        const pop = res.profit_probability;
                         
                         let message = '🏦 HEDGE FUND GRADE SIGNAL\\n\\n';
                         
@@ -929,7 +929,7 @@ app.get('/', (c) => {
                         
                         // Telegram Status
                         message += '\\n\\n';
-                        if (res.data.telegram_sent) {
+                        if (res.telegram_sent) {
                             message += '📱 ✅ Sent to Telegram!';
                         } else {
                             message += '📱 ⚠️ Telegram not configured (check settings)';
@@ -938,7 +938,7 @@ app.get('/', (c) => {
                         alert(message);
                         await refreshData();
                     } else {
-                        alert('❌ Error: ' + res.data.error);
+                        alert('❌ Error: ' + res.error);
                     }
                     
                     btn.disabled = false;
@@ -967,7 +967,7 @@ app.get('/', (c) => {
                     // Run automated analysis
                     const res = await fetchWithTimeout('/api/automation/analyze-and-notify', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
-                    if (res.data.success) {
+                    if (res.success) {
                         const { signals, positions, alignment, telegram_sent, results } = res.data;
                         
                         // Update status
@@ -1052,7 +1052,7 @@ app.get('/', (c) => {
                         // Refresh signals display
                         await refreshData();
                     } else {
-                        statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>Error: ' + res.data.error;
+                        statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>Error: ' + res.error;
                     }
                 } catch (error) {
                     statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>Error: ' + error.message;
@@ -1173,7 +1173,7 @@ app.get('/', (c) => {
                     } else {
                         detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
                             '<i class="fas fa-exclamation-triangle mr-2"></i>' +
-                            '<strong>Error:</strong> ' + (res.data.error || 'Backtest failed') +
+                            '<strong>Error:</strong> ' + (res.error || 'Backtest failed') +
                             '</div>';
                     }
                 } catch (error) {
@@ -1225,8 +1225,8 @@ app.get('/', (c) => {
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                     
-                    if (res.data.success) {
-                        const analysis = res.data.analysis;
+                    if (res.success) {
+                        const analysis = res.analysis;
                         
                         let html = '';
                         
@@ -1310,7 +1310,7 @@ app.get('/', (c) => {
                     } else {
                         detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
                             '<i class="fas fa-exclamation-triangle mr-2"></i>' +
-                            '<strong>Error:</strong> ' + (res.data.error || 'Analysis failed') +
+                            '<strong>Error:</strong> ' + (res.error || 'Analysis failed') +
                             '</div>';
                     }
                 } catch (error) {
