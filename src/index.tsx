@@ -45,7 +45,6 @@ app.get('/', (c) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     </head>
     <body class="bg-gray-900 text-gray-100">
         <div class="min-h-screen">
@@ -307,13 +306,30 @@ app.get('/', (c) => {
         </div>
 
         <script>
-            // ⚡ CRITICAL: Configure axios FIRST before anything else
-            console.log('[INIT] Setting axios timeout to 30 seconds');
-            axios.defaults.timeout = 30000; // 30 seconds global timeout
-            axios.defaults.headers.post['Content-Type'] = 'application/json';
-            console.log('[INIT] Axios configured:', axios.defaults.timeout);
-            
             let priceChart = null;
+            
+            // ⚡ Helper function: Native fetch with timeout
+            async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+                
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    
+                    return await response.json();
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    throw error;
+                }
+            }
             
             // Initialize on page load
             async function init() {
@@ -536,8 +552,8 @@ app.get('/', (c) => {
 
             async function loadSettings() {
                 try {
-                    const res = await axios.get('/api/settings');
-                    const settings = res.data.settings;
+                    const res = await fetchWithTimeout('/api/settings');
+                    const settings = res.settings;
                     
                     const apiKey = settings.twelve_data_api_key || '70140f57bea54c5e90768de696487d8f';
                     document.getElementById('twelveDataKey').value = apiKey.substring(0, 8) + '...' + apiKey.substring(apiKey.length - 4);
@@ -559,7 +575,11 @@ app.get('/', (c) => {
                 };
                 
                 try {
-                    await axios.post('/api/settings', settings);
+                    await fetchWithTimeout('/api/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(settings)
+                    });
                     alert('Settings saved successfully!');
                 } catch (error) {
                     alert('Error saving settings: ' + error.message);
@@ -568,7 +588,7 @@ app.get('/', (c) => {
 
             async function testTelegram() {
                 try {
-                    const res = await axios.post('/api/telegram/test');
+                    const res = await fetchWithTimeout('/api/telegram/test', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     if (res.data.success) {
                         alert('✅ Telegram test message sent successfully!');
                     } else {
@@ -590,7 +610,7 @@ app.get('/', (c) => {
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
                     
-                    const res = await axios.post('/api/scanner/test-alert');
+                    const res = await fetchWithTimeout('/api/scanner/test-alert', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
@@ -623,7 +643,7 @@ app.get('/', (c) => {
                     resultsDiv.classList.add('hidden');
                     
                     // Call the 5M scanner endpoint
-                    const res = await axios.post('/api/scanner/scan');
+                    const res = await fetchWithTimeout('/api/scanner/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
                     if (res.data.success) {
                         const scan = res.data.scan_result;
@@ -746,7 +766,7 @@ app.get('/', (c) => {
                     // Fetch MULTI-TIMEFRAME data (for both simple AND hedge fund signals)
                     // This fetches 5 timeframes: 5m, 15m, 1h, 4h, daily
                     // Total: 500 candles + all indicators
-                    const res = await axios.post('/api/market/fetch-mtf');
+                    const res = await fetchWithTimeout('/api/market/fetch-mtf', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
                     if (res.data.success) {
                         let message = '✅ Market Data Fetched Successfully!\\n\\n';
@@ -778,7 +798,7 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
                     
                     // Call SIMPLE signal endpoint (not hedge fund)
-                    const res = await axios.post('/api/signals/simple/simple');
+                    const res = await fetchWithTimeout('/api/signals/simple/simple', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
                     if (res.data.success) {
                         const day = res.data.day_trade;
@@ -831,7 +851,7 @@ app.get('/', (c) => {
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
                     
-                    const res = await axios.post('/api/signals/enhanced/enhanced');
+                    const res = await fetchWithTimeout('/api/signals/enhanced/enhanced', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
                     if (res.data.success) {
                         // API returns day_trade and swing_trade directly (not nested in signals)
@@ -934,7 +954,7 @@ app.get('/', (c) => {
                     resultsDiv.classList.add('hidden');
                     
                     // Run automated analysis
-                    const res = await axios.post('/api/automation/analyze-and-notify');
+                    const res = await fetchWithTimeout('/api/automation/analyze-and-notify', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
                     if (res.data.success) {
                         const { signals, positions, alignment, telegram_sent, results } = res.data;
@@ -1045,15 +1065,20 @@ app.get('/', (c) => {
                     '</div>';
                 
                 try {
-                    const res = await axios.post('/api/backtest/run', {
-                        min_confidence: 75,
-                        use_mtf_confirmation: true,
-                        use_news_filter: false,
-                        starting_balance: 10000
+                    const res = await fetchWithTimeout('/api/backtest/run', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            min_confidence: 75,
+                            use_mtf_confirmation: true,
+                            use_news_filter: false,
+                            starting_balance: 10000
+                        })
                     });
+                    const resData = await res.json();
                     
-                    if (res.data.success) {
-                        const r = res.data.result;
+                    if (resData.success) {
+                        const r = resData.result;
                         
                         // Format results
                         let html = '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">';
@@ -1183,7 +1208,7 @@ app.get('/', (c) => {
                     detailsDiv.innerHTML = '<div class="bg-cyan-900 bg-opacity-50 border border-cyan-500 p-4 rounded-lg text-white"><i class="fas fa-brain fa-spin mr-2"></i>AI analyzing market conditions...</div>';
                     
                     console.log('📡 Calling /api/ai/market-analysis...');
-                    const res = await axios.post('/api/ai/market-analysis');
+                    const res = await fetchWithTimeout('/api/ai/market-analysis', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     console.log('✅ API response received:', res.data);
                     
                     btn.disabled = false;
@@ -1593,7 +1618,7 @@ app.get('/api/market/fetch', async (c) => {
     
     // Generate signals (simplified for GET)
     const latestCandle = values[0];
-    const currentPrice = parseFloat(latestCandle.close);
+    const currentPrice = parseFloat(latestCandle.close) || 0;
     
     return c.json({ 
       success: true, 
@@ -2097,10 +2122,10 @@ app.post('/api/market/fetch-mtf', async (c) => {
       for (const item of values) {
         const candle = {
           timestamp: item.datetime,
-          open: parseFloat(item.open),
-          high: parseFloat(item.high),
-          low: parseFloat(item.low),
-          close: parseFloat(item.close),
+          open: parseFloat(item.open) || 0,
+          high: parseFloat(item.high) || 0,
+          low: parseFloat(item.low) || 0,
+          close: parseFloat(item.close) || 0,
           volume: 0
         };
         
@@ -2445,10 +2470,10 @@ app.post('/api/signals/generate-now', async (c) => {
           // Convert API data to candles
           candles = data.values.reverse().map((item: any) => ({
             timestamp: item.datetime,
-            open: parseFloat(item.open),
-            high: parseFloat(item.high),
-            low: parseFloat(item.low),
-            close: parseFloat(item.close),
+            open: parseFloat(item.open) || 0,
+            high: parseFloat(item.high) || 0,
+            low: parseFloat(item.low) || 0,
+            close: parseFloat(item.close) || 0,
             volume: parseFloat(item.volume) || 0
           }));
           usedFreshData = true;
@@ -3032,10 +3057,10 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
             for (const item of data.values) {
               candles.push({
                 timestamp: item.datetime,
-                open: parseFloat(item.open),
-                high: parseFloat(item.high),
-                low: parseFloat(item.low),
-                close: parseFloat(item.close),
+                open: parseFloat(item.open) || 0,
+                high: parseFloat(item.high) || 0,
+                low: parseFloat(item.low) || 0,
+                close: parseFloat(item.close) || 0,
                 volume: 0
               })
             }
