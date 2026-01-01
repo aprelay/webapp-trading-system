@@ -259,7 +259,7 @@ app.get('/', (c) => {
                         <button id="fetchBtn" onclick="fetchMarketData()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-download mr-2"></i>Fetch Market Data
                         </button>
-                        <button onclick="generateSignalNow()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition">
+                        <button id="generateBtn" onclick="generateSignalNow()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-chart-line mr-2"></i>Generate Signal NOW
                         </button>
                         <button onclick="generateEnhancedSignal()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold transition">
@@ -765,7 +765,7 @@ app.get('/', (c) => {
 
             async function fetchMarketData() {
                 try {
-                    const btn = event.target;
+                    const btn = document.getElementById('fetchBtn');
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching ALL Data...';
                     
@@ -792,14 +792,17 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
                 } catch (error) {
                     alert('❌ Error fetching data: ' + error.message);
-                    event.target.disabled = false;
-                    event.target.innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
+                    const btn = document.getElementById('fetchBtn');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
+                    }
                 }
             }
 
             async function generateSignalNow() {
                 try {
-                    const btn = event.target;
+                    const btn = document.getElementById('generateBtn');
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
                     
@@ -846,7 +849,9 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
-                    event.target.disabled = false;
+                    const btn = document.getElementById('generateBtn');
+                    if (btn) {
+                        btn.disabled = false;
                     event.target.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
                 }
             }
