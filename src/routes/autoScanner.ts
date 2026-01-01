@@ -36,6 +36,10 @@ import {
   isZoneAligned
 } from '../lib/priceActionZones'
 import {
+  analyzeFVG,
+  type FVGAnalysis
+} from '../lib/fvgAnalysis'
+import {
   detectDivergence,
   isDivergenceAligned,
   formatDivergenceMessage
@@ -945,6 +949,19 @@ async function analyze7Layers(
     layers.push(`ℹ️ Layer 13: No key zones nearby`)
   }
   
+  // Layer 21: Fair Value Gap (FVG) Detection
+  const fvgAnalysis = analyzeFVG(candles5m, currentPrice, signal.signal_type)
+  
+  if (fvgAnalysis.aligned && fvgAnalysis.hasFVG) {
+    score += 10
+    layersPassed++
+    layers.push(`✅ Layer 21: ${fvgAnalysis.description}`)
+  } else if (fvgAnalysis.hasFVG) {
+    layers.push(`⚠️ Layer 21: ${fvgAnalysis.description}`)
+  } else {
+    layers.push(`ℹ️ Layer 21: ${fvgAnalysis.description}`)
+  }
+  
   // Layer 14: RSI/MACD Divergence
   // Need to fetch recent indicators for divergence analysis
   const recentIndicators5m = await DB.prepare(`
@@ -1048,11 +1065,11 @@ async function analyze7Layers(
     layers.push(`ℹ️ Layer 20: ${cotAnalysis.description}`)
   }
   
-  // Calculate grade (max score ~180 with all 20 layers)
+  // Calculate grade (max score ~190 with all 21 layers including FVG)
   let grade = 'C'
-  if (score >= 162) grade = 'A+' // 90% of max
-  else if (score >= 144) grade = 'A'  // 80% of max
-  else if (score >= 126) grade = 'B'  // 70% of max
+  if (score >= 171) grade = 'A+' // 90% of max (190 * 0.9)
+  else if (score >= 152) grade = 'A'  // 80% of max (190 * 0.8)
+  else if (score >= 133) grade = 'B'  // 70% of max (190 * 0.7)
   
   // Re-evaluate signal with all layers (including Phase 1)
   if ((isBullish || isBearish) && layersPassed >= 7) {
