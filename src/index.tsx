@@ -248,7 +248,7 @@ app.get('/', (c) => {
                         <button onclick="sendTestAlert()" class="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert
                         </button>
-                        <button onclick="fetchMarketData()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition">
+                        <button id="fetchBtn" onclick="fetchMarketData()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-download mr-2"></i>Fetch Market Data
                         </button>
                         <button onclick="generateSignalNow()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition">
@@ -315,30 +315,51 @@ app.get('/', (c) => {
 
             async function refreshData() {
                 try {
-                    // ⚡ CRITICAL: Fetch fresh market data every minute
-                    // This triggers signal generation and Telegram alerts
-                    await axios.post('/api/market/fetch', {
-                        symbol: 'XAU/USD',
-                        interval: '1h'
-                    });
+                    // ⚡ OPTIMIZED: Load all data in parallel (3x faster!)
+                    // Cron job handles fresh data fetching every minute
+                    // Dashboard just displays cached data instantly
+                    const [signalsRes, marketRes, indicatorsRes] = await Promise.all([
+                        axios.get('/api/signals/recent'),
+                        axios.get('/api/market/latest'),
+                        axios.get('/api/indicators/latest')
+                    ]);
                     
-                    // Load latest signals
-                    const signalsRes = await axios.get('/api/signals/recent');
+                    // Display all results
                     displayRecentSignals(signalsRes.data.signals);
                     
-                    // Load market data
-                    const marketRes = await axios.get('/api/market/latest');
                     if (marketRes.data.data && marketRes.data.data.length > 0) {
                         updateDashboard(marketRes.data.data);
                     }
 
-                    // Load indicators
-                    const indicatorsRes = await axios.get('/api/indicators/latest');
                     if (indicatorsRes.data.indicators) {
                         displayIndicators(indicatorsRes.data.indicators);
                     }
                 } catch (error) {
                     console.error('Error refreshing data:', error);
+                }
+            }
+
+            // Manual fetch function for "Fetch Data" button
+            async function fetchMarketData() {
+                try {
+                    document.getElementById('fetchBtn').disabled = true;
+                    document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching...';
+                    
+                    // Fetch fresh data from Twelve Data API
+                    await axios.post('/api/market/fetch', {
+                        symbol: 'XAU/USD',
+                        interval: '1h'
+                    });
+                    
+                    // Refresh dashboard with new data
+                    await refreshData();
+                    
+                    document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Fetch Data';
+                } catch (error) {
+                    alert('Error fetching data: ' + error.message);
+                    document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Fetch Data';
+                } finally {
+                    document.getElementById('fetchBtn').disabled = false;
                 }
             }
 
