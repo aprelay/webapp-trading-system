@@ -306,6 +306,10 @@ app.get('/', (c) => {
         <script>
             let priceChart = null;
 
+            // Configure axios defaults for longer timeouts
+            // Twelve Data API and heavy operations can take 5-10 seconds
+            axios.defaults.timeout = 30000; // 30 seconds global timeout
+            
             // Initialize on page load
             async function init() {
                 await loadSettings();
@@ -346,18 +350,40 @@ app.get('/', (c) => {
                     document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching...';
                     
                     // Fetch fresh data from Twelve Data API
+                    // Note: This can take 3-5 seconds, so we use a longer timeout
                     await axios.post('/api/market/fetch', {
                         symbol: 'XAU/USD',
                         interval: '1h'
+                    }, {
+                        timeout: 30000 // 30 second timeout (Twelve Data API can be slow)
                     });
                     
                     // Refresh dashboard with new data
                     await refreshData();
                     
-                    document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Fetch Data';
+                    document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
+                    
+                    // Show success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                    successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Data fetched successfully!';
+                    document.body.appendChild(successMsg);
+                    setTimeout(() => successMsg.remove(), 3000);
+                    
                 } catch (error) {
-                    alert('Error fetching data: ' + error.message);
-                    document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Fetch Data';
+                    console.error('Fetch error:', error);
+                    let errorMsg = 'Error fetching data: ';
+                    if (error.code === 'ECONNABORTED') {
+                        errorMsg += 'Request timed out. Please try again.';
+                    } else if (error.response) {
+                        errorMsg += error.response.data?.error || error.response.statusText;
+                    } else if (error.request) {
+                        errorMsg += 'No response from server. Please check your connection.';
+                    } else {
+                        errorMsg += error.message;
+                    }
+                    alert(errorMsg);
+                    document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
                 } finally {
                     document.getElementById('fetchBtn').disabled = false;
                 }
