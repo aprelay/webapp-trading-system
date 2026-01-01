@@ -447,9 +447,9 @@ app.get('/scan', async (c) => {
       0
     ).run()
     
-    // Send Telegram alert for A-grade only
+    // Send Telegram alert for A and B+ grades (75%+ confidence)
     let telegramSent = false
-    if (analysis.grade === 'A' || analysis.grade === 'A+') {
+    if (analysis.grade === 'A' || analysis.grade === 'A+' || analysis.grade === 'B+') {
       try {
         const settings = await DB.prepare(`
           SELECT setting_key, setting_value FROM user_settings
@@ -473,7 +473,7 @@ app.get('/scan', async (c) => {
 🎯 <b>5M ASSASSIN SCANNER - ${analysis.grade} GRADE SETUP!</b>
 
 📊 <b>Signal:</b> ${analysis.signal === 'BUY' ? '🟢 BUY' : '🔴 SELL'}
-💎 <b>Grade:</b> ${analysis.grade} (Score: ${analysis.score}/250)
+💎 <b>Grade:</b> ${analysis.grade} (Score: ${analysis.score}/190)
 💰 <b>Entry:</b> $${currentPrice.toFixed(2)}
 🛡️ <b>Stop Loss:</b> $${analysis.stopLoss.toFixed(2)}
 
@@ -482,7 +482,7 @@ app.get('/scan', async (c) => {
    TP2: $${analysis.tp2.toFixed(2)}
    TP3: $${analysis.tp3.toFixed(2)}
 
-✅ <b>Layers Passed:</b> ${analysis.layersPassed}/20
+✅ <b>Layers Passed:</b> ${analysis.layersPassed}/21
 📈 <b>Confidence:</b> ${analysis.confidence}%
 💧 <b>Liquidity:</b> ${analysis.liquidityScore}/100
 🕐 <b>Session:</b> ${analysis.session}
@@ -1069,7 +1069,9 @@ async function analyze7Layers(
   let grade = 'C'
   if (score >= 171) grade = 'A+' // 90% of max (190 * 0.9)
   else if (score >= 152) grade = 'A'  // 80% of max (190 * 0.8)
+  else if (score >= 142) grade = 'B+' // 75% of max (190 * 0.75) - Added for Telegram alerts
   else if (score >= 133) grade = 'B'  // 70% of max (190 * 0.7)
+  else if (score >= 124) grade = 'B-' // 65% of max (190 * 0.65)
   
   // Re-evaluate signal with all layers (including FVG Layer 21)
   // Require at least 8 layers passed (38% of 21 layers) for signal confirmation
