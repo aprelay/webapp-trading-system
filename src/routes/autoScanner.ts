@@ -3,8 +3,8 @@
  * 
  * Automatically scans 5m candles every 5 minutes for A-grade setups
  * Features:
- * - 7-layer confirmation system
- * - A/B/C grade scoring
+ * - 21-layer confirmation system (including FVG detection)
+ * - A/B/C grade scoring (max 190 points)
  * - Telegram alerts for A-grade setups
  * - Performance tracking
  * - Session-based filtering
@@ -172,10 +172,10 @@ app.post('/scan', async (c) => {
     
     const currentPrice = candles5m[candles5m.length - 1].close
     
-    console.log('[5M-SCANNER] Step 7: Starting 7-layer analysis')
+    console.log('[5M-SCANNER] Step 7: Starting 21-layer analysis')
     
     // ============================================================
-    // LAYER 2: 7-LAYER ANALYSIS
+    // LAYER 2: 21-LAYER ANALYSIS (includes FVG)
     // ============================================================
     
     const analysis = await analyze7Layers(
@@ -410,7 +410,7 @@ app.get('/scan', async (c) => {
     
     const currentPrice = candles5m[candles5m.length - 1].close
     
-    // Run 7-layer analysis
+    // Run 21-layer analysis (including Layer 21: FVG)
     const analysis = await analyze7Layers(
       DB,
       indicators5m,
@@ -1127,7 +1127,7 @@ function formatTelegramAlert(analysis: any, currentPrice: number): string {
   message += `⏰ ${timeStr} UTC - ${analysis.session}\n\n`
   
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`
-  message += `📊 <b>7-LAYER ANALYSIS</b>\n`
+  message += `📊 <b>21-LAYER ANALYSIS (${analysis.layersPassed} passed)</b>\n`
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
   
   for (const layer of analysis.layers) {
