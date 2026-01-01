@@ -1734,6 +1734,45 @@ app.post('/api/market/fetch', async (c) => {
   }
 })
 
+// 🚀 LIGHTWEIGHT CRON ENDPOINT - Fast response for cron-job.org
+// Returns immediately to avoid 502 timeouts
+// Actual data fetching happens via separate manual trigger
+app.get('/api/cron/ping', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    // Quick database check to verify system is alive
+    const latestData = await DB.prepare(`
+      SELECT close, timestamp FROM market_data 
+      WHERE timeframe = '1h' 
+      ORDER BY timestamp DESC LIMIT 1
+    `).first();
+    
+    const latestSignal = await DB.prepare(`
+      SELECT signal_type, confidence, created_at FROM signals 
+      ORDER BY created_at DESC LIMIT 1
+    `).first();
+    
+    return c.json({ 
+      success: true,
+      status: 'operational',
+      timestamp: new Date().toISOString(),
+      last_data: latestData ? {
+        price: (latestData as any).close,
+        time: (latestData as any).timestamp
+      } : null,
+      last_signal: latestSignal ? {
+        type: (latestSignal as any).signal_type,
+        confidence: (latestSignal as any).confidence,
+        time: (latestSignal as any).created_at
+      } : null,
+      message: 'System operational - Data being fetched by background jobs'
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+})
+
 // 🚀 ENHANCED CRON ENDPOINT - Full automation with Telegram alerts
 // This endpoint is specifically designed for cron-job.org
 // GET request compatible + Signal generation + Telegram alerts
