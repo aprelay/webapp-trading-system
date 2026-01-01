@@ -663,7 +663,10 @@ Example: /close_trade 1 4580 TP1
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Gold/USD Trading System (XAU/USD)</title>
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Expires" content="0">
+        <title>Gold/USD Trading System (XAU/USD) v2.0</title>
         <script src="https://cdn.tailwindcss.com"><\/script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
@@ -929,11 +932,13 @@ Example: /close_trade 1 4580 TP1
         </div>
 
         <script>
-            let priceChart = null;
-
-            // Configure axios defaults for longer timeouts
-            // Twelve Data API and heavy operations can take 5-10 seconds
+            // ⚡ CRITICAL: Configure axios FIRST before anything else
+            console.log('[INIT] Setting axios timeout to 30 seconds');
             axios.defaults.timeout = 30000; // 30 seconds global timeout
+            axios.defaults.headers.post['Content-Type'] = 'application/json';
+            console.log('[INIT] Axios configured:', axios.defaults.timeout);
+            
+            let priceChart = null;
             
             // Initialize on page load
             async function init() {
@@ -970,40 +975,61 @@ Example: /close_trade 1 4580 TP1
 
             // Manual fetch function for "Fetch Data" button
             async function fetchMarketData() {
+                const startTime = Date.now();
+                console.log('[FETCH] Starting at', new Date().toISOString());
+                console.log('[FETCH] Axios timeout configured:', axios.defaults.timeout);
+                
                 try {
                     document.getElementById('fetchBtn').disabled = true;
                     document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching...';
                     
+                    console.log('[FETCH] Sending POST request to /api/market/fetch');
+                    
                     // Fetch fresh data from Twelve Data API
-                    // Note: This can take 3-5 seconds, so we use a longer timeout
-                    await axios.post('/api/market/fetch', {
+                    const response = await axios.post('/api/market/fetch', {
                         symbol: 'XAU/USD',
                         interval: '1h'
                     }, {
-                        timeout: 30000 // 30 second timeout (Twelve Data API can be slow)
+                        timeout: 30000, // 30 second timeout
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
                     });
+                    
+                    const fetchTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                    console.log('[FETCH] Success! Time:', fetchTime, 'seconds');
+                    console.log('[FETCH] Response:', response.data);
                     
                     // Refresh dashboard with new data
                     await refreshData();
                     
                     document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
                     
-                    // Show success message
+                    // Show success message with timing
                     const successMsg = document.createElement('div');
                     successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-                    successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Data fetched successfully!';
+                    successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Data fetched in ' + fetchTime + 's!';
                     document.body.appendChild(successMsg);
                     setTimeout(() => successMsg.remove(), 3000);
                     
                 } catch (error) {
-                    console.error('Fetch error:', error);
-                    let errorMsg = 'Error fetching data: ';
-                    if (error.code === 'ECONNABORTED') {
-                        errorMsg += 'Request timed out. Please try again.';
+                    const errorTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                    console.error('[FETCH] Error after', errorTime, 'seconds:', error);
+                    console.error('[FETCH] Error details:', {
+                        name: error.name,
+                        message: error.message,
+                        code: error.code,
+                        config: error.config,
+                        response: error.response
+                    });
+                    
+                    let errorMsg = 'Error fetching data (after ' + errorTime + 's): ';
+                    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+                        errorMsg += 'Request timed out. Server may be overloaded or network is slow.';
                     } else if (error.response) {
                         errorMsg += error.response.data?.error || error.response.statusText;
                     } else if (error.request) {
-                        errorMsg += 'No response from server. Please check your connection.';
+                        errorMsg += 'No response from server. Check network connection.';
                     } else {
                         errorMsg += error.message;
                     }
@@ -1011,6 +1037,7 @@ Example: /close_trade 1 4580 TP1
                     document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
                 } finally {
                     document.getElementById('fetchBtn').disabled = false;
+                    console.log('[FETCH] Completed at', new Date().toISOString());
                 }
             }
 
