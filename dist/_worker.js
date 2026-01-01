@@ -1600,7 +1600,7 @@ Example: /close_trade 1 4580 TP1
                     const res = await fetchWithTimeout('/api/automation/analyze-and-notify', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
                     if (res.success) {
-                        const { signals, positions, alignment, telegram_sent, results } = res.data;
+                        const { signals, positions, alignment, telegram_sent, results } = res;
                         
                         // Update status
                         statusDiv.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-2"></i>' +
