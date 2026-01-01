@@ -42,9 +42,15 @@ app.get('/', (c) => {
         <meta http-equiv="Pragma" content="no-cache">
         <meta http-equiv="Expires" content="0">
         <title>Gold/USD Trading System (XAU/USD) v2.0</title>
-        <link href="/static/tailwind.min.css" rel="stylesheet">
+        <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            // Suppress Tailwind CDN warning in production
+            if (window.tailwind) {
+                tailwind.config = { corePlugins: { preflight: true } }
+            }
+        </script>
     </head>
     <body class="bg-gray-900 text-gray-100">
         <div class="min-h-screen">
