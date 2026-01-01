@@ -253,7 +253,7 @@ app.get('/', (c) => {
                         <button onclick="testTelegram()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fab fa-telegram mr-2"></i>Test Telegram
                         </button>
-                        <button onclick="sendTestAlert()" class="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-lg font-semibold transition">
+                        <button id="testAlertBtn" onclick="sendTestAlert()" class="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert
                         </button>
                         <button id="fetchBtn" onclick="fetchMarketData()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition">
@@ -262,7 +262,7 @@ app.get('/', (c) => {
                         <button id="generateBtn" onclick="generateSignalNow()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-chart-line mr-2"></i>Generate Signal NOW
                         </button>
-                        <button onclick="generateEnhancedSignal()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold transition">
+                        <button id="enhancedBtn" onclick="generateEnhancedSignal()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal
                         </button>
                         <button onclick="runBacktest()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold transition">
@@ -612,7 +612,7 @@ app.get('/', (c) => {
                         return;
                     }
                     
-                    const btn = event.target;
+                    const btn = document.getElementById('testAlertBtn');
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
                     
@@ -628,8 +628,11 @@ app.get('/', (c) => {
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
-                    event.target.disabled = false;
-                    event.target.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
+                    const btn = document.getElementById('testAlertBtn');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
+                    }
                 }
             }
 
@@ -852,13 +855,14 @@ app.get('/', (c) => {
                     const btn = document.getElementById('generateBtn');
                     if (btn) {
                         btn.disabled = false;
-                    event.target.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
+                        btn.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
+                    }
                 }
             }
 
             async function generateEnhancedSignal() {
                 try {
-                    const btn = event.target;
+                    const btn = document.getElementById('enhancedBtn');
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
                     
@@ -945,8 +949,11 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal';
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
-                    event.target.disabled = false;
-                    event.target.innerHTML = '<i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal';
+                    const btn = document.getElementById('enhancedBtn');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal';
+                    }
                 }
             }
 
