@@ -324,56 +324,68 @@ app.get('/', (c) => {
 
             async function refreshData() {
                 try {
-                    // ⚡ OPTIMIZED: Load all data in parallel (3x faster!)
+                    // ⚡ OPTIMIZED: Load all data in parallel using native fetch
                     // Cron job handles fresh data fetching every minute
                     // Dashboard just displays cached data instantly
                     const [signalsRes, marketRes, indicatorsRes] = await Promise.all([
-                        axios.get('/api/signals/recent'),
-                        axios.get('/api/market/latest'),
-                        axios.get('/api/indicators/latest')
+                        fetch('/api/signals/recent').then(r => r.json()),
+                        fetch('/api/market/latest').then(r => r.json()),
+                        fetch('/api/indicators/latest').then(r => r.json())
                     ]);
                     
                     // Display all results
-                    displayRecentSignals(signalsRes.data.signals);
+                    displayRecentSignals(signalsRes.signals);
                     
-                    if (marketRes.data.data && marketRes.data.data.length > 0) {
-                        updateDashboard(marketRes.data.data);
+                    if (marketRes.data && marketRes.data.length > 0) {
+                        updateDashboard(marketRes.data);
                     }
 
-                    if (indicatorsRes.data.indicators) {
-                        displayIndicators(indicatorsRes.data.indicators);
+                    if (indicatorsRes.indicators) {
+                        displayIndicators(indicatorsRes.indicators);
                     }
                 } catch (error) {
                     console.error('Error refreshing data:', error);
                 }
             }
 
-            // Manual fetch function for "Fetch Data" button
+            // Manual fetch function for "Fetch Data" button - Using Native Fetch API
             async function fetchMarketData() {
                 const startTime = Date.now();
                 console.log('[FETCH] Starting at', new Date().toISOString());
-                console.log('[FETCH] Axios timeout configured:', axios.defaults.timeout);
                 
                 try {
                     document.getElementById('fetchBtn').disabled = true;
                     document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching...';
                     
-                    console.log('[FETCH] Sending POST request to /api/market/fetch');
+                    console.log('[FETCH] Sending POST request to /api/market/fetch using native fetch()');
                     
-                    // Fetch fresh data from Twelve Data API
-                    const response = await axios.post('/api/market/fetch', {
-                        symbol: 'XAU/USD',
-                        interval: '1h'
-                    }, {
-                        timeout: 30000, // 30 second timeout
+                    // Use native fetch with AbortController for timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                    
+                    const response = await fetch('/api/market/fetch', {
+                        method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
-                        }
+                        },
+                        body: JSON.stringify({
+                            symbol: 'XAU/USD',
+                            interval: '1h'
+                        }),
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    
+                    const data = await response.json();
                     
                     const fetchTime = ((Date.now() - startTime) / 1000).toFixed(2);
                     console.log('[FETCH] Success! Time:', fetchTime, 'seconds');
-                    console.log('[FETCH] Response:', response.data);
+                    console.log('[FETCH] Response:', data);
                     
                     // Refresh dashboard with new data
                     await refreshData();
@@ -390,24 +402,19 @@ app.get('/', (c) => {
                 } catch (error) {
                     const errorTime = ((Date.now() - startTime) / 1000).toFixed(2);
                     console.error('[FETCH] Error after', errorTime, 'seconds:', error);
-                    console.error('[FETCH] Error details:', {
-                        name: error.name,
-                        message: error.message,
-                        code: error.code,
-                        config: error.config,
-                        response: error.response
-                    });
                     
                     let errorMsg = 'Error fetching data (after ' + errorTime + 's): ';
-                    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-                        errorMsg += 'Request timed out. Server may be overloaded or network is slow.';
-                    } else if (error.response) {
-                        errorMsg += error.response.data?.error || error.response.statusText;
-                    } else if (error.request) {
-                        errorMsg += 'No response from server. Check network connection.';
+                    if (error.name === 'AbortError') {
+                        errorMsg += 'Request timed out after 30 seconds. Your network may be slow or the server is overloaded.';
+                    } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+                        errorMsg += 'Network error. Check your internet connection or try disabling VPN/firewall.';
                     } else {
                         errorMsg += error.message;
                     }
+                    
+                    console.error('[FETCH] Error type:', error.name);
+                    console.error('[FETCH] Error message:', error.message);
+                    
                     alert(errorMsg);
                     document.getElementById('fetchBtn').innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
                 } finally {
