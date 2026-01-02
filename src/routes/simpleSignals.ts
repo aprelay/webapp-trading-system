@@ -168,29 +168,93 @@ app.post('/simple', async (c) => {
       })
       
       if (config.telegram_bot_token && config.telegram_chat_id) {
-        // Build SIMPLE Telegram message (matching your format)
-        const emoji = daySignal.signal_type === 'BUY' ? '🟢' : daySignal.signal_type === 'SELL' ? '🔴' : '⚪'
+        // Determine if this is actually a HOLD signal
+        const confidence = Number(daySignal.confidence)
+        let displaySignal = daySignal.signal_type
+        let isHold = false
+        
+        // Override to HOLD if confidence is too low
+        if (confidence < 60 || daySignal.signal_type === 'HOLD') {
+          displaySignal = 'HOLD'
+          isHold = true
+        }
+        
+        // Build Telegram message matching popup format
+        const emoji = displaySignal === 'BUY' ? '🟢' : displaySignal === 'SELL' ? '🔴' : '⚪'
         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' })
         
-        let message = `${emoji} <b>GOLD/USD ${daySignal.signal_type} SIGNAL</b> ${emoji}\n\n`
+        let message = `${emoji} <b>GOLD/USD ${displaySignal} SIGNAL</b> ${emoji}\n\n`
         message += `📊 Day Trade\n`
         message += `💰 <b>Price:</b> $${Number(currentPrice).toFixed(2)}\n`
-        message += `📊 <b>Confidence:</b> ${Number(daySignal.confidence).toFixed(1)}%\n\n`
+        message += `📊 <b>Confidence:</b> ${confidence.toFixed(1)}%\n`
         
-        message += `🎯 <b>Take Profits:</b>\n`
-        message += `   TP1: $${Number(daySignal.take_profit_1).toFixed(2)}\n`
-        message += `   TP2: $${Number(daySignal.take_profit_2).toFixed(2)}\n`
-        message += `   TP3: $${Number(daySignal.take_profit_3).toFixed(2)}\n\n`
+        // Add confidence-based grading
+        if (confidence >= 80) {
+          message += `✅ <b>Grade: A+ (Strong - Trade It!)</b>\n\n`
+        } else if (confidence >= 70) {
+          message += `✅ <b>Grade: B+ (Good Setup)</b>\n\n`
+        } else if (confidence >= 60) {
+          message += `⚠️ <b>Grade: C (Moderate - Proceed with Caution)</b>\n\n`
+        } else {
+          message += `❌ <b>Grade: D (Weak - SKIP THIS SIGNAL)</b>\n\n`
+        }
         
-        message += `🛡️ <b>Stop Loss:</b> $${Number(daySignal.stop_loss).toFixed(2)}\n\n`
-        
-        message += `📝 <b>Reason:</b>\n`
-        // Escape HTML characters in reason text (< > & symbols)
-        const escapedReason = String(daySignal.reason)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-        message += escapedReason + `\n\n`
+        // HOLD-specific message
+        if (isHold) {
+          message += `🛑 <b>DO NOT TRADE</b>\n`
+          message += `━━━━━━━━━━━━━━━━━━━━\n`
+          message += `⚠️ <b>LOW CONFIDENCE SIGNAL</b>\n\n`
+          message += `📊 <b>Market Analysis:</b>\n`
+          message += `• Conflicting signals detected\n`
+          message += `• Confidence below 60% threshold\n`
+          message += `• Risk/Reward ratio unfavorable\n\n`
+          
+          message += `💡 <b>Professional Trading Rule:</b>\n`
+          message += `━━━━━━━━━━━━━━━━━━━━\n`
+          message += `ONLY trade signals with:\n`
+          message += `• Confidence ≥70% (B+ grade or higher)\n`
+          message += `• Clear directional bias\n`
+          message += `• Good risk/reward ratio\n\n`
+          
+          message += `✅ <b>What To Do Now:</b>\n`
+          message += `1. Wait for Auto-Fetch alert (≥70%)\n`
+          message += `2. Or use "Fetch Market Data" + "Scan 5M NOW"\n`
+          message += `3. Only enter when you see Grade A or B+\n\n`
+          
+          message += `📝 <b>Why This Is HOLD:</b>\n`
+          // Escape HTML characters
+          const escapedReason = String(daySignal.reason)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+          message += escapedReason + `\n\n`
+          
+        } else {
+          // Regular BUY/SELL signal
+          message += `🎯 <b>Take Profits:</b>\n`
+          message += `   TP1: $${Number(daySignal.take_profit_1).toFixed(2)}\n`
+          message += `   TP2: $${Number(daySignal.take_profit_2).toFixed(2)}\n`
+          message += `   TP3: $${Number(daySignal.take_profit_3).toFixed(2)}\n\n`
+          
+          message += `🛡️ <b>Stop Loss:</b> $${Number(daySignal.stop_loss).toFixed(2)}\n\n`
+          
+          // Add warnings for moderate confidence
+          if (confidence >= 60 && confidence < 70) {
+            message += `⚠️ <b>MODERATE CONFIDENCE WARNING:</b>\n`
+            message += `This is a C-grade setup. Consider:\n`
+            message += `• Using smaller position size\n`
+            message += `• Waiting for confirmation\n`
+            message += `• Checking 5M Scanner for validation\n\n`
+          }
+          
+          message += `📝 <b>Reason:</b>\n`
+          // Escape HTML characters
+          const escapedReason = String(daySignal.reason)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+          message += escapedReason + `\n\n`
+        }
         
         message += `⏰ ${timestamp}`
         
