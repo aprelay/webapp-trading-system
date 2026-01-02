@@ -2067,7 +2067,23 @@ app.get('/api/cron/auto-fetch', async (c) => {
         const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const emoji = dayTradeSignal.signal_type === 'BUY' ? '🟢' : '🔴';
         
-        const message = `${emoji} <b>GOLD/USD ${dayTradeSignal.signal_type} SIGNAL</b> ${emoji}\\n\\n📊 <b>Day Trade</b>\\n💰 Price: $${currentPrice.toFixed(2)}\\n📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%\\n\\n🎯 <b>Take Profits:</b>\\n   TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}\\n   TP2: $${dayTradeSignal.take_profit_2.toFixed(2)}\\n   TP3: $${dayTradeSignal.take_profit_3.toFixed(2)}\\n\\n🛡️ <b>Stop Loss:</b> $${dayTradeSignal.stop_loss.toFixed(2)}\\n\\n📝 <b>Reason:</b> ${escapeHtml(dayTradeSignal.reason)}\\n\\n⏰ ${new Date().toLocaleString()}`;
+        const message = `${emoji} <b>GOLD/USD ${dayTradeSignal.signal_type} SIGNAL</b> ${emoji}
+
+📊 <b>Day Trade</b>
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
+
+🎯 <b>Take Profits:</b>
+   TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
+   TP2: $${dayTradeSignal.take_profit_2.toFixed(2)}
+   TP3: $${dayTradeSignal.take_profit_3.toFixed(2)}
+
+🛡️ <b>Stop Loss:</b> $${dayTradeSignal.stop_loss.toFixed(2)}
+
+📝 <b>Reason:</b>
+${escapeHtml(dayTradeSignal.reason)}
+
+⏰ ${new Date().toLocaleString()}`;
         
         const success = await sendTelegramMessage({
           botToken: telegramBotToken,
@@ -2103,7 +2119,23 @@ app.get('/api/cron/auto-fetch', async (c) => {
         const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const emoji = swingTradeSignal.signal_type === 'BUY' ? '🟢' : '🔴';
         
-        const message = `${emoji} <b>GOLD/USD ${swingTradeSignal.signal_type} SIGNAL</b> ${emoji}\\n\\n📈 <b>Swing Trade</b>\\n💰 Price: $${currentPrice.toFixed(2)}\\n📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%\\n\\n🎯 <b>Take Profits:</b>\\n   TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}\\n   TP2: $${swingTradeSignal.take_profit_2.toFixed(2)}\\n   TP3: $${swingTradeSignal.take_profit_3.toFixed(2)}\\n\\n🛡️ <b>Stop Loss:</b> $${swingTradeSignal.stop_loss.toFixed(2)}\\n\\n📝 <b>Reason:</b> ${escapeHtml(swingTradeSignal.reason)}\\n\\n⏰ ${new Date().toLocaleString()}`;
+        const message = `${emoji} <b>GOLD/USD ${swingTradeSignal.signal_type} SIGNAL</b> ${emoji}
+
+📈 <b>Swing Trade</b>
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
+
+🎯 <b>Take Profits:</b>
+   TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
+   TP2: $${swingTradeSignal.take_profit_2.toFixed(2)}
+   TP3: $${swingTradeSignal.take_profit_3.toFixed(2)}
+
+🛡️ <b>Stop Loss:</b> $${swingTradeSignal.stop_loss.toFixed(2)}
+
+📝 <b>Reason:</b>
+${escapeHtml(swingTradeSignal.reason)}
+
+⏰ ${new Date().toLocaleString()}`;
         
         const success = await sendTelegramMessage({
           botToken: telegramBotToken,
