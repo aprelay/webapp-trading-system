@@ -1916,7 +1916,9 @@ app.get('/api/cron/auto-fetch', async (c) => {
     const values = data['values'];
     
     // 3. Process and store candles (OPTIMIZED with batch insert)
-    const candles = values.map(item => ({
+    // IMPORTANT: Twelve Data API returns values in REVERSE chronological order (newest first)
+    // We need to reverse the array so candles[0] = oldest, candles[last] = newest
+    const candles = values.reverse().map(item => ({
       timestamp: item.datetime,
       open: parseFloat(item.open) || 0,
       high: parseFloat(item.high) || 0,
@@ -1957,6 +1959,15 @@ app.get('/api/cron/auto-fetch', async (c) => {
     
     // 5. Generate signals
     const currentPrice = candles[candles.length - 1].close;
+    
+    // Check data freshness (warn if > 2 hours old)
+    const latestTimestamp = candles[candles.length - 1].timestamp;
+    const dataAge = Date.now() - new Date(latestTimestamp).getTime();
+    const hoursOld = dataAge / (1000 * 60 * 60);
+    
+    if (hoursOld > 2) {
+      console.warn(`[CRON] WARNING: Data is ${hoursOld.toFixed(1)} hours old! Latest: ${latestTimestamp}`);
+    }
     
     const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
     const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
@@ -2047,7 +2058,8 @@ ${swingTradeSignal.reason}
       timestamp: new Date().toISOString(),
       data_fetched: {
         candles: candles.length,
-        latest_price: currentPrice
+        latest_price: currentPrice,
+        data_timestamp: candles[candles.length - 1].timestamp  // Show when data is from
       },
       signals: {
         day_trade: {
@@ -2137,7 +2149,9 @@ app.post('/api/market/fetch-mtf', async (c) => {
       let count = 0;
       const candles: Candle[] = [];
       
-      for (const item of values) {
+      // IMPORTANT: Twelve Data API returns values in REVERSE chronological order (newest first)
+      // Reverse it so we store chronologically (oldest first) for consistency
+      for (const item of values.reverse()) {
         const candle = {
           timestamp: item.datetime,
           open: parseFloat(item.open) || 0,
@@ -2160,7 +2174,8 @@ app.post('/api/market/fetch-mtf', async (c) => {
       
       // Calculate indicators for this timeframe
       if (candles.length >= 50) {
-        const indicators = calculateIndicators(candles.reverse());
+        // Now candles is already in chronological order (oldest first), so no need to reverse
+        const indicators = calculateIndicators(candles);
         
         if (indicators) {
           await DB.prepare(`
