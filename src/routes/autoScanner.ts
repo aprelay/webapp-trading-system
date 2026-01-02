@@ -505,6 +505,7 @@ app.get('/scan', async (c) => {
       scan_result: {
         grade: analysis.grade,
         score: analysis.score,
+        max_score: 190,
         signal: analysis.signal,
         confidence: analysis.confidence,
         entry: currentPrice,

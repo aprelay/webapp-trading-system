@@ -675,7 +675,7 @@ app.get('/', (c) => {
                         html += '<div class="mb-3">';
                         html += '<p class="text-xs text-green-300 mb-1">GRADE</p>';
                         html += '<p class="text-3xl font-bold text-white">' + gradeEmoji + ' ' + scan.grade + '</p>';
-                        html += '<p class="text-sm text-green-300">' + scan.score + '/100 points</p>';
+                        html += '<p class="text-sm text-green-300">' + scan.score + '/' + (scan.max_score || 190) + ' points</p>';
                         html += '</div>';
                         
                         html += '<div class="mb-3">';
