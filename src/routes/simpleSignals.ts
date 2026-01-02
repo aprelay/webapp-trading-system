@@ -179,6 +179,13 @@ app.post('/simple', async (c) => {
           isHold = true
         }
         
+        // Only send B+ or higher (70%+) to Telegram to reduce noise
+        const shouldSend = confidence >= 70 && !isHold
+        
+        if (!shouldSend) {
+          console.log('[SIMPLE] Skipping Telegram - confidence too low:', confidence)
+        } else {
+        
         // Build Telegram message matching popup format
         const emoji = displaySignal === 'BUY' ? '🟢' : displaySignal === 'SELL' ? '🔴' : '⚪'
         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' })
@@ -269,6 +276,7 @@ app.post('/simple', async (c) => {
         if (!telegramSent) {
           console.log('[SIMPLE] Telegram send failed - checking response')
         }
+        } // End shouldSend
       } else {
         console.log('[SIMPLE] Telegram not configured')
       }
