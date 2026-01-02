@@ -2085,6 +2085,67 @@ ${swingTradeSignal.reason}
   }
 })
 
+// 🤖 AI AUTO-SCAN CRON ENDPOINT
+// Automatic AI Market Analysis with Telegram alerts (≥65% confidence)
+// Runs AI analysis and sends alerts for both BUY and SELL signals
+app.get('/api/cron/auto-ai-scan', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    console.log('[AI-AUTO-SCAN] Starting automatic AI market analysis');
+    
+    // Check if AI auto-scan is enabled
+    const settingResult = await DB.prepare(`
+      SELECT setting_value FROM user_settings 
+      WHERE setting_key = 'ai_auto_scan_enabled'
+    `).first();
+    
+    const aiAutoScanEnabled = (settingResult as any)?.setting_value === '1' || 
+                               (settingResult as any)?.setting_value === 'true';
+    
+    if (!aiAutoScanEnabled) {
+      console.log('[AI-AUTO-SCAN] Disabled in settings');
+      return c.json({ 
+        success: true, 
+        message: 'AI auto-scan is disabled',
+        ai_scan_enabled: false
+      });
+    }
+    
+    // Call the AI analysis endpoint
+    const aiResponse = await c.env.app?.fetch?.(
+      new Request(new URL('/api/ai/market-analysis', c.req.url).toString(), {
+        method: 'POST'
+      })
+    );
+    
+    if (aiResponse) {
+      const result = await aiResponse.json();
+      console.log('[AI-AUTO-SCAN] Analysis complete:', result.success ? 'Success' : 'Failed');
+      return c.json({
+        success: true,
+        ai_scan_enabled: true,
+        analysis: result,
+        message: result.analysis?.telegram_sent ? 
+          '🤖 AI analysis complete - Telegram alert sent' : 
+          '🤖 AI analysis complete - No alert (confidence < 65% or HOLD)'
+      });
+    }
+    
+    return c.json({ 
+      success: false, 
+      error: 'Failed to run AI analysis' 
+    }, 500);
+    
+  } catch (error: any) {
+    console.error('[AI-AUTO-SCAN] Error:', error);
+    return c.json({ 
+      success: false, 
+      error: error.message 
+    }, 500);
+  }
+})
+
 // Fetch multi-timeframe market data (Phase 3: 90% Accuracy)
 app.post('/api/market/fetch-mtf', async (c) => {
   const { DB } = c.env;

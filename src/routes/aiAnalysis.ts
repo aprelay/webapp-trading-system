@@ -26,6 +26,24 @@ const app = new Hono<{ Bindings: Bindings }>()
  * Generate AI-powered market analysis
  */
 app.post('/market-analysis', async (c) => {
+  return await runAIAnalysis(c)
+})
+
+/**
+ * GET /auto-ai-scan
+ * 
+ * Automatic AI scanning endpoint (for cron jobs)
+ * Runs AI analysis and sends Telegram alerts if confidence ≥65%
+ */
+app.get('/auto-ai-scan', async (c) => {
+  return await runAIAnalysis(c)
+})
+
+/**
+ * Core AI Analysis Function
+ * Used by both manual and automatic scanning
+ */
+async function runAIAnalysis(c: any) {
   const { DB } = c.env
   
   try {
@@ -274,7 +292,8 @@ app.post('/market-analysis', async (c) => {
       stop_loss: null
     }
     
-    if (signal.confidence >= 70) {
+    // IMPORTANT: Send Telegram alerts for ≥65% confidence (both BUY and SELL)
+    if (signal.confidence >= 65) {
       if (signal.signal_type === 'BUY') {
         recommendation = {
           action: 'BUY',
@@ -297,50 +316,63 @@ app.post('/market-analysis', async (c) => {
     }
     
     // ============================================================
-    // STEP 8: SEND TO TELEGRAM (Optional)
+    // STEP 8: SEND TO TELEGRAM (for signals ≥65%)
     // ============================================================
     
     let telegramSent = false
     
-    try {
-      const settings = await DB.prepare(`
-        SELECT setting_key, setting_value FROM user_settings
-        WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
-      `).all()
-      
-      const config: any = {}
-      for (const row of settings.results || []) {
-        config[(row as any).setting_key] = (row as any).setting_value
-      }
-      
-      if (config.telegram_bot_token && config.telegram_chat_id) {
-        let message = `🤖 *AI MARKET ANALYSIS*\n⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC\n\n`
+    // Only send if confidence ≥65% and signal is BUY or SELL (not HOLD)
+    if (signal.confidence >= 65 && (signal.signal_type === 'BUY' || signal.signal_type === 'SELL')) {
+      try {
+        const settings = await DB.prepare(`
+          SELECT setting_key, setting_value FROM user_settings
+          WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+        `).all()
         
-        message += `📊 *Current Price:* $${currentPrice.toFixed(2)}\n`
-        message += `📈 *Signal:* ${signal.signal_type} (${signal.confidence}%)\n`
-        message += `⚡ *Volatility:* ${volatility}\n`
-        message += `🎯 *MTF Alignment:* ${alignment.type} (${alignment.score}/5)\n\n`
-        
-        message += `🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}\n`
-        message += `🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}\n\n`
-        
-        message += `*Scenarios:*\n`
-        for (const scenario of scenarios) {
-          message += `${scenario.name} (${scenario.probability}%)\n`
+        const config: any = {}
+        for (const row of settings.results || []) {
+          config[(row as any).setting_key] = (row as any).setting_value
         }
         
-        message += `\n💡 *Recommendation:* ${recommendation.action === 'WAIT' ? '⏰' : recommendation.action === 'BUY' ? '📈' : '📉'} ${recommendation.action}\n`
-        message += `${recommendation.reason}`
-        
-        telegramSent = await sendTelegramMessage(
-          { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
-          message
-        )
-        
-        console.log('[AI-ANALYSIS] Telegram sent:', telegramSent)
+        if (config.telegram_bot_token && config.telegram_chat_id && 
+            config.telegram_bot_token !== 'your_bot_token_here') {
+          
+          const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴'
+          
+          let message = `${emoji} *AI MARKET ANALYSIS* ${emoji}\n`
+          message += `⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC\n\n`
+          
+          message += `📊 *Signal:* ${signal.signal_type} (${signal.confidence.toFixed(1)}%)\n`
+          message += `💰 *Price:* $${currentPrice.toFixed(2)}\n`
+          message += `⚡ *Volatility:* ${volatility}\n`
+          message += `🎯 *MTF Alignment:* ${alignment.type} (${alignment.score}/5)\n\n`
+          
+          message += `🔴 *Resistance:* ${resistanceLevels.length > 0 ? resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ') : 'N/A'}\n`
+          message += `🟢 *Support:* ${supportLevels.length > 0 ? supportLevels.map(s => `$${s.toFixed(2)}`).join(', ') : 'N/A'}\n\n`
+          
+          message += `*Top Scenario:* ${scenarios[0].name} (${scenarios[0].probability}%)\n`
+          message += `${scenarios[0].description}\n\n`
+          
+          message += `💡 *Recommendation:* ${recommendation.action === 'WAIT' ? '⏰' : recommendation.action === 'BUY' ? '📈' : '📉'} ${recommendation.action}\n`
+          message += `${recommendation.reason}\n\n`
+          
+          if (recommendation.entry_range) {
+            message += `🎯 *Entry Range:* $${recommendation.entry_range}\n`
+            message += `🛡️ *Stop Loss:* $${recommendation.stop_loss}`
+          }
+          
+          telegramSent = await sendTelegramMessage(
+            { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+            message
+          )
+          
+          console.log('[AI-ANALYSIS] Telegram alert sent:', telegramSent, 'for', signal.signal_type, signal.confidence + '%')
+        }
+      } catch (error: any) {
+        console.error('[AI-ANALYSIS] Telegram error:', error.message)
       }
-    } catch (error: any) {
-      console.error('[AI-ANALYSIS] Telegram error:', error.message)
+    } else {
+      console.log('[AI-ANALYSIS] No Telegram alert - Confidence:', signal.confidence, 'Signal:', signal.signal_type)
     }
     
     // ============================================================
@@ -377,6 +409,6 @@ app.post('/market-analysis', async (c) => {
       error: error.message 
     }, 500)
   }
-})
+}
 
 export default app
