@@ -315,7 +315,7 @@ app.get('/', (c) => {
             let priceChart = null;
             
             // ⚡ Helper function: Native fetch with timeout
-            async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+            async function fetchWithTimeout(url, options = {}, timeoutMs = 60000) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
                 
@@ -383,7 +383,7 @@ app.get('/', (c) => {
                     
                     // Use native fetch with AbortController for timeout
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout (mobile-friendly)
                     
                     const response = await fetch('/api/market/fetch', {
                         method: 'POST',
@@ -3064,7 +3064,7 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
         try {
           const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${tf.interval}&apikey=${apiKey}&outputsize=100`
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout (mobile-friendly)
           
           const response = await fetch(url, { signal: controller.signal })
           clearTimeout(timeoutId)
