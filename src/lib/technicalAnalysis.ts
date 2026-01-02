@@ -391,11 +391,45 @@ export function calculateIndicators(candles: Candle[]): TechnicalIndicators | nu
 export function generateSignal(
   currentPrice: number,
   indicators: TechnicalIndicators,
-  tradingStyle: 'day_trade' | 'swing_trade'
+  tradingStyle: 'day_trade' | 'swing_trade',
+  candles?: Candle[]
 ): TradeSignal {
   const signals: string[] = [];
   let bullishCount = 0;
   let bearishCount = 0;
+  
+  // ========================================================================
+  // PHASE 0: INTELLIGENT FLIP DETECTION (NEW!)
+  // ========================================================================
+  
+  // Check if we have candle data for flip detection
+  if (candles && candles.length >= 20) {
+    // Import flip detection (dynamic import to avoid circular deps)
+    // We'll check for market flips first before regular analysis
+    const { detectMarketFlip, getFlipDescription } = require('./flipDetection')
+    
+    const flipSignal = detectMarketFlip(currentPrice, indicators, candles)
+    
+    // If strong flip detected, prioritize flip signal
+    if (flipSignal.is_flip && flipSignal.flip_confidence >= 65) {
+      const flipDirection = flipSignal.flip_type === 'BULLISH_FLIP' ? 'BUY' : 'SELL'
+      
+      return {
+        signal_type: flipDirection,
+        trading_style: tradingStyle,
+        price: currentPrice,
+        stop_loss: flipSignal.entry_zone.stop_loss,
+        take_profit_1: flipSignal.entry_zone.targets[0],
+        take_profit_2: flipSignal.entry_zone.targets[1],
+        take_profit_3: flipSignal.entry_zone.targets[2],
+        confidence: flipSignal.flip_confidence,
+        reason: `🔥 MARKET FLIP DETECTED! ${flipSignal.flip_strength} ${flipSignal.flip_type.replace('_', ' ')}\n\n` +
+                `Flip Confidence: ${flipSignal.flip_confidence.toFixed(0)}%\n` +
+                `Flip Reasons:\n${flipSignal.flip_reasons.map((r, i) => `${i + 1}. ${r}`).join('\n')}\n\n` +
+                `Entry Strategy: Enter at $${flipSignal.entry_zone.optimal_entry.toFixed(2)} (current: $${currentPrice.toFixed(2)})`
+      }
+    }
+  }
   
   // ========================================================================
   // PHASE 1: ADVANCED INDICATOR ANALYSIS (80% Accuracy)

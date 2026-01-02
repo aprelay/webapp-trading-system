@@ -4,6 +4,7 @@ import { calculateIndicators, generateSignal, type Candle } from './lib/technica
 import { sendTelegramMessage, formatTradeSignal, formatMarketUpdate } from './lib/telegram'
 import enhancedSignalsRouter from './routes/enhancedSignals'
 import simpleSignalsRouter from './routes/simpleSignals'
+import flipSignalsRouter from './routes/flipSignals'
 import autoScannerRouter from './routes/autoScanner'
 import tradesRouter from './routes/trades'
 import calendarRouter from './routes/calendar'
@@ -23,6 +24,7 @@ app.use('/api/*', cors())
 // Mount API routers
 app.route('/api/signals/enhanced', enhancedSignalsRouter)
 app.route('/api/signals/simple', simpleSignalsRouter)
+app.route('/api/signals/flip', flipSignalsRouter)
 app.route('/api/scanner', autoScannerRouter)
 app.route('/api/trades', tradesRouter)
 app.route('/api/calendar', calendarRouter)
@@ -261,6 +263,9 @@ app.get('/', (c) => {
                         </button>
                         <button id="generateBtn" onclick="generateSignalNow()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-chart-line mr-2"></i>Generate Signal NOW
+                        </button>
+                        <button id="flipBtn" onclick="detectMarketFlip()" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-lg">
+                            <i class="fas fa-exchange-alt mr-2"></i>🔥 Detect Market FLIP
                         </button>
                         <button id="enhancedBtn" onclick="generateEnhancedSignal()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal
@@ -984,6 +989,113 @@ app.get('/', (c) => {
                     if (btn) {
                         btn.disabled = false;
                         btn.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
+                    }
+                }
+            }
+
+            async function detectMarketFlip() {
+                try {
+                    const btn = document.getElementById('flipBtn');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Detecting Flip...';
+                    
+                    const res = await fetchWithTimeout('/api/signals/flip/detect', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                    
+                    if (res.success && res.flip_signal) {
+                        const flip = res.flip_signal;
+                        
+                        if (flip.is_flip) {
+                            // FLIP DETECTED!
+                            const emoji = flip.flip_type === 'BULLISH_FLIP' ? '🟢' : '🔴';
+                            const direction = flip.flip_type === 'BULLISH_FLIP' ? 'BULLISH' : 'BEARISH';
+                            
+                            let message = emoji + ' 🔥 MARKET FLIP DETECTED! 🔥 ' + emoji + '\\n\\n';
+                            message += flip.flip_strength + ' ' + direction + ' FLIP\\n';
+                            message += 'Confidence: ' + flip.flip_confidence.toFixed(0) + '%\\n\\n';
+                            
+                            message += '📊 Flip Reasons:\\n';
+                            flip.flip_reasons.forEach((reason, i) => {
+                                message += (i + 1) + '. ' + reason + '\\n';
+                            });
+                            message += '\\n';
+                            
+                            message += '🎯 Entry Strategy:\\n';
+                            message += '• Current Price: $' + res.current_price.toFixed(2) + '\\n';
+                            message += '• Optimal Entry: $' + flip.entry_zone.optimal_entry.toFixed(2) + '\\n';
+                            message += '• Stop Loss: $' + flip.entry_zone.stop_loss.toFixed(2) + '\\n\\n';
+                            
+                            message += '🎯 Take Profits:\\n';
+                            message += '   TP1: $' + flip.entry_zone.targets[0].toFixed(2) + '\\n';
+                            message += '   TP2: $' + flip.entry_zone.targets[1].toFixed(2) + '\\n';
+                            message += '   TP3: $' + flip.entry_zone.targets[2].toFixed(2) + '\\n\\n';
+                            
+                            if (flip.timeframe_alignment.aligned) {
+                                message += '✅ Multi-Timeframe Aligned!\\n';
+                                message += 'All timeframes showing ' + flip.timeframe_alignment.one_hour + ' bias\\n\\n';
+                            }
+                            
+                            if (flip.structure_break.break_confirmed) {
+                                message += '🔥 Structure Break Confirmed!\\n';
+                                message += 'Key level at $' + flip.structure_break.key_level.toFixed(2) + ' broken with volume!\\n\\n';
+                            }
+                            
+                            if (flip.smart_money.liquidity_grab || flip.smart_money.stop_hunt || flip.smart_money.institutional_volume) {
+                                message += '💰 Smart Money Activity Detected:\\n';
+                                if (flip.smart_money.liquidity_grab) message += '• Liquidity grab detected\\n';
+                                if (flip.smart_money.stop_hunt) message += '• Stop hunt pattern found\\n';
+                                if (flip.smart_money.institutional_volume) message += '• Institutional volume spike\\n';
+                                message += '\\n';
+                            }
+                            
+                            const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
+                            message += '⏰ ' + timestamp;
+                            
+                            if (res.telegram_sent) {
+                                message += '\\n\\n📱 Sent to Telegram!';
+                            }
+                            
+                            alert(message);
+                            
+                        } else {
+                            // NO FLIP DETECTED
+                            let message = '⚪ No Market Flip Detected\\n\\n';
+                            message += 'Flip Confidence: ' + flip.flip_confidence.toFixed(0) + '%\\n';
+                            message += 'Current trend continuing.\\n\\n';
+                            
+                            message += '📊 Market Status:\\n';
+                            if (flip.flip_reasons.length > 0) {
+                                flip.flip_reasons.forEach((reason, i) => {
+                                    message += (i + 1) + '. ' + reason + '\\n';
+                                });
+                            } else {
+                                message += '• Trend strength intact\\n';
+                                message += '• No structure breaks\\n';
+                                message += '• Momentum holding\\n';
+                            }
+                            message += '\\n';
+                            
+                            message += '💡 What This Means:\\n';
+                            message += 'The market is NOT flipping direction yet.\\n';
+                            message += 'Continue with current trend or wait for flip.\\n\\n';
+                            
+                            message += 'Use "Generate Signal NOW" for regular signals.';
+                            
+                            alert(message);
+                        }
+                        
+                        await refreshData();
+                    } else {
+                        alert('❌ Error: ' + (res.error || 'Unable to detect flip'));
+                    }
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-exchange-alt mr-2"></i>🔥 Detect Market FLIP';
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                    const btn = document.getElementById('flipBtn');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-exchange-alt mr-2"></i>🔥 Detect Market FLIP';
                     }
                 }
             }
@@ -2083,11 +2195,11 @@ app.get('/api/cron/auto-fetch', async (c) => {
       });
     }
     
-    // 5. Generate signals
+    // 5. Generate signals (WITH FLIP DETECTION)
     const currentPrice = candles[candles.length - 1].close;
     
-    const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
-    const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
+    const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade', candles);
+    const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade', candles);
     
     // 6. Check if we should send Telegram alerts
     const minConfidence = 70;

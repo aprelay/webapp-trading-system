@@ -130,12 +130,12 @@ app.post('/simple', async (c) => {
     })
     
     // ============================================================
-    // STEP 3: GENERATE SIGNALS
+    // STEP 3: GENERATE SIGNALS (WITH FLIP DETECTION)
     // ============================================================
     
-    // Call generateSignal with correct signature: (currentPrice, indicators, tradingStyle)
-    const daySignal = generateSignal(currentPrice, indicators, 'day_trade')
-    const swingSignal = generateSignal(currentPrice, indicators, 'swing_trade')
+    // Call generateSignal with candles for intelligent flip detection
+    const daySignal = generateSignal(currentPrice, indicators, 'day_trade', candles)
+    const swingSignal = generateSignal(currentPrice, indicators, 'swing_trade', candles)
     
     console.log('[SIMPLE] Generated signals:', {
       day: daySignal.signal_type,
