@@ -1,4 +1,5 @@
 // Technical Analysis Library for Gold/USD Trading
+import { detectMarketFlip } from './flipDetection'
 
 export interface Candle {
   timestamp: string;
@@ -404,30 +405,31 @@ export function generateSignal(
   
   // Check if we have candle data for flip detection
   if (candles && candles.length >= 20) {
-    // Import flip detection (dynamic import to avoid circular deps)
-    // We'll check for market flips first before regular analysis
-    const { detectMarketFlip, getFlipDescription } = require('./flipDetection')
-    
-    const flipSignal = detectMarketFlip(currentPrice, indicators, candles)
-    
-    // If strong flip detected, prioritize flip signal
-    if (flipSignal.is_flip && flipSignal.flip_confidence >= 65) {
-      const flipDirection = flipSignal.flip_type === 'BULLISH_FLIP' ? 'BUY' : 'SELL'
+    try {
+      const flipSignal = detectMarketFlip(currentPrice, indicators, candles)
       
-      return {
-        signal_type: flipDirection,
-        trading_style: tradingStyle,
-        price: currentPrice,
-        stop_loss: flipSignal.entry_zone.stop_loss,
-        take_profit_1: flipSignal.entry_zone.targets[0],
-        take_profit_2: flipSignal.entry_zone.targets[1],
-        take_profit_3: flipSignal.entry_zone.targets[2],
-        confidence: flipSignal.flip_confidence,
-        reason: `🔥 MARKET FLIP DETECTED! ${flipSignal.flip_strength} ${flipSignal.flip_type.replace('_', ' ')}\n\n` +
-                `Flip Confidence: ${flipSignal.flip_confidence.toFixed(0)}%\n` +
-                `Flip Reasons:\n${flipSignal.flip_reasons.map((r, i) => `${i + 1}. ${r}`).join('\n')}\n\n` +
-                `Entry Strategy: Enter at $${flipSignal.entry_zone.optimal_entry.toFixed(2)} (current: $${currentPrice.toFixed(2)})`
+      // If strong flip detected, prioritize flip signal
+      if (flipSignal.is_flip && flipSignal.flip_confidence >= 65) {
+        const flipDirection = flipSignal.flip_type === 'BULLISH_FLIP' ? 'BUY' : 'SELL'
+        
+        return {
+          signal_type: flipDirection,
+          trading_style: tradingStyle,
+          price: currentPrice,
+          stop_loss: flipSignal.entry_zone.stop_loss,
+          take_profit_1: flipSignal.entry_zone.targets[0],
+          take_profit_2: flipSignal.entry_zone.targets[1],
+          take_profit_3: flipSignal.entry_zone.targets[2],
+          confidence: flipSignal.flip_confidence,
+          reason: `🔥 MARKET FLIP DETECTED! ${flipSignal.flip_strength} ${flipSignal.flip_type.replace('_', ' ')}\n\n` +
+                  `Flip Confidence: ${flipSignal.flip_confidence.toFixed(0)}%\n` +
+                  `Flip Reasons:\n${flipSignal.flip_reasons.map((r, i) => `${i + 1}. ${r}`).join('\n')}\n\n` +
+                  `Entry Strategy: Enter at $${flipSignal.entry_zone.optimal_entry.toFixed(2)} (current: $${currentPrice.toFixed(2)})`
+        }
       }
+    } catch (e) {
+      // Flip detection failed, continue with regular analysis
+      console.log('[FLIP] Detection skipped:', e)
     }
   }
   
