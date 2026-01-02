@@ -775,7 +775,11 @@ app.get('/', (c) => {
                     // Fetch MULTI-TIMEFRAME data (for both simple AND hedge fund signals)
                     // This fetches 5 timeframes: 5m, 15m, 1h, 4h, daily
                     // Total: 500 candles + all indicators
-                    const res = await fetchWithTimeout('/api/market/fetch-mtf', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                    // IMPORTANT: Use 180s timeout - sequential fetch takes 60-90s on slow networks
+                    const res = await fetchWithTimeout('/api/market/fetch-mtf', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' } 
+                    }, 180000); // 180 second timeout for slow mobile networks
                     
                     if (res.success) {
                         let message = '✅ Market Data Fetched Successfully!\\n\\n';
