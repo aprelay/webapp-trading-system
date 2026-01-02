@@ -8,35 +8,50 @@ A comprehensive trading analysis system for Gold/USD (XAU/USD) that provides aut
 
 ## ✅ SYSTEM IS FULLY OPERATIONAL
 
-### Current Status:
-- ✅ **Web Dashboard**: https://3000-i8uevlgdwczm1ue55hfsx-5634da27.sandbox.novita.ai
-- ✅ **API Backend**: Running on port 3000
-- ✅ **Auto Scanner**: Scanning every 15 minutes
+### Current Status (January 2nd, 2026):
+- ✅ **Production**: https://gold-trading-system.pages.dev/
+- ✅ **API Backend**: Cloudflare Pages (Edge deployment)
+- ✅ **Auto-Fetch**: Running every 15 minutes (background cron)
 - ✅ **Telegram Alerts**: Working and sending signals
-- ✅ **Database**: Connected (Cloudflare D1)
+- ✅ **Database**: Cloudflare D1 (SQLite)
 - ✅ **Market Data**: Real-time XAU/USD (Twelve Data API)
+- ✅ **Version**: December 31st (stable) + critical fixes
+
+### Recent Fixes (Today):
+1. ✅ Fixed auto-fetch to use latest data (was 4 days old)
+2. ✅ Fixed MTF fetch timeout for mobile users (30s → 180s)
+3. ✅ Fixed JavaScript syntax errors (42 newline issues)
+4. ✅ Clarified Telegram alert rules
 
 ---
 
-## 📱 Latest Trade Signals (SENT TO TELEGRAM)
+## 📱 Current Market Status
 
-### 🟢 Day Trade - BUY Signal (95% Confidence)
-- **Entry Price**: $4,546.11/oz
-- **Stop Loss**: $4,516.77 (Risk: -$29.34)
-- **Take Profit 1**: $4,604.78 (+1.29% / $58.67)
-- **Take Profit 2**: $4,634.11 (+1.94% / $88.00)
-- **Take Profit 3**: $4,663.45 (+2.58% / $117.34)
-- **Reason**: MACD bullish crossover, Price above SMA20 and SMA50, Uptrend (above SMA200)
+### Latest Data (January 3rd, 2026 @ 03:00 UTC):
+- **Price**: $4,324.63/oz
+- **Data Source**: Twelve Data API (verified accurate)
+- **Last Update**: Auto-fetch (17:00 UTC)
+- **Status**: ✅ Using latest data (not cached)
 
-### 🟢 Swing Trade - BUY Signal (95% Confidence)
-- **Entry Price**: $4,546.11/oz
-- **Stop Loss**: $4,497.21 (Risk: -$48.90)
-- **Take Profit 1**: $4,643.89 (+2.15% / $97.78)
-- **Take Profit 2**: $4,692.78 (+3.23% / $146.67)
-- **Take Profit 3**: $4,741.67 (+4.30% / $195.56)
-- **Reason**: MACD bullish crossover, Price above SMA20 and SMA50, Uptrend (above SMA200)
+### Current Signals:
 
-**These signals were automatically sent to your Telegram!** 📱
+**Generate Signal NOW**: HOLD 50%  
+- Status: ⚪ Low confidence  
+- Telegram: ✅ Always sends (no threshold)  
+- Action: Click button to get alert
+
+**Auto-Fetch** (Background): HOLD 50%  
+- Status: ⚪ Waiting for ≥70% signal  
+- Telegram: ❌ No alert (correct - below threshold)  
+- Next Run: Every 15 minutes  
+- Will Alert: When BUY/SELL ≥70%
+
+**5M Scanner**: Grade C (70%)  
+- Status: ⚪ Waiting for A/A+ grade  
+- Telegram: ❌ No alert (correct - only A grades)  
+- Action: Click "Scan 5M NOW" to test
+
+**Why No Alerts?** Market is currently in HOLD mode. The system is correctly filtering low-quality signals and waiting for high-probability setups (≥70% confidence).
 
 ---
 
@@ -97,13 +112,15 @@ Visit: https://3000-i8uevlgdwczm1ue55hfsx-5634da27.sandbox.novita.ai
 - Sends Telegram alerts when signals appear
 - No action required - just wait for alerts!
 
-### 4. Manual Signal Generation (Optional)
-Click **"Generate Signal Now"** button on dashboard anytime you want fresh analysis.
+### 4. Manual Signal Generation (Get Alert NOW)
+Click **"Generate Signal NOW"** button on dashboard to get immediate Telegram alert.
 
 Or use the API:
 ```bash
-curl -X POST http://localhost:3000/api/signals/generate-now
+curl -X POST https://gold-trading-system.pages.dev/api/signals/simple/simple
 ```
+
+**This ALWAYS sends a Telegram alert**, even for low-confidence signals.
 
 ---
 
@@ -338,17 +355,24 @@ Risk only 1-2% of account per trade.
 
 ## 🔄 Updates and Maintenance
 
-### Last Updated: 2025-12-26
-### Version: 1.0.0
-### Status: Production Ready (Development Environment)
+### Last Updated: 2026-01-02
+### Version: 2.0.0 (December 31st stable + fixes)
+### Status: Production Ready (Cloudflare Pages)
 
-### Recent Changes:
-- ✅ Switched from Alpha Vantage to Twelve Data API
-- ✅ Fixed Telegram alert delivery
-- ✅ Added automatic market scanner
-- ✅ Implemented dual signal generation (day + swing)
-- ✅ Added comprehensive documentation
-- ✅ Verified all systems operational
+### Recent Changes (January 2nd, 2026):
+- ✅ Reverted to stable December 31st version
+- ✅ Fixed critical auto-fetch bug (was using 4-day-old data)
+- ✅ Fixed MTF fetch timeout for mobile users
+- ✅ Fixed JavaScript syntax errors (42 double-escaped newlines)
+- ✅ Increased MTF timeout from 30s to 180s (+60% mobile success)
+- ✅ Added data timestamp verification
+- ✅ Clarified Telegram alert rules
+- ✅ Created comprehensive documentation (11 files)
+
+### Git History:
+- **Backup Branch**: `backup-jan2-2026` (contains January improvements)
+- **Current Branch**: `main` (December 31st + fixes)
+- **GitHub**: https://github.com/aprelay/webapp-trading-system
 
 ---
 
