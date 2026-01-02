@@ -294,6 +294,75 @@ app.get('/', (c) => {
                     </div>
                 </div>
 
+                <!-- Signal Grading Guide -->
+                <div class="bg-gradient-to-r from-green-900 to-emerald-900 border-2 border-green-500 p-6 rounded-lg mt-6">
+                    <h3 class="text-xl font-bold mb-4 text-green-300">
+                        <i class="fas fa-graduation-cap mr-2"></i>📊 Signal Grading Guide - When To Trade
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <!-- Trade These -->
+                        <div class="bg-green-800 bg-opacity-30 p-4 rounded-lg border border-green-600">
+                            <h4 class="font-bold text-green-300 mb-3">✅ TRADE THESE SIGNALS</h4>
+                            <div class="space-y-2">
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-2">🟢</span>
+                                    <div>
+                                        <p class="font-bold text-green-400">Grade A+ (80-100%)</p>
+                                        <p class="text-gray-300 text-xs">Strong signal, high conviction, excellent R:R</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-2">🟢</span>
+                                    <div>
+                                        <p class="font-bold text-green-400">Grade A (70-79%)</p>
+                                        <p class="text-gray-300 text-xs">Good signal, solid setup, favorable conditions</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-2">🟡</span>
+                                    <div>
+                                        <p class="font-bold text-yellow-400">Grade B+ (70-79%)</p>
+                                        <p class="text-gray-300 text-xs">Decent signal, acceptable R:R (Telegram alerts)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Skip These -->
+                        <div class="bg-red-800 bg-opacity-30 p-4 rounded-lg border border-red-600">
+                            <h4 class="font-bold text-red-300 mb-3">❌ SKIP THESE SIGNALS</h4>
+                            <div class="space-y-2">
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-2">🟡</span>
+                                    <div>
+                                        <p class="font-bold text-yellow-400">Grade B/C (60-69%)</p>
+                                        <p class="text-gray-300 text-xs">Moderate signal, risky, reduce position size</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-2">🔴</span>
+                                    <div>
+                                        <p class="font-bold text-red-400">Grade D (50-59%)</p>
+                                        <p class="text-gray-300 text-xs">Weak signal, conflicting indicators, SKIP</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-2">⚪</span>
+                                    <div>
+                                        <p class="font-bold text-gray-400">HOLD (&lt;60%)</p>
+                                        <p class="text-gray-300 text-xs">No clear direction, wait for better setup</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-4 bg-blue-900 bg-opacity-40 rounded-lg border border-blue-600">
+                        <p class="text-sm text-blue-300"><strong>💡 Professional Tip:</strong> The 5M Assassin Scanner (21 layers) is more accurate than simple signals. Always verify high-value trades with the 5M scanner before entering!</p>
+                    </div>
+                </div>
+
                 <!-- Instructions -->
                 <div class="bg-blue-900 border border-blue-700 p-6 rounded-lg mt-6">
                     <h3 class="text-lg font-bold mb-3 text-blue-300">
@@ -816,22 +885,81 @@ app.get('/', (c) => {
                         const day = res.day_trade;
                         const swing = res.swing_trade;
                         
-                        // Format SIMPLE signal (matching Telegram format)
-                        const emoji = day.signal_type === 'BUY' ? '🟢' : day.signal_type === 'SELL' ? '🔴' : '⚪';
+                        // OPTION 1: Determine if this is actually a HOLD signal
+                        let displaySignal = day.signal_type;
+                        let isHold = false;
                         
-                        let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\\n\\n';
+                        // Override to HOLD if confidence is too low
+                        if (day.confidence < 60 || day.signal_type === 'HOLD') {
+                            displaySignal = 'HOLD';
+                            isHold = true;
+                        }
+                        
+                        // Format SIMPLE signal with HOLD support
+                        const emoji = displaySignal === 'BUY' ? '🟢' : displaySignal === 'SELL' ? '🔴' : '⚪';
+                        
+                        let message = emoji + ' GOLD/USD ' + displaySignal + ' SIGNAL ' + emoji + '\\n\\n';
                         message += '📊 Day Trade\\n';
                         message += '💰 Price: $' + day.price.toFixed(2) + '\\n';
-                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\\n\\n';
+                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\\n';
                         
-                        message += '🎯 Take Profits:\\n';
-                        message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
-                        message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\\n';
-                        message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\\n\\n';
+                        // OPTION 2: Add confidence-based warnings
+                        if (day.confidence >= 80) {
+                            message += '✅ Grade: A (Strong - Trade It!)\\n\\n';
+                        } else if (day.confidence >= 70) {
+                            message += '✅ Grade: B+ (Good Setup)\\n\\n';
+                        } else if (day.confidence >= 60) {
+                            message += '⚠️ Grade: C (Moderate - Proceed with Caution)\\n\\n';
+                        } else {
+                            message += '❌ Grade: D (Weak - SKIP THIS SIGNAL)\\n\\n';
+                        }
                         
-                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n\\n';
-                        
-                        message += '📝 Reason:\\n' + day.reason + '\\n\\n';
+                        // OPTION 1 & 2: Show HOLD-specific message
+                        if (isHold) {
+                            message += '🛑 DO NOT TRADE\\n';
+                            message += '━━━━━━━━━━━━━━━━━━━━\\n';
+                            message += '⚠️ LOW CONFIDENCE SIGNAL\\n\\n';
+                            message += '📊 Market Analysis:\\n';
+                            message += '• Conflicting signals detected\\n';
+                            message += '• Confidence below 60% threshold\\n';
+                            message += '• Risk/Reward ratio unfavorable\\n\\n';
+                            
+                            // OPTION 3: Explain when to ignore signals
+                            message += '💡 Professional Trading Rule:\\n';
+                            message += '━━━━━━━━━━━━━━━━━━━━\\n';
+                            message += 'ONLY trade signals with:\\n';
+                            message += '• Confidence ≥70% (B+ grade or higher)\\n';
+                            message += '• Clear directional bias\\n';
+                            message += '• Good risk/reward ratio\\n\\n';
+                            
+                            message += '✅ What To Do Now:\\n';
+                            message += '1. Wait for Auto-Fetch alert (≥70%)\\n';
+                            message += '2. Or click "Fetch Market Data" + "Scan 5M NOW"\\n';
+                            message += '3. Only enter when you see Grade A or B+\\n\\n';
+                            
+                            message += '📝 Why This Is HOLD:\\n';
+                            message += day.reason + '\\n\\n';
+                            
+                        } else {
+                            // Regular BUY/SELL signal display
+                            message += '🎯 Take Profits:\\n';
+                            message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
+                            message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\\n';
+                            message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\\n\\n';
+                            
+                            message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n\\n';
+                            
+                            // OPTION 2: Add warnings for moderate confidence
+                            if (day.confidence >= 60 && day.confidence < 70) {
+                                message += '⚠️ MODERATE CONFIDENCE WARNING:\\n';
+                                message += 'This is a C-grade setup. Consider:\\n';
+                                message += '• Using smaller position size\\n';
+                                message += '• Waiting for confirmation\\n';
+                                message += '• Checking 5M Scanner for additional validation\\n\\n';
+                            }
+                            
+                            message += '📝 Reason:\\n' + day.reason + '\\n\\n';
+                        }
                         
                         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
                         message += '⏰ ' + timestamp;
