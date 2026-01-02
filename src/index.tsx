@@ -1893,6 +1893,14 @@ app.get('/api/cron/auto-fetch', async (c) => {
     const telegramBotToken = config.telegram_bot_token;
     const telegramChatId = config.telegram_chat_id;
     
+    console.log('[AUTO-FETCH] Settings loaded:', {
+      hasApiKey: !!apiKey,
+      hasBotToken: !!telegramBotToken,
+      botTokenLength: telegramBotToken ? telegramBotToken.length : 0,
+      hasChatId: !!telegramChatId,
+      chatId: telegramChatId
+    });
+    
     // 2. Fetch fresh market data
     const symbol = 'XAU/USD';
     const interval = '1h';
@@ -1965,85 +1973,155 @@ app.get('/api/cron/auto-fetch', async (c) => {
     const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
     const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
     
+    // 5.5 Save signals to database
+    try {
+      await DB.prepare(`
+        INSERT INTO signals 
+        (timestamp, signal_type, trading_style, price, stop_loss, 
+         take_profit_1, take_profit_2, take_profit_3, confidence, reason)
+        VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        dayTradeSignal.signal_type,
+        'day_trade',
+        currentPrice,
+        dayTradeSignal.stop_loss,
+        dayTradeSignal.take_profit_1,
+        dayTradeSignal.take_profit_2,
+        dayTradeSignal.take_profit_3,
+        dayTradeSignal.confidence,
+        dayTradeSignal.reason
+      ).run();
+      
+      await DB.prepare(`
+        INSERT INTO signals 
+        (timestamp, signal_type, trading_style, price, stop_loss, 
+         take_profit_1, take_profit_2, take_profit_3, confidence, reason)
+        VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        swingTradeSignal.signal_type,
+        'swing_trade',
+        currentPrice,
+        swingTradeSignal.stop_loss,
+        swingTradeSignal.take_profit_1,
+        swingTradeSignal.take_profit_2,
+        swingTradeSignal.take_profit_3,
+        swingTradeSignal.confidence,
+        swingTradeSignal.reason
+      ).run();
+      
+      console.log('[AUTO-FETCH] Signals saved to database');
+    } catch (err) {
+      console.error('[AUTO-FETCH] Error saving signals:', err);
+    }
+    
     // 6. Check if we should send Telegram alerts
     const minConfidence = 70;
     let telegramSent = false;
     const alertsSent = [];
+    const debugInfo: any = {
+      telegram_configured: false,
+      day_trade_checked: false,
+      day_trade_send_attempted: false,
+      day_trade_send_result: null,
+      swing_trade_checked: false,
+      swing_trade_send_attempted: false,
+      swing_trade_send_result: null
+    };
+    
+    console.log('[AUTO-FETCH] Telegram check:', {
+      botToken: telegramBotToken ? 'SET' : 'NOT SET',
+      chatId: telegramChatId,
+      dayConfidence: dayTradeSignal.confidence,
+      dayType: dayTradeSignal.signal_type,
+      swingConfidence: swingTradeSignal.confidence,
+      swingType: swingTradeSignal.signal_type,
+      minConfidence
+    });
     
     // Only send alerts if Telegram is configured
     if (telegramBotToken && telegramChatId && 
         telegramBotToken !== 'your_bot_token_here') {
       
+      debugInfo.telegram_configured = true;
+      console.log('[AUTO-FETCH] Telegram is configured, checking signals...');
+      console.log('[AUTO-FETCH] Day trade check:', {
+        confidence: dayTradeSignal.confidence,
+        minConfidence,
+        meetsThreshold: dayTradeSignal.confidence >= minConfidence,
+        signalType: dayTradeSignal.signal_type,
+        notHold: dayTradeSignal.signal_type !== 'HOLD',
+        willSend: (dayTradeSignal.confidence >= minConfidence && dayTradeSignal.signal_type !== 'HOLD')
+      });
+      
+      debugInfo.day_trade_checked = true;
+      
       // Check Day Trade signal
       if (dayTradeSignal.confidence >= minConfidence && 
           dayTradeSignal.signal_type !== 'HOLD') {
         
+        debugInfo.day_trade_send_attempted = true;
+        
+        console.log('[AUTO-FETCH] ✅ Day trade meets criteria! Sending alert...');
+        
+        // Escape HTML in reason text
+        const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const emoji = dayTradeSignal.signal_type === 'BUY' ? '🟢' : '🔴';
-        const message = `${emoji} GOLD/USD ${dayTradeSignal.signal_type} SIGNAL ${emoji}
-
-📊 Day Trade
-💰 Price: $${currentPrice.toFixed(2)}
-📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
-
-🎯 Take Profits:
-   TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
-   TP2: $${dayTradeSignal.take_profit_2.toFixed(2)}
-   TP3: $${dayTradeSignal.take_profit_3.toFixed(2)}
-
-🛡️ Stop Loss: $${dayTradeSignal.stop_loss.toFixed(2)}
-
-📝 Reason:
-${dayTradeSignal.reason}
-
-⏰ ${new Date().toLocaleString()}`;
+        
+        const message = `${emoji} <b>GOLD/USD ${dayTradeSignal.signal_type} SIGNAL</b> ${emoji}\\n\\n📊 <b>Day Trade</b>\\n💰 Price: $${currentPrice.toFixed(2)}\\n📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%\\n\\n🎯 <b>Take Profits:</b>\\n   TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}\\n   TP2: $${dayTradeSignal.take_profit_2.toFixed(2)}\\n   TP3: $${dayTradeSignal.take_profit_3.toFixed(2)}\\n\\n🛡️ <b>Stop Loss:</b> $${dayTradeSignal.stop_loss.toFixed(2)}\\n\\n📝 <b>Reason:</b> ${escapeHtml(dayTradeSignal.reason)}\\n\\n⏰ ${new Date().toLocaleString()}`;
         
         const success = await sendTelegramMessage({
           botToken: telegramBotToken,
           chatId: telegramChatId
         }, message);
+        
+        debugInfo.day_trade_send_result = success;
+        console.log('[AUTO-FETCH] Day trade alert result:', success);
         
         if (success) {
           telegramSent = true;
           alertsSent.push('Day Trade');
+        } else {
+          console.error('[AUTO-FETCH] Failed to send day trade alert!');
         }
       }
       
       // Check Swing Trade signal (higher threshold)
+      debugInfo.swing_trade_checked = true;
+      console.log('[AUTO-FETCH] Checking swing trade...', {
+        confidence: swingTradeSignal.confidence,
+        type: swingTradeSignal.signal_type,
+        threshold: 80
+      });
+      
       if (swingTradeSignal.confidence >= 80 && 
           swingTradeSignal.signal_type !== 'HOLD') {
         
+        debugInfo.swing_trade_send_attempted = true;
+        console.log('[AUTO-FETCH] Swing trade meets criteria! Sending alert...');
+        
+        // Escape HTML in reason text
+        const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const emoji = swingTradeSignal.signal_type === 'BUY' ? '🟢' : '🔴';
-        const message = `${emoji} GOLD/USD ${swingTradeSignal.signal_type} SIGNAL ${emoji}
-
-📈 Swing Trade
-💰 Price: $${currentPrice.toFixed(2)}
-📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
-
-🎯 Take Profits:
-   TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
-   TP2: $${swingTradeSignal.take_profit_2.toFixed(2)}
-   TP3: $${swingTradeSignal.take_profit_3.toFixed(2)}
-
-🛡️ Stop Loss: $${swingTradeSignal.stop_loss.toFixed(2)}
-
-📝 Reason:
-${swingTradeSignal.reason}
-
-⏰ ${new Date().toLocaleString()}`;
+        
+        const message = `${emoji} <b>GOLD/USD ${swingTradeSignal.signal_type} SIGNAL</b> ${emoji}\\n\\n📈 <b>Swing Trade</b>\\n💰 Price: $${currentPrice.toFixed(2)}\\n📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%\\n\\n🎯 <b>Take Profits:</b>\\n   TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}\\n   TP2: $${swingTradeSignal.take_profit_2.toFixed(2)}\\n   TP3: $${swingTradeSignal.take_profit_3.toFixed(2)}\\n\\n🛡️ <b>Stop Loss:</b> $${swingTradeSignal.stop_loss.toFixed(2)}\\n\\n📝 <b>Reason:</b> ${escapeHtml(swingTradeSignal.reason)}\\n\\n⏰ ${new Date().toLocaleString()}`;
         
         const success = await sendTelegramMessage({
           botToken: telegramBotToken,
           chatId: telegramChatId
         }, message);
+        
+        debugInfo.swing_trade_send_result = success;
         
         if (success) {
           telegramSent = true;
           alertsSent.push('Swing Trade');
         }
       }
+    } else {
+      console.log('[AUTO-FETCH] Telegram NOT configured or invalid token');
     }
     
-    console.log(`[CRON] Processed ${candles.length} candles, Telegram: ${telegramSent ? 'SENT' : 'NOT SENT'}`);
+    console.log(`[CRON] Processed ${candles.length} candles, Telegram: ${telegramSent ? 'SENT' : 'NOT SENT'}, Alerts: ${alertsSent.join(', ')}`);
     
     // 7. Return comprehensive status
     return c.json({ 
@@ -2067,8 +2145,30 @@ ${swingTradeSignal.reason}
       },
       telegram: {
         configured: !!(telegramBotToken && telegramChatId),
+        bot_token_set: !!telegramBotToken,
+        chat_id_set: !!telegramChatId,
+        bot_token_valid: telegramBotToken !== 'your_bot_token_here',
         sent: telegramSent,
         alerts: alertsSent
+      },
+      debug: {
+        ...debugInfo,
+        day_trade_check: {
+          confidence: dayTradeSignal.confidence,
+          min_confidence: minConfidence,
+          meets_threshold: dayTradeSignal.confidence >= minConfidence,
+          signal_type: dayTradeSignal.signal_type,
+          not_hold: dayTradeSignal.signal_type !== 'HOLD',
+          should_alert: (dayTradeSignal.confidence >= minConfidence && dayTradeSignal.signal_type !== 'HOLD')
+        },
+        swing_trade_check: {
+          confidence: swingTradeSignal.confidence,
+          min_confidence: 80,
+          meets_threshold: swingTradeSignal.confidence >= 80,
+          signal_type: swingTradeSignal.signal_type,
+          not_hold: swingTradeSignal.signal_type !== 'HOLD',
+          should_alert: (swingTradeSignal.confidence >= 80 && swingTradeSignal.signal_type !== 'HOLD')
+        }
       },
       message: telegramSent ? 
         `✅ Alerts sent: ${alertsSent.join(', ')}` : 
@@ -2084,6 +2184,41 @@ ${swingTradeSignal.reason}
     }, 500);
   }
 })
+
+// 🧪 TEST ENDPOINT - Debug auto-fetch settings
+app.get('/api/test/auto-fetch-settings', async (c) => {
+  const { DB } = c.env;
+  
+  try {
+    const settingsRows = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings 
+      WHERE setting_key IN ('twelve_data_api_key', 'telegram_bot_token', 'telegram_chat_id')
+    `).all();
+    
+    const config: any = {};
+    for (const row of settingsRows.results) {
+      config[(row as any).setting_key] = (row as any).setting_value;
+    }
+    
+    const apiKey = config.twelve_data_api_key || '70140f57bea54c5e90768de696487d8f';
+    const telegramBotToken = config.telegram_bot_token;
+    const telegramChatId = config.telegram_chat_id;
+    
+    return c.json({
+      success: true,
+      raw_results: settingsRows.results,
+      config_object: config,
+      extracted: {
+        apiKey: apiKey ? `${apiKey.substring(0, 10)}...` : null,
+        telegramBotToken: telegramBotToken ? `${telegramBotToken.substring(0, 10)}...` : null,
+        telegramChatId,
+        is_configured: !!(telegramBotToken && telegramChatId && telegramBotToken !== 'your_bot_token_here')
+      }
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 
 // 🤖 AI AUTO-SCAN CRON ENDPOINT
 // Automatic AI Market Analysis with Telegram alerts (≥65% confidence)
