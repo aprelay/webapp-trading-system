@@ -608,7 +608,7 @@ app.get('/', (c) => {
             // Send Test A-Grade Alert
             async function sendTestAlert() {
                 try {
-                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\\n\\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\\n\\nContinue?')) {
+                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\n\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\n\nContinue?')) {
                         return;
                     }
                     
@@ -622,9 +622,9 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
                     
                     if (res.success) {
-                        alert('✅ Test A-grade alert sent!\\n\\nCheck your Telegram to see what real alerts will look like.\\n\\n📊 Grade: A (87%)\\n🟢 Signal: BUY\\n💰 Entry: $4386.50\\n🛡️ Stop: $4401.50\\n🎯 TP1: $4356.20\\n\\nThis is a SAMPLE alert for testing purposes.');
+                        alert('✅ Test A-grade alert sent!\n\nCheck your Telegram to see what real alerts will look like.\n\n📊 Grade: A (87%)\n🟢 Signal: BUY\n💰 Entry: $4386.50\n🛡️ Stop: $4401.50\n🎯 TP1: $4356.20\n\nThis is a SAMPLE alert for testing purposes.');
                     } else {
-                        alert('❌ Failed to send test alert.\\n\\n' + res.error + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                        alert('❌ Failed to send test alert.\n\n' + res.error + '\n\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
@@ -746,7 +746,7 @@ app.get('/', (c) => {
                         
                         // Show alert for A-grade
                         if (scan.grade === 'A' || scan.grade === 'A+') {
-                            alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\\n\\nSignal: ' + scan.signal + '\\nEntry: $' + scan.entry.toFixed(2) + '\\nStop: $' + scan.stop_loss.toFixed(2) + '\\nTP1: $' + scan.targets[0].toFixed(2) + '\\n\\nCheck dashboard for full details!');
+                            alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\n\nSignal: ' + scan.signal + '\nEntry: $' + scan.entry.toFixed(2) + '\nStop: $' + scan.stop_loss.toFixed(2) + '\nTP1: $' + scan.targets[0].toFixed(2) + '\n\nCheck dashboard for full details!');
                         }
                     } else {
                         alert('❌ Scanner error: ' + res.error);
@@ -782,15 +782,15 @@ app.get('/', (c) => {
                     }, 180000); // 180 second timeout for slow mobile networks
                     
                     if (res.success) {
-                        let message = '✅ Market Data Fetched Successfully!\\n\\n';
-                        message += '📊 Fetched ' + res.totalCount + ' candles across 5 timeframes\\n\\n';
-                        message += '✅ Ready for:\\n';
-                        message += '   • Generate Signal NOW (simple)\\n';
-                        message += '   • Hedge Fund Signal (all 10 features)\\n\\n';
+                        let message = '✅ Market Data Fetched Successfully!\n\n';
+                        message += '📊 Fetched ' + res.totalCount + ' candles across 5 timeframes\n\n';
+                        message += '✅ Ready for:\n';
+                        message += '   • Generate Signal NOW (simple)\n';
+                        message += '   • Hedge Fund Signal (all 10 features)\n\n';
                         message += 'Click either button to analyze current market!';
                         alert(message);
                     } else {
-                        alert('✅ Partial Success\\n\\nFetched ' + res.totalCount + ' candles\\n\\nSome timeframes may have errors. Check console for details.');
+                        alert('✅ Partial Success\n\nFetched ' + res.totalCount + ' candles\n\nSome timeframes may have errors. Check console for details.');
                     }
                     
                     await refreshData();
@@ -834,27 +834,27 @@ app.get('/', (c) => {
                         // Format SIMPLE signal (matching Telegram format)
                         const emoji = day.signal_type === 'BUY' ? '🟢' : day.signal_type === 'SELL' ? '🔴' : '⚪';
                         
-                        let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\\n\\n';
-                        message += '📊 Day Trade\\n';
-                        message += '💰 Price: $' + day.price.toFixed(2) + '\\n';
-                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\\n\\n';
+                        let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\n\n';
+                        message += '📊 Day Trade\n';
+                        message += '💰 Price: $' + day.price.toFixed(2) + '\n';
+                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\n\n';
                         
-                        message += '🎯 Take Profits:\\n';
-                        message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
-                        message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\\n';
-                        message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\\n\\n';
+                        message += '🎯 Take Profits:\n';
+                        message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\n';
+                        message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\n';
+                        message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\n\n';
                         
-                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n\\n';
+                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\n\n';
                         
-                        message += '📝 Reason:\\n' + day.reason + '\\n\\n';
+                        message += '📝 Reason:\n' + day.reason + '\n\n';
                         
                         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
                         message += '⏰ ' + timestamp;
                         
                         if (res.telegram_sent) {
-                            message += '\\n\\n📱 Sent to Telegram!';
+                            message += '\n\n📱 Sent to Telegram!';
                         } else {
-                            message += '\\n\\n⚠️ Telegram not configured';
+                            message += '\n\n⚠️ Telegram not configured';
                         }
                         
                         alert(message);
@@ -893,53 +893,53 @@ app.get('/', (c) => {
                         const ml = res.ml_prediction;
                         const pop = res.profit_probability;
                         
-                        let message = '🏦 HEDGE FUND GRADE SIGNAL\\n\\n';
+                        let message = '🏦 HEDGE FUND GRADE SIGNAL\n\n';
                         
                         // Risk Warnings
                         if (day.risk_warning) {
-                            message += '⚠️ RISK ALERT: ' + day.risk_warning + '\\n\\n';
+                            message += '⚠️ RISK ALERT: ' + day.risk_warning + '\n\n';
                         }
                         
                         // Multi-Timeframe Alignment
-                        message += '📊 MTF ALIGNMENT: ' + alignment.type + ' (' + alignment.score + '/5)\\n\\n';
+                        message += '📊 MTF ALIGNMENT: ' + alignment.type + ' (' + alignment.score + '/5)\n\n';
                         
                         // Day Trade
-                        message += '📈 DAY TRADE:\\n';
-                        message += (day.isValid ? '✅' : '❌') + ' ' + day.signal_type + ' (' + day.enhanced_confidence.toFixed(0) + '%)\\n';
-                        message += 'Entry: $' + day.price.toFixed(2) + '\\n';
-                        message += 'Stop: $' + day.stop_loss.toFixed(2) + '\\n';
-                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
+                        message += '📈 DAY TRADE:\n';
+                        message += (day.isValid ? '✅' : '❌') + ' ' + day.signal_type + ' (' + day.enhanced_confidence.toFixed(0) + '%)\n';
+                        message += 'Entry: $' + day.price.toFixed(2) + '\n';
+                        message += 'Stop: $' + day.stop_loss.toFixed(2) + '\n';
+                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + '\n';
                         
                         // Confidence Breakdown
-                        message += '\\nConfidence Breakdown:\\n';
-                        message += 'Base: ' + day.base_confidence.toFixed(0) + '%\\n';
-                        message += 'MTF: ' + day.mtf_confidence.toFixed(0) + '%\\n';
-                        if (day.pattern_boost > 0) message += 'Pattern: +' + day.pattern_boost.toFixed(0) + '%\\n';
-                        if (day.regime_boost > 0) message += 'Regime: +' + day.regime_boost.toFixed(0) + '%\\n';
-                        if (day.ml_boost > 0) message += 'ML: +' + day.ml_boost.toFixed(0) + '%\\n';
-                        if (day.pop_boost > 0) message += 'PoP: +' + day.pop_boost.toFixed(0) + '%\\n';
-                        message += 'FINAL: ' + day.enhanced_confidence.toFixed(0) + '%\\n\\n';
+                        message += '\nConfidence Breakdown:\n';
+                        message += 'Base: ' + day.base_confidence.toFixed(0) + '%\n';
+                        message += 'MTF: ' + day.mtf_confidence.toFixed(0) + '%\n';
+                        if (day.pattern_boost > 0) message += 'Pattern: +' + day.pattern_boost.toFixed(0) + '%\n';
+                        if (day.regime_boost > 0) message += 'Regime: +' + day.regime_boost.toFixed(0) + '%\n';
+                        if (day.ml_boost > 0) message += 'ML: +' + day.ml_boost.toFixed(0) + '%\n';
+                        if (day.pop_boost > 0) message += 'PoP: +' + day.pop_boost.toFixed(0) + '%\n';
+                        message += 'FINAL: ' + day.enhanced_confidence.toFixed(0) + '%\n\n';
                         
                         // Market Regime
                         if (regime) {
-                            message += '🌡️ REGIME: ' + (regime.trend || 'N/A') + ' | Volatility: ' + regime.volatility + '\\n';
-                            message += 'Should Trade: ' + (regime.should_trade ? '✅ YES' : '❌ NO') + '\\n\\n';
+                            message += '🌡️ REGIME: ' + (regime.trend || 'N/A') + ' | Volatility: ' + regime.volatility + '\n';
+                            message += 'Should Trade: ' + (regime.should_trade ? '✅ YES' : '❌ NO') + '\n\n';
                         }
                         
                         // ML Prediction
                         if (ml && ml.direction !== 'NEUTRAL') {
-                            message += '🤖 ML: ' + ml.direction + '\\n\\n';
+                            message += '🤖 ML: ' + ml.direction + '\n\n';
                         }
                         
                         // Risk Metrics
-                        message += '⚡ RISK METRICS:\\n';
-                        message += 'VaR(95%): $' + risk_metrics.var_95.toFixed(2) + '\\n';
-                        message += 'VaR(99%): $' + risk_metrics.var_99.toFixed(2) + '\\n';
-                        message += 'Drawdown: ' + risk_metrics.drawdown_pct.toFixed(2) + '%\\n';
-                        message += 'Portfolio Heat: ' + risk_metrics.portfolio_heat_pct.toFixed(1) + '%\\n\\n';
+                        message += '⚡ RISK METRICS:\n';
+                        message += 'VaR(95%): $' + risk_metrics.var_95.toFixed(2) + '\n';
+                        message += 'VaR(99%): $' + risk_metrics.var_99.toFixed(2) + '\n';
+                        message += 'Drawdown: ' + risk_metrics.drawdown_pct.toFixed(2) + '%\n';
+                        message += 'Portfolio Heat: ' + risk_metrics.portfolio_heat_pct.toFixed(1) + '%\n\n';
                         
                         // Recommendation
-                        message += '💡 RECOMMENDATION:\\n';
+                        message += '💡 RECOMMENDATION:\n';
                         if (day.isValid && day.signal_type !== 'HOLD') {
                             message += '✅ EXECUTE ' + day.signal_type;
                         } else {
@@ -947,7 +947,7 @@ app.get('/', (c) => {
                         }
                         
                         // Telegram Status
-                        message += '\\n\\n';
+                        message += '\n\n';
                         if (res.telegram_sent) {
                             message += '📱 ✅ Sent to Telegram!';
                         } else {
