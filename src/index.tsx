@@ -345,15 +345,23 @@ app.get('/', (c) => {
             }
 
             async function refreshData() {
+                console.log('[REFRESH] Starting data refresh...');
                 try {
                     // ⚡ OPTIMIZED: Load all data in parallel using native fetch
                     // Cron job handles fresh data fetching every minute
                     // Dashboard just displays cached data instantly
+                    console.log('[REFRESH] Fetching data from APIs...');
                     const [signalsRes, marketRes, indicatorsRes] = await Promise.all([
                         fetch('/api/signals/recent').then(r => r.json()),
                         fetch('/api/market/latest').then(r => r.json()),
                         fetch('/api/indicators/latest').then(r => r.json())
                     ]);
+                    
+                    console.log('[REFRESH] Data received:', {
+                        signals: signalsRes.signals?.length || 0,
+                        market: marketRes.data?.length || 0,
+                        indicators: indicatorsRes.success
+                    });
                     
                     // Display all results
                     displayRecentSignals(signalsRes.signals);
@@ -365,8 +373,16 @@ app.get('/', (c) => {
                     if (indicatorsRes.indicators) {
                         displayIndicators(indicatorsRes.indicators);
                     }
+                    
+                    console.log('[REFRESH] Data refresh complete');
                 } catch (error) {
-                    console.error('Error refreshing data:', error);
+                    console.error('[REFRESH] Error refreshing data:', error);
+                    // Show error in UI
+                    const currentSignal = document.getElementById('currentSignal');
+                    if (currentSignal) {
+                        currentSignal.textContent = 'ERROR';
+                        currentSignal.className = 'text-xl font-bold text-red-400';
+                    }
                 }
             }
 
@@ -1349,8 +1365,21 @@ app.get('/', (c) => {
             // Make functions globally accessible for onclick handlers
             window.runAIAnalysis = runAIAnalysis;
             
-            // Initialize on page load
-            init();
+            // Initialize on page load with error handling
+            try {
+                console.log('[INIT] Starting dashboard initialization...');
+                init().then(() => {
+                    console.log('[INIT] Dashboard loaded successfully');
+                }).catch(error => {
+                    console.error('[INIT] Error during initialization:', error);
+                    // Still try to load data even if init fails
+                    refreshData().catch(e => console.error('[INIT] Backup refresh failed:', e));
+                });
+            } catch (error) {
+                console.error('[INIT] Critical error:', error);
+                // Last resort: try direct refresh
+                setTimeout(() => refreshData(), 1000);
+            }
         </script>
     </body>
     </html>
