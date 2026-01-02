@@ -345,23 +345,15 @@ app.get('/', (c) => {
             }
 
             async function refreshData() {
-                console.log('[REFRESH] Starting data refresh...');
                 try {
                     // ⚡ OPTIMIZED: Load all data in parallel using native fetch
                     // Cron job handles fresh data fetching every minute
                     // Dashboard just displays cached data instantly
-                    console.log('[REFRESH] Fetching data from APIs...');
                     const [signalsRes, marketRes, indicatorsRes] = await Promise.all([
                         fetch('/api/signals/recent').then(r => r.json()),
                         fetch('/api/market/latest').then(r => r.json()),
                         fetch('/api/indicators/latest').then(r => r.json())
                     ]);
-                    
-                    console.log('[REFRESH] Data received:', {
-                        signals: signalsRes.signals?.length || 0,
-                        market: marketRes.data?.length || 0,
-                        indicators: indicatorsRes.success
-                    });
                     
                     // Display all results
                     displayRecentSignals(signalsRes.signals);
@@ -373,16 +365,8 @@ app.get('/', (c) => {
                     if (indicatorsRes.indicators) {
                         displayIndicators(indicatorsRes.indicators);
                     }
-                    
-                    console.log('[REFRESH] Data refresh complete');
                 } catch (error) {
-                    console.error('[REFRESH] Error refreshing data:', error);
-                    // Show error in UI
-                    const currentSignal = document.getElementById('currentSignal');
-                    if (currentSignal) {
-                        currentSignal.textContent = 'ERROR';
-                        currentSignal.className = 'text-xl font-bold text-red-400';
-                    }
+                    console.error('Error refreshing data:', error);
                 }
             }
 
@@ -624,7 +608,7 @@ app.get('/', (c) => {
             // Send Test A-Grade Alert
             async function sendTestAlert() {
                 try {
-                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\n\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\n\nContinue?')) {
+                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\\n\\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\\n\\nContinue?')) {
                         return;
                     }
                     
@@ -638,9 +622,9 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
                     
                     if (res.success) {
-                        alert('✅ Test A-grade alert sent!\n\nCheck your Telegram to see what real alerts will look like.\n\n📊 Grade: A (87%)\n🟢 Signal: BUY\n💰 Entry: $4386.50\n🛡️ Stop: $4401.50\n🎯 TP1: $4356.20\n\nThis is a SAMPLE alert for testing purposes.');
+                        alert('✅ Test A-grade alert sent!\\n\\nCheck your Telegram to see what real alerts will look like.\\n\\n📊 Grade: A (87%)\\n🟢 Signal: BUY\\n💰 Entry: $4386.50\\n🛡️ Stop: $4401.50\\n🎯 TP1: $4356.20\\n\\nThis is a SAMPLE alert for testing purposes.');
                     } else {
-                        alert('❌ Failed to send test alert.\n\n' + res.error + '\n\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                        alert('❌ Failed to send test alert.\\n\\n' + res.error + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
@@ -762,7 +746,7 @@ app.get('/', (c) => {
                         
                         // Show alert for A-grade
                         if (scan.grade === 'A' || scan.grade === 'A+') {
-                            alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\n\nSignal: ' + scan.signal + '\nEntry: $' + scan.entry.toFixed(2) + '\nStop: $' + scan.stop_loss.toFixed(2) + '\nTP1: $' + scan.targets[0].toFixed(2) + '\n\nCheck dashboard for full details!');
+                            alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\\n\\nSignal: ' + scan.signal + '\\nEntry: $' + scan.entry.toFixed(2) + '\\nStop: $' + scan.stop_loss.toFixed(2) + '\\nTP1: $' + scan.targets[0].toFixed(2) + '\\n\\nCheck dashboard for full details!');
                         }
                     } else {
                         alert('❌ Scanner error: ' + res.error);
@@ -798,15 +782,15 @@ app.get('/', (c) => {
                     }, 180000); // 180 second timeout for slow mobile networks
                     
                     if (res.success) {
-                        let message = '✅ Market Data Fetched Successfully!\n\n';
-                        message += '📊 Fetched ' + res.totalCount + ' candles across 5 timeframes\n\n';
-                        message += '✅ Ready for:\n';
-                        message += '   • Generate Signal NOW (simple)\n';
-                        message += '   • Hedge Fund Signal (all 10 features)\n\n';
+                        let message = '✅ Market Data Fetched Successfully!\\n\\n';
+                        message += '📊 Fetched ' + res.totalCount + ' candles across 5 timeframes\\n\\n';
+                        message += '✅ Ready for:\\n';
+                        message += '   • Generate Signal NOW (simple)\\n';
+                        message += '   • Hedge Fund Signal (all 10 features)\\n\\n';
                         message += 'Click either button to analyze current market!';
                         alert(message);
                     } else {
-                        alert('✅ Partial Success\n\nFetched ' + res.totalCount + ' candles\n\nSome timeframes may have errors. Check console for details.');
+                        alert('✅ Partial Success\\n\\nFetched ' + res.totalCount + ' candles\\n\\nSome timeframes may have errors. Check console for details.');
                     }
                     
                     await refreshData();
@@ -814,18 +798,7 @@ app.get('/', (c) => {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
                 } catch (error) {
-                    // Better error handling with helpful messages
-                    let errorMsg = error.message || 'Unknown error';
-                    
-                    if (errorMsg.includes('aborted') || errorMsg.includes('timeout')) {
-                        errorMsg = 'Request timeout. This happens on slow networks.\n\nTry again with better connection, or wait a moment and retry.';
-                    } else if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
-                        errorMsg = 'Network error. Check your internet connection and try again.';
-                    }
-                    
-                    alert('❌ Error fetching data:\n\n' + errorMsg);
-                    console.error('Fetch Market Data Error:', error);
-                    
+                    alert('❌ Error fetching data: ' + error.message);
                     const btn = document.getElementById('fetchBtn');
                     if (btn) {
                         btn.disabled = false;
@@ -850,27 +823,27 @@ app.get('/', (c) => {
                         // Format SIMPLE signal (matching Telegram format)
                         const emoji = day.signal_type === 'BUY' ? '🟢' : day.signal_type === 'SELL' ? '🔴' : '⚪';
                         
-                        let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\n\n';
-                        message += '📊 Day Trade\n';
-                        message += '💰 Price: $' + day.price.toFixed(2) + '\n';
-                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\n\n';
+                        let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\\n\\n';
+                        message += '📊 Day Trade\\n';
+                        message += '💰 Price: $' + day.price.toFixed(2) + '\\n';
+                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\\n\\n';
                         
-                        message += '🎯 Take Profits:\n';
-                        message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\n';
-                        message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\n';
-                        message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\n\n';
+                        message += '🎯 Take Profits:\\n';
+                        message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
+                        message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\\n';
+                        message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\\n\\n';
                         
-                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\n\n';
+                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n\\n';
                         
-                        message += '📝 Reason:\n' + day.reason + '\n\n';
+                        message += '📝 Reason:\\n' + day.reason + '\\n\\n';
                         
                         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
                         message += '⏰ ' + timestamp;
                         
                         if (res.telegram_sent) {
-                            message += '\n\n📱 Sent to Telegram!';
+                            message += '\\n\\n📱 Sent to Telegram!';
                         } else {
-                            message += '\n\n⚠️ Telegram not configured';
+                            message += '\\n\\n⚠️ Telegram not configured';
                         }
                         
                         alert(message);
@@ -909,53 +882,53 @@ app.get('/', (c) => {
                         const ml = res.ml_prediction;
                         const pop = res.profit_probability;
                         
-                        let message = '🏦 HEDGE FUND GRADE SIGNAL\n\n';
+                        let message = '🏦 HEDGE FUND GRADE SIGNAL\\n\\n';
                         
                         // Risk Warnings
                         if (day.risk_warning) {
-                            message += '⚠️ RISK ALERT: ' + day.risk_warning + '\n\n';
+                            message += '⚠️ RISK ALERT: ' + day.risk_warning + '\\n\\n';
                         }
                         
                         // Multi-Timeframe Alignment
-                        message += '📊 MTF ALIGNMENT: ' + alignment.type + ' (' + alignment.score + '/5)\n\n';
+                        message += '📊 MTF ALIGNMENT: ' + alignment.type + ' (' + alignment.score + '/5)\\n\\n';
                         
                         // Day Trade
-                        message += '📈 DAY TRADE:\n';
-                        message += (day.isValid ? '✅' : '❌') + ' ' + day.signal_type + ' (' + day.enhanced_confidence.toFixed(0) + '%)\n';
-                        message += 'Entry: $' + day.price.toFixed(2) + '\n';
-                        message += 'Stop: $' + day.stop_loss.toFixed(2) + '\n';
-                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + '\n';
+                        message += '📈 DAY TRADE:\\n';
+                        message += (day.isValid ? '✅' : '❌') + ' ' + day.signal_type + ' (' + day.enhanced_confidence.toFixed(0) + '%)\\n';
+                        message += 'Entry: $' + day.price.toFixed(2) + '\\n';
+                        message += 'Stop: $' + day.stop_loss.toFixed(2) + '\\n';
+                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
                         
                         // Confidence Breakdown
-                        message += '\nConfidence Breakdown:\n';
-                        message += 'Base: ' + day.base_confidence.toFixed(0) + '%\n';
-                        message += 'MTF: ' + day.mtf_confidence.toFixed(0) + '%\n';
-                        if (day.pattern_boost > 0) message += 'Pattern: +' + day.pattern_boost.toFixed(0) + '%\n';
-                        if (day.regime_boost > 0) message += 'Regime: +' + day.regime_boost.toFixed(0) + '%\n';
-                        if (day.ml_boost > 0) message += 'ML: +' + day.ml_boost.toFixed(0) + '%\n';
-                        if (day.pop_boost > 0) message += 'PoP: +' + day.pop_boost.toFixed(0) + '%\n';
-                        message += 'FINAL: ' + day.enhanced_confidence.toFixed(0) + '%\n\n';
+                        message += '\\nConfidence Breakdown:\\n';
+                        message += 'Base: ' + day.base_confidence.toFixed(0) + '%\\n';
+                        message += 'MTF: ' + day.mtf_confidence.toFixed(0) + '%\\n';
+                        if (day.pattern_boost > 0) message += 'Pattern: +' + day.pattern_boost.toFixed(0) + '%\\n';
+                        if (day.regime_boost > 0) message += 'Regime: +' + day.regime_boost.toFixed(0) + '%\\n';
+                        if (day.ml_boost > 0) message += 'ML: +' + day.ml_boost.toFixed(0) + '%\\n';
+                        if (day.pop_boost > 0) message += 'PoP: +' + day.pop_boost.toFixed(0) + '%\\n';
+                        message += 'FINAL: ' + day.enhanced_confidence.toFixed(0) + '%\\n\\n';
                         
                         // Market Regime
                         if (regime) {
-                            message += '🌡️ REGIME: ' + (regime.trend || 'N/A') + ' | Volatility: ' + regime.volatility + '\n';
-                            message += 'Should Trade: ' + (regime.should_trade ? '✅ YES' : '❌ NO') + '\n\n';
+                            message += '🌡️ REGIME: ' + (regime.trend || 'N/A') + ' | Volatility: ' + regime.volatility + '\\n';
+                            message += 'Should Trade: ' + (regime.should_trade ? '✅ YES' : '❌ NO') + '\\n\\n';
                         }
                         
                         // ML Prediction
                         if (ml && ml.direction !== 'NEUTRAL') {
-                            message += '🤖 ML: ' + ml.direction + '\n\n';
+                            message += '🤖 ML: ' + ml.direction + '\\n\\n';
                         }
                         
                         // Risk Metrics
-                        message += '⚡ RISK METRICS:\n';
-                        message += 'VaR(95%): $' + risk_metrics.var_95.toFixed(2) + '\n';
-                        message += 'VaR(99%): $' + risk_metrics.var_99.toFixed(2) + '\n';
-                        message += 'Drawdown: ' + risk_metrics.drawdown_pct.toFixed(2) + '%\n';
-                        message += 'Portfolio Heat: ' + risk_metrics.portfolio_heat_pct.toFixed(1) + '%\n\n';
+                        message += '⚡ RISK METRICS:\\n';
+                        message += 'VaR(95%): $' + risk_metrics.var_95.toFixed(2) + '\\n';
+                        message += 'VaR(99%): $' + risk_metrics.var_99.toFixed(2) + '\\n';
+                        message += 'Drawdown: ' + risk_metrics.drawdown_pct.toFixed(2) + '%\\n';
+                        message += 'Portfolio Heat: ' + risk_metrics.portfolio_heat_pct.toFixed(1) + '%\\n\\n';
                         
                         // Recommendation
-                        message += '💡 RECOMMENDATION:\n';
+                        message += '💡 RECOMMENDATION:\\n';
                         if (day.isValid && day.signal_type !== 'HOLD') {
                             message += '✅ EXECUTE ' + day.signal_type;
                         } else {
@@ -963,7 +936,7 @@ app.get('/', (c) => {
                         }
                         
                         // Telegram Status
-                        message += '\n\n';
+                        message += '\\n\\n';
                         if (res.telegram_sent) {
                             message += '📱 ✅ Sent to Telegram!';
                         } else {
@@ -1365,21 +1338,8 @@ app.get('/', (c) => {
             // Make functions globally accessible for onclick handlers
             window.runAIAnalysis = runAIAnalysis;
             
-            // Initialize on page load with error handling
-            try {
-                console.log('[INIT] Starting dashboard initialization...');
-                init().then(() => {
-                    console.log('[INIT] Dashboard loaded successfully');
-                }).catch(error => {
-                    console.error('[INIT] Error during initialization:', error);
-                    // Still try to load data even if init fails
-                    refreshData().catch(e => console.error('[INIT] Backup refresh failed:', e));
-                });
-            } catch (error) {
-                console.error('[INIT] Critical error:', error);
-                // Last resort: try direct refresh
-                setTimeout(() => refreshData(), 1000);
-            }
+            // Initialize on page load
+            init();
         </script>
     </body>
     </html>
@@ -1960,9 +1920,7 @@ app.get('/api/cron/auto-fetch', async (c) => {
     const values = data['values'];
     
     // 3. Process and store candles (OPTIMIZED with batch insert)
-    // IMPORTANT: Twelve Data API returns values in REVERSE chronological order (newest first)
-    // We need to reverse the array so candles[0] = oldest, candles[last] = newest
-    const candles = values.reverse().map(item => ({
+    const candles = values.map(item => ({
       timestamp: item.datetime,
       open: parseFloat(item.open) || 0,
       high: parseFloat(item.high) || 0,
@@ -2003,15 +1961,6 @@ app.get('/api/cron/auto-fetch', async (c) => {
     
     // 5. Generate signals
     const currentPrice = candles[candles.length - 1].close;
-    
-    // Check data freshness (warn if > 2 hours old)
-    const latestTimestamp = candles[candles.length - 1].timestamp;
-    const dataAge = Date.now() - new Date(latestTimestamp).getTime();
-    const hoursOld = dataAge / (1000 * 60 * 60);
-    
-    if (hoursOld > 2) {
-      console.warn(`[CRON] WARNING: Data is ${hoursOld.toFixed(1)} hours old! Latest: ${latestTimestamp}`);
-    }
     
     const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
     const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
@@ -2102,8 +2051,7 @@ ${swingTradeSignal.reason}
       timestamp: new Date().toISOString(),
       data_fetched: {
         candles: candles.length,
-        latest_price: currentPrice,
-        data_timestamp: candles[candles.length - 1].timestamp  // Show when data is from
+        latest_price: currentPrice
       },
       signals: {
         day_trade: {
@@ -2193,9 +2141,7 @@ app.post('/api/market/fetch-mtf', async (c) => {
       let count = 0;
       const candles: Candle[] = [];
       
-      // IMPORTANT: Twelve Data API returns values in REVERSE chronological order (newest first)
-      // Reverse it so we store chronologically (oldest first) for consistency
-      for (const item of values.reverse()) {
+      for (const item of values) {
         const candle = {
           timestamp: item.datetime,
           open: parseFloat(item.open) || 0,
@@ -2218,8 +2164,7 @@ app.post('/api/market/fetch-mtf', async (c) => {
       
       // Calculate indicators for this timeframe
       if (candles.length >= 50) {
-        // Now candles is already in chronological order (oldest first), so no need to reverse
-        const indicators = calculateIndicators(candles);
+        const indicators = calculateIndicators(candles.reverse());
         
         if (indicators) {
           await DB.prepare(`
@@ -3430,6 +3375,18 @@ ${swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD' ?
       },
       alignment,
       telegram_sent: telegramSent
+    })
+  } catch (error: any) {
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      stack: error.stack 
+    }, 500)
+  }
+})
+
+export default app
+_sent: telegramSent
     })
   } catch (error: any) {
     return c.json({ 
