@@ -7,18 +7,41 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+// Helper: Check if monitoring tables exist
+async function checkIfTablesExist(DB: D1Database): Promise<boolean> {
+  try {
+    await DB.prepare(`SELECT 1 FROM monitoring_config LIMIT 1`).first()
+    return true
+  } catch (error) {
+    return false
+  }
+}
+
 // Helper: Get monitoring config
 async function getMonitoringConfig(DB: D1Database): Promise<Record<string, string>> {
-  const result = await DB.prepare(`
-    SELECT config_key, config_value FROM monitoring_config
-  `).all()
-  
-  const config: Record<string, string> = {}
-  for (const row of result.results || []) {
-    config[(row as any).config_key] = (row as any).config_value
+  try {
+    const result = await DB.prepare(`
+      SELECT config_key, config_value FROM monitoring_config
+    `).all()
+    
+    const config: Record<string, string> = {}
+    for (const row of result.results || []) {
+      config[(row as any).config_key] = (row as any).config_value
+    }
+    
+    return config
+  } catch (error) {
+    // Table doesn't exist yet, return defaults
+    return {
+      data_stale_threshold_minutes: '30',
+      endpoint_timeout_ms: '30000',
+      slow_response_threshold_ms: '5000',
+      max_failure_count: '3',
+      monitoring_interval_minutes: '5',
+      telegram_alerts_enabled: '1',
+      auto_recovery_enabled: '1'
+    }
   }
-  
-  return config
 }
 
 // Helper: Check endpoint health
@@ -160,11 +183,15 @@ async function sendMonitoringAlert(
   telegramEnabled: boolean
 ): Promise<boolean> {
   try {
-    // Save alert to database
-    await DB.prepare(`
-      INSERT INTO monitoring_alerts (alert_type, severity, source, message, telegram_sent)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(alertType, severity, source, message, telegramEnabled ? 1 : 0).run()
+    // Try to save alert to database (optional - skip if tables don't exist)
+    try {
+      await DB.prepare(`
+        INSERT INTO monitoring_alerts (alert_type, severity, source, message, telegram_sent)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(alertType, severity, source, message, telegramEnabled ? 1 : 0).run()
+    } catch (error) {
+      console.log('[MONITORING] Could not save alert to database:', error)
+    }
     
     // Send Telegram alert if enabled
     if (telegramEnabled) {
@@ -228,8 +255,10 @@ app.get('/health-check', async (c) => {
     const config = await getMonitoringConfig(DB)
     const baseUrl = c.req.url.replace('/api/monitoring/health-check', '')
     const timestamp = new Date().toISOString()
+    const tablesExist = await checkIfTablesExist(DB)
     
     console.log('[MONITORING] Starting comprehensive health check...')
+    console.log('[MONITORING] Tables exist:', tablesExist)
     
     // Define endpoints to monitor
     const endpoints = [
@@ -250,34 +279,50 @@ app.get('/health-check', async (c) => {
     for (const endpoint of endpoints) {
       const health = await checkEndpointHealth(DB, endpoint.name, endpoint.url, baseUrl)
       
-      // Get previous failure count
-      const prevCheck = await DB.prepare(`
-        SELECT failure_count, status FROM system_health
-        WHERE endpoint_name = ?
-        ORDER BY last_check_at DESC
-        LIMIT 1
-      `).bind(endpoint.name).first()
+      let prevFailureCount = 0
+      let prevStatus = 'unknown'
+      let newFailureCount = health.status === 'down' ? 1 : 0
       
-      const prevFailureCount = (prevCheck as any)?.failure_count || 0
-      const prevStatus = (prevCheck as any)?.status || 'unknown'
-      const newFailureCount = health.status === 'down' ? prevFailureCount + 1 : 0
+      // Get previous failure count if tables exist
+      if (tablesExist) {
+        try {
+          const prevCheck = await DB.prepare(`
+            SELECT failure_count, status FROM system_health
+            WHERE endpoint_name = ?
+            ORDER BY last_check_at DESC
+            LIMIT 1
+          `).bind(endpoint.name).first()
+          
+          prevFailureCount = (prevCheck as any)?.failure_count || 0
+          prevStatus = (prevCheck as any)?.status || 'unknown'
+          newFailureCount = health.status === 'down' ? prevFailureCount + 1 : 0
+        } catch (error) {
+          console.log('[MONITORING] Could not read previous health check:', error)
+        }
+      }
       
-      // Save health check result
-      await DB.prepare(`
-        INSERT INTO system_health 
-        (endpoint_name, endpoint_url, status, response_time_ms, last_check_at, 
-         last_success_at, last_failure_at, failure_count, error_message)
-        VALUES (?, ?, ?, ?, datetime('now'), ?, ?, ?, ?)
-      `).bind(
-        endpoint.name,
-        endpoint.url,
-        health.status,
-        health.responseTime,
-        health.status === 'healthy' ? new Date().toISOString() : null,
-        health.status === 'down' ? new Date().toISOString() : null,
-        newFailureCount,
-        health.error || null
-      ).run()
+      // Save health check result if tables exist
+      if (tablesExist) {
+        try {
+          await DB.prepare(`
+            INSERT INTO system_health 
+            (endpoint_name, endpoint_url, status, response_time_ms, last_check_at, 
+             last_success_at, last_failure_at, failure_count, error_message)
+            VALUES (?, ?, ?, ?, datetime('now'), ?, ?, ?, ?)
+          `).bind(
+            endpoint.name,
+            endpoint.url,
+            health.status,
+            health.responseTime,
+            health.status === 'healthy' ? new Date().toISOString() : null,
+            health.status === 'down' ? new Date().toISOString() : null,
+            newFailureCount,
+            health.error || null
+          ).run()
+        } catch (error) {
+          console.log('[MONITORING] Could not save health check:', error)
+        }
+      }
       
       endpointResults.push({
         name: endpoint.name,
@@ -290,26 +335,30 @@ app.get('/health-check', async (c) => {
       
       // Alert if endpoint is down and failure count exceeds threshold
       if (health.status === 'down' && newFailureCount >= maxFailures && prevStatus !== 'down') {
-        await sendMonitoringAlert(
-          DB,
-          'endpoint_down',
-          'critical',
-          endpoint.name,
-          `Endpoint ${endpoint.name} is DOWN after ${newFailureCount} consecutive failures. Error: ${health.error}`,
-          telegramEnabled
-        )
+        if (tablesExist) {
+          await sendMonitoringAlert(
+            DB,
+            'endpoint_down',
+            'critical',
+            endpoint.name,
+            `Endpoint ${endpoint.name} is DOWN after ${newFailureCount} consecutive failures. Error: ${health.error}`,
+            telegramEnabled
+          )
+        }
       }
       
       // Alert if response is slow
       if (health.status === 'healthy' && health.responseTime > slowThreshold) {
-        await sendMonitoringAlert(
-          DB,
-          'slow_response',
-          'medium',
-          endpoint.name,
-          `Endpoint ${endpoint.name} is responding slowly: ${health.responseTime}ms (threshold: ${slowThreshold}ms)`,
-          telegramEnabled
-        )
+        if (tablesExist) {
+          await sendMonitoringAlert(
+            DB,
+            'slow_response',
+            'medium',
+            endpoint.name,
+            `Endpoint ${endpoint.name} is responding slowly: ${health.responseTime}ms (threshold: ${slowThreshold}ms)`,
+            telegramEnabled
+          )
+        }
       }
     }
     
@@ -319,21 +368,27 @@ app.get('/health-check', async (c) => {
     
     // Save freshness results and send alerts
     for (const freshness of freshnessResults) {
-      await DB.prepare(`
-        INSERT INTO data_freshness 
-        (data_source, timeframe, last_data_timestamp, last_fetch_at, data_age_minutes, is_stale, record_count)
-        VALUES (?, ?, ?, datetime('now'), ?, ?, ?)
-      `).bind(
-        freshness.source,
-        freshness.timeframe || null,
-        freshness.lastTimestamp || null,
-        freshness.ageMinutes,
-        freshness.isStale ? 1 : 0,
-        freshness.count || null
-      ).run()
+      if (tablesExist) {
+        try {
+          await DB.prepare(`
+            INSERT INTO data_freshness 
+            (data_source, timeframe, last_data_timestamp, last_fetch_at, data_age_minutes, is_stale, record_count)
+            VALUES (?, ?, ?, datetime('now'), ?, ?, ?)
+          `).bind(
+            freshness.source,
+            freshness.timeframe || null,
+            freshness.lastTimestamp || null,
+            freshness.ageMinutes,
+            freshness.isStale ? 1 : 0,
+            freshness.count || null
+          ).run()
+        } catch (error) {
+          console.log('[MONITORING] Could not save freshness check:', error)
+        }
+      }
       
       // Alert if data is stale
-      if (freshness.isStale) {
+      if (freshness.isStale && tablesExist) {
         const sourceDesc = freshness.timeframe 
           ? `${freshness.source} (${freshness.timeframe})` 
           : freshness.source
@@ -361,24 +416,31 @@ app.get('/health-check', async (c) => {
         ? 'degraded' 
         : 'healthy'
     
-    // Save metrics
-    await DB.prepare(`
-      INSERT INTO system_metrics (metric_name, metric_value, metric_unit)
-      VALUES 
-        ('endpoints_healthy', ?, 'count'),
-        ('endpoints_degraded', ?, 'count'),
-        ('endpoints_down', ?, 'count'),
-        ('data_sources_stale', ?, 'count'),
-        ('avg_response_time', ?, 'ms')
-    `).bind(
-      healthyCount,
-      degradedCount,
-      downCount,
-      staleCount,
-      endpointResults.reduce((sum, e) => sum + e.response_time_ms, 0) / endpointResults.length
-    ).run()
+    // Save metrics if tables exist
+    if (tablesExist) {
+      try {
+        await DB.prepare(`
+          INSERT INTO system_metrics (metric_name, metric_value, metric_unit)
+          VALUES 
+            ('endpoints_healthy', ?, 'count'),
+            ('endpoints_degraded', ?, 'count'),
+            ('endpoints_down', ?, 'count'),
+            ('data_sources_stale', ?, 'count'),
+            ('avg_response_time', ?, 'ms')
+        `).bind(
+          healthyCount,
+          degradedCount,
+          downCount,
+          staleCount,
+          endpointResults.reduce((sum, e) => sum + e.response_time_ms, 0) / endpointResults.length
+        ).run()
+      } catch (error) {
+        console.log('[MONITORING] Could not save metrics:', error)
+      }
+    }
     
     console.log(`[MONITORING] Health check complete: ${overallStatus}`)
+    console.log(`[MONITORING] Tables exist: ${tablesExist}, Alerts enabled: ${telegramEnabled}`)
     
     return c.json({
       success: true,
