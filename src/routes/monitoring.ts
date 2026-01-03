@@ -260,10 +260,10 @@ app.get('/health-check', async (c) => {
     console.log('[MONITORING] Starting comprehensive health check...')
     console.log('[MONITORING] Tables exist:', tablesExist)
     
-    // Define endpoints to monitor
+    // Define endpoints to monitor (EXCLUDE mtf-fetch for speed)
     const endpoints = [
       { name: 'auto-fetch', url: '/api/cron/auto-fetch' },
-      { name: 'mtf-fetch', url: '/api/market/fetch-mtf' },
+      // Skipping mtf-fetch - too slow (~19 seconds)
       { name: 'ai-analysis', url: '/api/ai/auto-ai-scan' },
       { name: 'scanner', url: '/api/scanner/scan' },
       { name: 'signals-recent', url: '/api/signals/recent' },
@@ -274,6 +274,8 @@ app.get('/health-check', async (c) => {
     const telegramEnabled = config.telegram_alerts_enabled === '1'
     const slowThreshold = parseInt(config.slow_response_threshold_ms || '5000')
     const maxFailures = parseInt(config.max_failure_count || '3')
+    
+    console.log('[MONITORING] Fast mode: Checking 5 endpoints (MTF skipped)')
     
     // Check each endpoint
     for (const endpoint of endpoints) {
