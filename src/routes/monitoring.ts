@@ -570,7 +570,56 @@ app.get('/status', async (c) => {
       )
       
       endpointStatus = { results: liveEndpoints }
-      dataStatus = { results: [] }
+      
+      // Check data freshness from actual database tables
+      try {
+        const marketData = await DB.prepare(`
+          SELECT 
+            '1h' as data_source,
+            '1h' as timeframe,
+            MAX(timestamp) as last_timestamp,
+            CAST((julianday('now') - julianday(MAX(timestamp))) * 24 * 60 AS INTEGER) as data_age_minutes,
+            CASE WHEN (julianday('now') - julianday(MAX(timestamp))) * 24 * 60 > 30 THEN 1 ELSE 0 END as is_stale,
+            datetime('now') as last_fetch_at
+          FROM market_data
+          WHERE timeframe = '1h'
+        `).first()
+        
+        const mtfData = await DB.prepare(`
+          SELECT 
+            'multi_timeframe_indicators' as data_source,
+            timeframe,
+            MAX(created_at) as last_timestamp,
+            CAST((julianday('now') - julianday(MAX(created_at))) * 24 * 60 AS INTEGER) as data_age_minutes,
+            CASE WHEN (julianday('now') - julianday(MAX(created_at))) * 24 * 60 > 30 THEN 1 ELSE 0 END as is_stale,
+            datetime('now') as last_fetch_at
+          FROM multi_timeframe_indicators
+          GROUP BY timeframe
+        `).all()
+        
+        const signalsData = await DB.prepare(`
+          SELECT 
+            'signals' as data_source,
+            NULL as timeframe,
+            MAX(created_at) as last_timestamp,
+            CAST((julianday('now') - julianday(MAX(created_at))) * 24 * 60 AS INTEGER) as data_age_minutes,
+            CASE WHEN (julianday('now') - julianday(MAX(created_at))) * 24 * 60 > 30 THEN 1 ELSE 0 END as is_stale,
+            datetime('now') as last_fetch_at
+          FROM signals
+        `).first()
+        
+        const dataSources = [
+          ...(marketData ? [marketData] : []),
+          ...(mtfData.results || []),
+          ...(signalsData ? [signalsData] : [])
+        ]
+        
+        dataStatus = { results: dataSources }
+      } catch (dbError: any) {
+        console.log('[MONITORING] Data freshness check error:', dbError.message)
+        dataStatus = { results: [] }
+      }
+      
       unresolvedAlerts = { results: [] }
     }
     
