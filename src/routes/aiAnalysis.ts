@@ -30,6 +30,20 @@ app.post('/market-analysis', async (c) => {
 })
 
 /**
+ * GET /health
+ * 
+ * Health check endpoint for monitoring (does NOT trigger analysis)
+ */
+app.get('/health', async (c) => {
+  return c.json({ 
+    success: true, 
+    status: 'healthy',
+    service: 'ai-analysis',
+    timestamp: new Date().toISOString()
+  })
+})
+
+/**
  * GET /auto-ai-scan
  * 
  * Automatic AI scanning endpoint (for cron jobs)

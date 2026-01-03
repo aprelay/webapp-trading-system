@@ -264,7 +264,7 @@ app.get('/health-check', async (c) => {
     const endpoints = [
       { name: 'auto-fetch', url: '/api/cron/auto-fetch' },
       // Skipping mtf-fetch - too slow (~19 seconds)
-      { name: 'ai-analysis', url: '/api/ai/auto-ai-scan' },
+      { name: 'ai-analysis', url: '/api/ai/health' }, // FIXED: Use health check
       { name: 'scanner', url: '/api/scanner/scan' },
       { name: 'signals-recent', url: '/api/signals/recent' },
       { name: 'indicators-latest', url: '/api/indicators/latest' }
@@ -536,7 +536,7 @@ app.get('/status', async (c) => {
       
       const endpointsToCheck = [
         { name: 'auto-fetch', url: '/api/cron/auto-fetch' },
-        { name: 'ai-analysis', url: '/api/ai/auto-ai-scan' },
+        { name: 'ai-analysis', url: '/api/ai/health' }, // FIXED: Use health check instead of auto-ai-scan
         { name: 'scanner', url: '/api/scanner/scan' },
         { name: 'signals-recent', url: '/api/signals/recent' },
         { name: 'indicators-latest', url: '/api/indicators/latest' }
