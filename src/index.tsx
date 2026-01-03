@@ -2160,7 +2160,7 @@ ${escapeHtml(swingTradeSignal.reason)}
       data_fetched: {
         candles: candles.length,
         latest_price: currentPrice,
-        data_timestamp: candles[candles.length - 1].timestamp
+        data_timestamp: candles[0].timestamp
       },
       signals: {
         day_trade: {
