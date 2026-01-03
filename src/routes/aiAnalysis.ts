@@ -321,8 +321,8 @@ async function runAIAnalysis(c: any) {
     
     let telegramSent = false
     
-    // Only send if confidence ≥65% and signal is BUY or SELL (not HOLD)
-    if (signal.confidence >= 65 && (signal.signal_type === 'BUY' || signal.signal_type === 'SELL')) {
+    // Send alert for all signals (HOLD/BUY/SELL) when confidence ≥65%
+    if (signal.confidence >= 65) {
       try {
         const settings = await DB.prepare(`
           SELECT setting_key, setting_value FROM user_settings
@@ -337,7 +337,7 @@ async function runAIAnalysis(c: any) {
         if (config.telegram_bot_token && config.telegram_chat_id && 
             config.telegram_bot_token !== 'your_bot_token_here') {
           
-          const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴'
+          const emoji = signal.signal_type === 'BUY' ? '🟢' : (signal.signal_type === 'SELL' ? '🔴' : '⚪')
           
           let message = `${emoji} *AI MARKET ANALYSIS* ${emoji}\n`
           message += `⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC\n\n`

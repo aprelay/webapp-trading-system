@@ -2055,9 +2055,8 @@ app.get('/api/cron/auto-fetch', async (c) => {
       
       debugInfo.day_trade_checked = true;
       
-      // Check Day Trade signal
-      if (dayTradeSignal.confidence >= minConfidence && 
-          dayTradeSignal.signal_type !== 'HOLD') {
+      // Check Day Trade signal - NOW SENDS FOR ALL SIGNALS (HOLD/BUY/SELL)
+      if (dayTradeSignal.confidence >= minConfidence) {
         
         debugInfo.day_trade_send_attempted = true;
         
@@ -2065,7 +2064,7 @@ app.get('/api/cron/auto-fetch', async (c) => {
         
         // Escape HTML in reason text
         const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const emoji = dayTradeSignal.signal_type === 'BUY' ? '🟢' : '🔴';
+        const emoji = dayTradeSignal.signal_type === 'BUY' ? '🟢' : (dayTradeSignal.signal_type === 'SELL' ? '🔴' : '⚪');
         
         const message = `${emoji} <b>GOLD/USD ${dayTradeSignal.signal_type} SIGNAL</b> ${emoji}
 
@@ -2101,7 +2100,7 @@ ${escapeHtml(dayTradeSignal.reason)}
         }
       }
       
-      // Check Swing Trade signal (higher threshold)
+      // Check Swing Trade signal (higher threshold) - NOW SENDS FOR ALL SIGNALS (HOLD/BUY/SELL)
       debugInfo.swing_trade_checked = true;
       console.log('[AUTO-FETCH] Checking swing trade...', {
         confidence: swingTradeSignal.confidence,
@@ -2109,15 +2108,14 @@ ${escapeHtml(dayTradeSignal.reason)}
         threshold: 80
       });
       
-      if (swingTradeSignal.confidence >= 80 && 
-          swingTradeSignal.signal_type !== 'HOLD') {
+      if (swingTradeSignal.confidence >= 80) {
         
         debugInfo.swing_trade_send_attempted = true;
         console.log('[AUTO-FETCH] Swing trade meets criteria! Sending alert...');
         
         // Escape HTML in reason text
         const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const emoji = swingTradeSignal.signal_type === 'BUY' ? '🟢' : '🔴';
+        const emoji = swingTradeSignal.signal_type === 'BUY' ? '🟢' : (swingTradeSignal.signal_type === 'SELL' ? '🔴' : '⚪');
         
         const message = `${emoji} <b>GOLD/USD ${swingTradeSignal.signal_type} SIGNAL</b> ${emoji}
 
@@ -2161,7 +2159,8 @@ ${escapeHtml(swingTradeSignal.reason)}
       timestamp: new Date().toISOString(),
       data_fetched: {
         candles: candles.length,
-        latest_price: currentPrice
+        latest_price: currentPrice,
+        data_timestamp: candles[candles.length - 1].timestamp
       },
       signals: {
         day_trade: {
@@ -2190,21 +2189,21 @@ ${escapeHtml(swingTradeSignal.reason)}
           min_confidence: minConfidence,
           meets_threshold: dayTradeSignal.confidence >= minConfidence,
           signal_type: dayTradeSignal.signal_type,
-          not_hold: dayTradeSignal.signal_type !== 'HOLD',
-          should_alert: (dayTradeSignal.confidence >= minConfidence && dayTradeSignal.signal_type !== 'HOLD')
+          sends_all_signals: true,
+          should_alert: dayTradeSignal.confidence >= minConfidence
         },
         swing_trade_check: {
           confidence: swingTradeSignal.confidence,
           min_confidence: 80,
           meets_threshold: swingTradeSignal.confidence >= 80,
           signal_type: swingTradeSignal.signal_type,
-          not_hold: swingTradeSignal.signal_type !== 'HOLD',
-          should_alert: (swingTradeSignal.confidence >= 80 && swingTradeSignal.signal_type !== 'HOLD')
+          sends_all_signals: true,
+          should_alert: swingTradeSignal.confidence >= 80
         }
       },
       message: telegramSent ? 
         `✅ Alerts sent: ${alertsSent.join(', ')}` : 
-        '⚪ No alerts (criteria not met or market in HOLD)'
+        '⚪ No alerts sent (signals below confidence threshold)'
     });
     
   } catch (error: any) {
