@@ -338,8 +338,11 @@ async function runAIAnalysis(c: any) {
             config.telegram_bot_token !== 'your_bot_token_here') {
           
           const emoji = signal.signal_type === 'BUY' ? '🟢' : (signal.signal_type === 'SELL' ? '🔴' : '⚪')
+          const isHighConviction = signal.confidence >= 85
+          const convictionLabel = isHighConviction ? '🔥 *HIGH CONVICTION AI* 🔥\n' : ''
           
           let message = `${emoji} *AI MARKET ANALYSIS* ${emoji}\n`
+          message += convictionLabel
           message += `⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC\n\n`
           
           message += `📊 *Signal:* ${signal.signal_type} (${signal.confidence.toFixed(1)}%)\n`
@@ -367,6 +370,47 @@ async function runAIAnalysis(c: any) {
           )
           
           console.log('[AI-ANALYSIS] Telegram alert sent:', telegramSent, 'for', signal.signal_type, signal.confidence + '%')
+          
+          // HIGH CONVICTION AI: Send reminder alerts
+          if (telegramSent && isHighConviction && (signal.signal_type === 'BUY' || signal.signal_type === 'SELL')) {
+            console.log('[AI-ANALYSIS] 🔥 HIGH CONVICTION AI signal! Scheduling reminders...')
+            
+            // Wait 2 minutes, send first reminder
+            setTimeout(async () => {
+              const reminder1 = `${emoji} *⚠️ REMINDER: AI HIGH CONVICTION* ${emoji}\n\n`
+              reminder1 += `📊 *${signal.signal_type}* - ${signal.confidence.toFixed(1)}%\n`
+              reminder1 += `💰 *Price:* $${currentPrice.toFixed(2)}\n`
+              reminder1 += `🎯 *MTF:* ${alignment.type}\n\n`
+              reminder1 += `💡 *Action:* ${recommendation.action}\n`
+              if (recommendation.entry_range) {
+                reminder1 += `🎯 *Entry:* $${recommendation.entry_range}\n`
+                reminder1 += `🛡️ *Stop:* $${recommendation.stop_loss}\n\n`
+              }
+              reminder1 += `⏰ Don't miss this AI signal!`
+              
+              await sendTelegramMessage(
+                { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+                reminder1
+              )
+            }, 2 * 60 * 1000) // 2 minutes
+            
+            // Wait 5 minutes, send final reminder
+            setTimeout(async () => {
+              const reminder2 = `${emoji} *⚠️ FINAL: AI SIGNAL STILL VALID* ${emoji}\n\n`
+              reminder2 += `📊 *${signal.signal_type}* (${signal.confidence.toFixed(1)}%)\n`
+              reminder2 += `💰 *Current Price:* $${currentPrice.toFixed(2)}\n\n`
+              reminder2 += `🔥 Last chance - ${recommendation.action}!\n`
+              if (recommendation.entry_range) {
+                reminder2 += `🎯 *Entry:* $${recommendation.entry_range}\n`
+                reminder2 += `🛡️ *Stop:* $${recommendation.stop_loss}`
+              }
+              
+              await sendTelegramMessage(
+                { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+                reminder2
+              )
+            }, 5 * 60 * 1000) // 5 minutes
+          }
         }
       } catch (error: any) {
         console.error('[AI-ANALYSIS] Telegram error:', error.message)

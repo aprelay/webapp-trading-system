@@ -2066,7 +2066,12 @@ app.get('/api/cron/auto-fetch', async (c) => {
         const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const emoji = dayTradeSignal.signal_type === 'BUY' ? '🟢' : (dayTradeSignal.signal_type === 'SELL' ? '🔴' : '⚪');
         
+        // Check if this is a HIGH CONVICTION signal (≥80%)
+        const isHighConviction = dayTradeSignal.confidence >= 80;
+        const convictionLabel = isHighConviction ? '🔥 <b>HIGH CONVICTION</b> 🔥' : '';
+        
         const message = `${emoji} <b>GOLD/USD ${dayTradeSignal.signal_type} SIGNAL</b> ${emoji}
+${convictionLabel}
 
 📊 <b>Day Trade</b>
 💰 Price: $${currentPrice.toFixed(2)}
@@ -2095,6 +2100,56 @@ ${escapeHtml(dayTradeSignal.reason)}
         if (success) {
           telegramSent = true;
           alertsSent.push('Day Trade');
+          
+          // HIGH CONVICTION: Send reminder alerts
+          if (isHighConviction && dayTradeSignal.signal_type !== 'HOLD') {
+            console.log('[AUTO-FETCH] 🔥 HIGH CONVICTION signal detected! Sending reminder alerts...');
+            
+            // Wait 2 minutes, send first reminder
+            setTimeout(async () => {
+              const reminder1 = `${emoji} <b>⚠️ REMINDER: HIGH CONVICTION SIGNAL</b> ${emoji}
+
+📊 <b>${dayTradeSignal.signal_type} Day Trade</b>
+💰 Current Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
+
+🎯 Entry: $${currentPrice.toFixed(2)}
+🛡️ Stop: $${dayTradeSignal.stop_loss.toFixed(2)}
+🎯 TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
+
+⏰ Don't miss this trade!`;
+              
+              await sendTelegramMessage({
+                botToken: telegramBotToken,
+                chatId: telegramChatId
+              }, reminder1);
+              
+              console.log('[AUTO-FETCH] First reminder sent');
+            }, 2 * 60 * 1000); // 2 minutes
+            
+            // Wait 5 minutes, send second reminder
+            setTimeout(async () => {
+              const reminder2 = `${emoji} <b>⚠️ FINAL REMINDER: HIGH CONVICTION</b> ${emoji}
+
+📊 <b>${dayTradeSignal.signal_type} Signal Still Valid</b>
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
+
+🔥 Last chance to enter this trade!
+
+🎯 TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
+🛡️ Stop: $${dayTradeSignal.stop_loss.toFixed(2)}`;
+              
+              await sendTelegramMessage({
+                botToken: telegramBotToken,
+                chatId: telegramChatId
+              }, reminder2);
+              
+              console.log('[AUTO-FETCH] Final reminder sent');
+            }, 5 * 60 * 1000); // 5 minutes
+            
+            alertsSent.push('High Conviction Reminders (2+5min)');
+          }
         } else {
           console.error('[AUTO-FETCH] Failed to send day trade alert!');
         }
@@ -2117,7 +2172,12 @@ ${escapeHtml(dayTradeSignal.reason)}
         const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const emoji = swingTradeSignal.signal_type === 'BUY' ? '🟢' : (swingTradeSignal.signal_type === 'SELL' ? '🔴' : '⚪');
         
+        // Check if this is a HIGH CONVICTION signal (≥85% for swing)
+        const isHighConviction = swingTradeSignal.confidence >= 85;
+        const convictionLabel = isHighConviction ? '🔥 <b>HIGH CONVICTION</b> 🔥' : '';
+        
         const message = `${emoji} <b>GOLD/USD ${swingTradeSignal.signal_type} SIGNAL</b> ${emoji}
+${convictionLabel}
 
 📈 <b>Swing Trade</b>
 💰 Price: $${currentPrice.toFixed(2)}
@@ -2145,6 +2205,56 @@ ${escapeHtml(swingTradeSignal.reason)}
         if (success) {
           telegramSent = true;
           alertsSent.push('Swing Trade');
+          
+          // HIGH CONVICTION: Send reminder alerts
+          if (isHighConviction && swingTradeSignal.signal_type !== 'HOLD') {
+            console.log('[AUTO-FETCH] 🔥 HIGH CONVICTION swing signal! Sending reminder alerts...');
+            
+            // Wait 3 minutes, send first reminder
+            setTimeout(async () => {
+              const reminder1 = `${emoji} <b>⚠️ REMINDER: HIGH CONVICTION SWING</b> ${emoji}
+
+📈 <b>${swingTradeSignal.signal_type} Swing Trade</b>
+💰 Current Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
+
+🎯 Entry: $${currentPrice.toFixed(2)}
+🛡️ Stop: $${swingTradeSignal.stop_loss.toFixed(2)}
+🎯 TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
+
+⏰ Don't miss this swing trade!`;
+              
+              await sendTelegramMessage({
+                botToken: telegramBotToken,
+                chatId: telegramChatId
+              }, reminder1);
+              
+              console.log('[AUTO-FETCH] Swing first reminder sent');
+            }, 3 * 60 * 1000); // 3 minutes
+            
+            // Wait 7 minutes, send second reminder
+            setTimeout(async () => {
+              const reminder2 = `${emoji} <b>⚠️ FINAL REMINDER: HIGH CONVICTION</b> ${emoji}
+
+📈 <b>${swingTradeSignal.signal_type} Swing Still Valid</b>
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
+
+🔥 Last chance for this swing trade!
+
+🎯 TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
+🛡️ Stop: $${swingTradeSignal.stop_loss.toFixed(2)}`;
+              
+              await sendTelegramMessage({
+                botToken: telegramBotToken,
+                chatId: telegramChatId
+              }, reminder2);
+              
+              console.log('[AUTO-FETCH] Swing final reminder sent');
+            }, 7 * 60 * 1000); // 7 minutes
+            
+            alertsSent.push('High Conviction Swing Reminders (3+7min)');
+          }
         }
       }
     } else {
