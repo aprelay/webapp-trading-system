@@ -377,7 +377,7 @@ async function runAIAnalysis(c: any) {
             
             // Wait 2 minutes, send first reminder
             setTimeout(async () => {
-              const reminder1 = `${emoji} *⚠️ REMINDER: AI HIGH CONVICTION* ${emoji}\n\n`
+              let reminder1 = `${emoji} *⚠️ REMINDER: AI HIGH CONVICTION* ${emoji}\n\n`
               reminder1 += `📊 *${signal.signal_type}* - ${signal.confidence.toFixed(1)}%\n`
               reminder1 += `💰 *Price:* $${currentPrice.toFixed(2)}\n`
               reminder1 += `🎯 *MTF:* ${alignment.type}\n\n`
@@ -396,7 +396,7 @@ async function runAIAnalysis(c: any) {
             
             // Wait 5 minutes, send final reminder
             setTimeout(async () => {
-              const reminder2 = `${emoji} *⚠️ FINAL: AI SIGNAL STILL VALID* ${emoji}\n\n`
+              let reminder2 = `${emoji} *⚠️ FINAL: AI SIGNAL STILL VALID* ${emoji}\n\n`
               reminder2 += `📊 *${signal.signal_type}* (${signal.confidence.toFixed(1)}%)\n`
               reminder2 += `💰 *Current Price:* $${currentPrice.toFixed(2)}\n\n`
               reminder2 += `🔥 Last chance - ${recommendation.action}!\n`
