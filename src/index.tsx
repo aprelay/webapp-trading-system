@@ -10,6 +10,7 @@ import calendarRouter from './routes/calendar'
 import backtestRouter from './routes/backtest'
 import telegramCommandsRouter from './routes/telegramCommands'
 import aiAnalysisRouter from './routes/aiAnalysis'
+import monitoringRouter from './routes/monitoring'
 
 type Bindings = {
   DB: D1Database;
@@ -29,6 +30,7 @@ app.route('/api/calendar', calendarRouter)
 app.route('/api/backtest', backtestRouter)
 app.route('/api/telegram', telegramCommandsRouter)
 app.route('/api/ai', aiAnalysisRouter)
+app.route('/api/monitoring', monitoringRouter)
 
 // Homepage - Dashboard
 app.get('/', (c) => {
