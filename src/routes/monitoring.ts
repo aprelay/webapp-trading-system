@@ -485,49 +485,94 @@ app.get('/status', async (c) => {
   const { DB } = c.env
   
   try {
-    // Get latest health check for each endpoint
-    const endpointStatus = await DB.prepare(`
-      SELECT 
-        endpoint_name,
-        status,
-        response_time_ms,
-        failure_count,
-        last_check_at
-      FROM system_health
-      WHERE id IN (
-        SELECT MAX(id) FROM system_health GROUP BY endpoint_name
-      )
-      ORDER BY endpoint_name
-    `).all()
+    // Try to get status from DB tables first
+    let endpointStatus, dataStatus, unresolvedAlerts
     
-    // Get data freshness status
-    const dataStatus = await DB.prepare(`
-      SELECT 
-        data_source,
-        timeframe,
-        data_age_minutes,
-        is_stale,
-        last_fetch_at
-      FROM data_freshness
-      WHERE id IN (
-        SELECT MAX(id) FROM data_freshness GROUP BY data_source, timeframe
+    try {
+      endpointStatus = await DB.prepare(`
+        SELECT 
+          endpoint_name,
+          status,
+          response_time_ms,
+          failure_count,
+          last_check_at
+        FROM system_health
+        WHERE id IN (
+          SELECT MAX(id) FROM system_health GROUP BY endpoint_name
+        )
+        ORDER BY endpoint_name
+      `).all()
+      
+      dataStatus = await DB.prepare(`
+        SELECT 
+          data_source,
+          timeframe,
+          data_age_minutes,
+          is_stale,
+          last_fetch_at
+        FROM data_freshness
+        WHERE id IN (
+          SELECT MAX(id) FROM data_freshness GROUP BY data_source, timeframe
+        )
+        ORDER BY data_source, timeframe
+      `).all()
+      
+      unresolvedAlerts = await DB.prepare(`
+        SELECT 
+          alert_type,
+          severity,
+          source,
+          message,
+          created_at
+        FROM monitoring_alerts
+        WHERE resolved = 0
+        ORDER BY created_at DESC
+        LIMIT 10
+      `).all()
+    } catch (dbError: any) {
+      // If DB tables don't exist, do live checks instead
+      const url = new URL(c.req.url)
+      const baseUrl = `${url.protocol}//${url.host}`
+      
+      const endpointsToCheck = [
+        { name: 'auto-fetch', url: '/api/cron/auto-fetch' },
+        { name: 'ai-analysis', url: '/api/ai/auto-ai-scan' },
+        { name: 'scanner', url: '/api/scanner/scan' },
+        { name: 'signals-recent', url: '/api/signals/recent' },
+        { name: 'indicators-latest', url: '/api/indicators/latest' }
+      ]
+      
+      const liveEndpoints = await Promise.all(
+        endpointsToCheck.map(async ({ name, url }) => {
+          try {
+            const startTime = Date.now()
+            const response = await fetch(`${baseUrl}${url}`, {
+              method: 'GET',
+              signal: AbortSignal.timeout(10000)
+            })
+            const responseTime = Date.now() - startTime
+            
+            return {
+              endpoint_name: name,
+              status: response.ok ? 'healthy' : 'degraded',
+              response_time_ms: responseTime,
+              last_check_at: new Date().toISOString()
+            }
+          } catch (error: any) {
+            return {
+              endpoint_name: name,
+              status: 'down',
+              response_time_ms: 0,
+              last_check_at: new Date().toISOString()
+            }
+          }
+        })
       )
-      ORDER BY data_source, timeframe
-    `).all()
-    
-    // Get unresolved alerts
-    const unresolvedAlerts = await DB.prepare(`
-      SELECT 
-        alert_type,
-        severity,
-        source,
-        message,
-        created_at
-      FROM monitoring_alerts
-      WHERE resolved = 0
-      ORDER BY created_at DESC
-      LIMIT 10
-    `).all()
+      
+      endpointStatus = { results: liveEndpoints }
+      dataStatus = { results: [] }
+      unresolvedAlerts = { results: [] }
+    }
     
     const overallHealthy = (endpointStatus.results || []).every((row: any) => row.status === 'healthy')
     const overallFresh = (dataStatus.results || []).every((row: any) => row.is_stale === 0)

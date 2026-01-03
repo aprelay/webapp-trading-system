@@ -154,6 +154,87 @@ app.get('/', (c) => {
                     </div>
                 </div>
 
+                <!-- System Health Monitoring Panel (NEW!) -->
+                <div class="bg-gradient-to-r from-blue-900 to-indigo-800 p-6 rounded-lg border-2 border-blue-500 mb-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex-1">
+                            <h2 class="text-2xl font-bold text-white mb-2">
+                                <i class="fas fa-heartbeat mr-3"></i>🔍 System Health Monitor
+                            </h2>
+                            <p class="text-blue-100 mb-2">
+                                Real-time health checks • 5 Endpoints • 7 Data Sources • Auto-monitoring every 5 minutes
+                            </p>
+                            <div id="monitoringStatus" class="text-sm text-blue-200">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading health status...
+                            </div>
+                        </div>
+                        <button 
+                            id="monitorButton"
+                            onclick="refreshMonitoring()" 
+                            class="bg-white hover:bg-blue-50 text-blue-900 px-6 py-3 rounded-lg font-bold transition shadow-lg hover:shadow-xl transform hover:scale-105">
+                            <i class="fas fa-sync mr-2"></i>
+                            <span>Check Now</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Health Status Display -->
+                    <div id="monitoringResults" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Overall Status -->
+                        <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                            <h3 class="text-sm font-bold text-blue-200 mb-2">Overall Status</h3>
+                            <div id="overallStatus" class="text-2xl font-bold text-white">
+                                <i class="fas fa-circle-notch fa-spin"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Endpoints Health -->
+                        <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                            <h3 class="text-sm font-bold text-blue-200 mb-2">Endpoints</h3>
+                            <div id="endpointsHealth" class="text-sm text-blue-100">
+                                <div class="flex justify-between mb-1">
+                                    <span>Healthy:</span>
+                                    <span id="healthyCount" class="font-bold">--</span>
+                                </div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Down:</span>
+                                    <span id="downCount" class="font-bold">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Total:</span>
+                                    <span id="totalCount" class="font-bold">--</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Data Freshness -->
+                        <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                            <h3 class="text-sm font-bold text-blue-200 mb-2">Data Freshness</h3>
+                            <div id="dataFreshness" class="text-sm text-blue-100">
+                                <div class="flex justify-between mb-1">
+                                    <span>Fresh:</span>
+                                    <span id="freshCount" class="font-bold">--</span>
+                                </div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Stale:</span>
+                                    <span id="staleCount" class="font-bold">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Total:</span>
+                                    <span id="dataTotal" class="font-bold">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Endpoint Status -->
+                    <div id="endpointDetails" class="mt-4 bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm hidden">
+                        <h3 class="text-sm font-bold text-blue-200 mb-3">Endpoint Details</h3>
+                        <div id="endpointList" class="space-y-2 text-sm">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Automation Panel -->
                 <div class="bg-gradient-to-r from-yellow-900 to-yellow-800 p-6 rounded-lg border-2 border-yellow-500 mb-6 shadow-xl">
                     <div class="flex items-center justify-between">
@@ -343,7 +424,79 @@ app.get('/', (c) => {
             async function init() {
                 await loadSettings();
                 await refreshData();
+                await refreshMonitoring(); // Load monitoring on startup
                 setInterval(refreshData, 60000); // Refresh every minute
+                setInterval(refreshMonitoring, 300000); // Refresh monitoring every 5 minutes
+            }
+
+            async function refreshMonitoring() {
+                try {
+                    const statusDiv = document.getElementById('monitoringStatus');
+                    const button = document.getElementById('monitorButton');
+                    
+                    statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Checking system health...';
+                    button.disabled = true;
+                    
+                    const response = await fetch('/api/monitoring/status');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Update overall status
+                        const overallDiv = document.getElementById('overallStatus');
+                        const statusColor = data.overall_status === 'healthy' ? 'text-green-400' : 'text-yellow-400';
+                        const statusIcon = data.overall_status === 'healthy' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+                        overallDiv.innerHTML = '<i class="fas ' + statusIcon + ' ' + statusColor + '"></i> <span class="' + statusColor + '">' + data.overall_status.toUpperCase() + '</span>';
+                        
+                        // Update endpoints
+                        const healthyEndpoints = (data.endpoints || []).filter(e => e.status === 'healthy').length;
+                        const downEndpoints = (data.endpoints || []).filter(e => e.status === 'down').length;
+                        const totalEndpoints = (data.endpoints || []).length;
+                        
+                        document.getElementById('healthyCount').textContent = healthyEndpoints;
+                        document.getElementById('downCount').textContent = downEndpoints;
+                        document.getElementById('totalCount').textContent = totalEndpoints;
+                        
+                        // Update data freshness
+                        const freshSources = (data.data_sources || []).filter(d => d.is_stale === 0).length;
+                        const staleSources = (data.data_sources || []).filter(d => d.is_stale === 1).length;
+                        const totalSources = (data.data_sources || []).length;
+                        
+                        document.getElementById('freshCount').textContent = freshSources;
+                        document.getElementById('staleCount').textContent = staleSources;
+                        document.getElementById('dataTotal').textContent = totalSources;
+                        
+                        // Update status message
+                        const emoji = data.overall_status === 'healthy' ? '✅' : '⚠️';
+                        statusDiv.innerHTML = emoji + ' System ' + data.overall_status + ' • ' + healthyEndpoints + '/' + totalEndpoints + ' endpoints healthy • ' + freshSources + '/' + totalSources + ' data fresh • Last checked: ' + new Date().toLocaleTimeString();
+                        
+                        // Show detailed endpoint status
+                        if (data.endpoints && data.endpoints.length > 0) {
+                            const detailsDiv = document.getElementById('endpointDetails');
+                            const listDiv = document.getElementById('endpointList');
+                            
+                            let html = '';
+                            data.endpoints.forEach(endpoint => {
+                                const statusIcon = endpoint.status === 'healthy' ? '✅' : '❌';
+                                const statusColor = endpoint.status === 'healthy' ? 'text-green-400' : 'text-red-400';
+                                html += '<div class="flex justify-between items-center py-1 border-b border-blue-700">' +
+                                    '<span class="' + statusColor + '">' + statusIcon + ' ' + endpoint.endpoint_name + '</span>' +
+                                    '<span class="text-blue-200">' + endpoint.response_time_ms + 'ms</span>' +
+                                    '</div>';
+                            });
+                            
+                            listDiv.innerHTML = html;
+                            detailsDiv.classList.remove('hidden');
+                        }
+                    } else {
+                        statusDiv.innerHTML = '❌ Error loading monitoring data';
+                    }
+                    
+                    button.disabled = false;
+                } catch (error) {
+                    console.error('Error refreshing monitoring:', error);
+                    document.getElementById('monitoringStatus').innerHTML = '❌ Error loading monitoring data';
+                    document.getElementById('monitorButton').disabled = false;
+                }
             }
 
             async function refreshData() {
