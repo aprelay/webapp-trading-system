@@ -4050,4 +4050,400 @@ ${swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD' ?
   }
 })
 
+// GET wrapper for analyze-and-notify (for cron jobs that only support GET)
+// This allows cron services to call the same endpoint via GET method
+app.get('/api/automation/analyze-and-notify', async (c) => {
+  // Forward to POST endpoint with empty body
+  const { DB } = c.env
+  
+  try {
+    const body = {}
+    const skipDataFetch = body.skipDataFetch === true
+    
+    const results: any = {
+      timestamp: new Date().toISOString(),
+      steps: []
+    }
+    
+    // Step 1: Fetch all 5 timeframes (or use cached data)
+    results.steps.push({ step: 1, name: 'Fetching All 5 Timeframes (100 candles each)', status: 'running' })
+    
+    let totalCandles = 0
+    
+    if (!skipDataFetch) {
+      // Check if data is recent (within last 30 minutes)
+      const latestData = await DB.prepare(`
+        SELECT MAX(timestamp) as latest_timestamp FROM market_data WHERE timeframe = '1h'
+      `).first()
+      
+      const dataAge = latestData?.latest_timestamp 
+        ? Date.now() - new Date(latestData.latest_timestamp as string).getTime()
+        : Infinity
+      
+      // Only fetch if data is older than 30 minutes
+      if (dataAge > 30 * 60 * 1000) {
+        const settings = await DB.prepare(`
+          SELECT setting_value FROM user_settings WHERE setting_key = 'twelve_data_api_key'
+        `).first()
+        
+        const apiKey = (settings as any)?.setting_value || '70140f57bea54c5e90768de696487d8f'
+        
+        const timeframes = [
+          { interval: '5min', dbKey: '5m' },
+          { interval: '15min', dbKey: '15m' },
+          { interval: '1h', dbKey: '1h' },
+          { interval: '4h', dbKey: '4h' },
+          { interval: '1day', dbKey: 'daily' }
+        ]
+        
+        for (const tf of timeframes) {
+          try {
+            const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${tf.interval}&apikey=${apiKey}&outputsize=100`
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 10000)
+            
+            const response = await fetch(url, { signal: controller.signal })
+            clearTimeout(timeoutId)
+            const data = await response.json()
+            
+            if (data.values && Array.isArray(data.values)) {
+              const candles: any[] = []
+              for (const item of data.values) {
+                candles.push({
+                  timestamp: item.datetime,
+                  open: parseFloat(item.open) || 0,
+                  high: parseFloat(item.high) || 0,
+                  low: parseFloat(item.low) || 0,
+                  close: parseFloat(item.close) || 0,
+                  volume: 0
+                })
+              }
+              
+              for (const candle of candles) {
+                await DB.prepare(`
+                  INSERT INTO market_data (timestamp, open, high, low, close, volume, timeframe)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)
+                  ON CONFLICT DO NOTHING
+                `).bind(candle.timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume, tf.dbKey).run()
+              }
+              
+              if (candles.length >= 50) {
+                const { calculateIndicators } = await import('./lib/technicalAnalysis')
+                const indicators = calculateIndicators(candles.reverse())
+                if (indicators) {
+                  await DB.prepare(`
+                    INSERT INTO multi_timeframe_indicators 
+                    (timestamp, timeframe, rsi_14, macd, macd_signal, macd_histogram,
+                     sma_20, sma_50, sma_200, ema_12, ema_26,
+                     bb_upper, bb_middle, bb_lower, atr_14,
+                     stochastic_k, stochastic_d, adx, plus_di, minus_di,
+                     ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a, ichimoku_senkou_b,
+                     parabolic_sar, vwap, fib_382, fib_500, fib_618)
+                    VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  `).bind(
+                    tf.dbKey, indicators.rsi_14, indicators.macd, indicators.macd_signal, indicators.macd_histogram,
+                    indicators.sma_20, indicators.sma_50, indicators.sma_200, indicators.ema_12, indicators.ema_26,
+                    indicators.bb_upper, indicators.bb_middle, indicators.bb_lower, indicators.atr_14,
+                    indicators.stochastic_k, indicators.stochastic_d, indicators.adx, indicators.plus_di, indicators.minus_di,
+                    indicators.ichimoku_tenkan, indicators.ichimoku_kijun, indicators.ichimoku_senkou_a, indicators.ichimoku_senkou_b,
+                    indicators.parabolic_sar, indicators.vwap, indicators.fib_382, indicators.fib_500, indicators.fib_618
+                  ).run()
+                }
+              }
+              totalCandles += data.values.length
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 100))
+          } catch (error) {
+            console.error(`[MTF] Error fetching ${tf.dbKey}:`, error)
+          }
+        }
+      } else {
+        totalCandles = 0
+        results.steps[0].cached = true
+      }
+    } else {
+      totalCandles = 0
+      results.steps[0].cached = true
+    }
+    
+    results.steps[0].status = 'completed'
+    results.steps[0].data = { totalCandles }
+    
+    // Step 2: Generate MTF Signal
+    results.steps.push({ step: 2, name: 'Generate MTF Signal', status: 'running' })
+    
+    const { analyzeTimeframeAlignment, validateMultiTimeframeSignal } = await import('./lib/multiTimeframeAnalysis')
+    const { generateSignal } = await import('./lib/technicalAnalysis')
+    
+    const mtfIndicators: any = {}
+    for (const tf of ['5m', '15m', '1h', '4h', 'daily']) {
+      const indicatorData = await DB.prepare(`
+        SELECT * FROM multi_timeframe_indicators 
+        WHERE timeframe = ?
+        ORDER BY timestamp DESC 
+        LIMIT 1
+      `).bind(tf).first()
+      
+      if (indicatorData) {
+        mtfIndicators[tf] = indicatorData
+      }
+    }
+    
+    const marketData = await DB.prepare(`
+      SELECT * FROM market_data 
+      WHERE timeframe = '1h'
+      ORDER BY timestamp DESC 
+      LIMIT 1
+    `).first()
+    
+    const currentPrice = (marketData as any)?.close || 0
+    
+    const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
+    const h1Indicators = mtfIndicators['1h']
+    const dayTradeSignal = generateSignal(currentPrice, h1Indicators, 'day_trade')
+    const swingTradeSignal = generateSignal(currentPrice, h1Indicators, 'swing_trade')
+    
+    const dayValidation = validateMultiTimeframeSignal(dayTradeSignal.signal_type, alignment)
+    const swingValidation = validateMultiTimeframeSignal(swingTradeSignal.signal_type, alignment)
+    
+    const dayTradeMTF = {
+      ...dayTradeSignal,
+      final_confidence: Math.min(95, dayValidation.confidence),
+      isValid: dayValidation.isValid,
+      mtf_reason: dayValidation.reason,
+      alignment_score: alignment.score,
+      alignment_type: alignment.type
+    }
+    
+    const swingTradeMTF = {
+      ...swingTradeSignal,
+      final_confidence: Math.min(95, swingValidation.confidence),
+      isValid: swingValidation.isValid,
+      mtf_reason: swingValidation.reason,
+      alignment_score: alignment.score,
+      alignment_type: alignment.type
+    }
+    
+    results.steps[1].status = 'completed'
+    results.steps[1].data = { dayTrade: dayTradeMTF, swingTrade: swingTradeMTF, alignment }
+    
+    // Step 3: Calculate Position Sizes
+    results.steps.push({ step: 3, name: 'Calculate Position Sizes', status: 'running' })
+    
+    const account = await DB.prepare(`
+      SELECT * FROM trading_accounts WHERE id = 1
+    `).first()
+    
+    const rules = await DB.prepare(`
+      SELECT * FROM position_sizing_rules 
+      WHERE account_id = 1 AND is_active = 1
+      ORDER BY confidence_min DESC
+    `).all()
+    
+    const { calculatePositionSize } = await import('./lib/riskManagement')
+    
+    const dayPosition = calculatePositionSize(account as any, {
+      entry_price: dayTradeMTF.price,
+      stop_loss: dayTradeMTF.stop_loss,
+      take_profit_1: dayTradeMTF.take_profit_1,
+      take_profit_2: dayTradeMTF.take_profit_2,
+      take_profit_3: dayTradeMTF.take_profit_3,
+      confidence: dayTradeMTF.final_confidence,
+      signal_type: dayTradeMTF.signal_type,
+      trading_style: dayTradeMTF.trading_style
+    }, rules.results as any)
+    
+    const swingPosition = calculatePositionSize(account as any, {
+      entry_price: swingTradeMTF.price,
+      stop_loss: swingTradeMTF.stop_loss,
+      take_profit_1: swingTradeMTF.take_profit_1,
+      take_profit_2: swingTradeMTF.take_profit_2,
+      take_profit_3: swingTradeMTF.take_profit_3,
+      confidence: swingTradeMTF.final_confidence,
+      signal_type: swingTradeMTF.signal_type,
+      trading_style: swingTradeMTF.trading_style
+    }, rules.results as any)
+    
+    results.steps[2].status = 'completed'
+    results.steps[2].data = { dayPosition, swingPosition }
+    
+    // Step 4: Send to Telegram
+    results.steps.push({ step: 4, name: 'Send Telegram Alert', status: 'running' })
+    
+    const settings = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings
+      WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+    `).all()
+    
+    const config: any = {}
+    for (const row of settings.results || []) {
+      config[(row as any).setting_key] = (row as any).setting_value
+    }
+    
+    let telegramSent = false
+    
+    if (config.telegram_bot_token && config.telegram_chat_id) {
+      // Calculate Support & Resistance Levels from last 20 x 1h candles
+      const candles1h = await DB.prepare(`
+        SELECT high, low FROM market_data 
+        WHERE timeframe = '1h'
+        ORDER BY timestamp DESC 
+        LIMIT 20
+      `).all()
+      
+      let resistanceLevels: number[] = []
+      let supportLevels: number[] = []
+      
+      if (candles1h.results && candles1h.results.length >= 20) {
+        const highs = (candles1h.results as any[]).map(c => c.high).sort((a: number, b: number) => b - a)
+        const lows = (candles1h.results as any[]).map(c => c.low).sort((a: number, b: number) => a - b)
+        resistanceLevels = highs.slice(0, 3)
+        supportLevels = lows.slice(0, 3)
+      }
+      
+      const message = `
+🤖 *AUTOMATED DAILY ANALYSIS*
+⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 *MULTI-TIMEFRAME ALIGNMENT*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${alignment.type} (${alignment.score}/5 timeframes)
+Confidence Boost: +${alignment.confidenceBoost}%
+
+${alignment.trends.map((t: any) => {
+  const icon = t.trend === 'BULLISH' ? '📈' : t.trend === 'BEARISH' ? '📉' : '➡️'
+  return `${icon} *${t.timeframe}*: ${t.trend} (${t.confidence.toFixed(0)}%)`
+}).join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 *DAY TRADE SIGNAL*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${dayTradeMTF.isValid ? '✅' : '❌'} *${dayTradeMTF.signal_type}* (${dayTradeMTF.final_confidence}% confidence)
+
+*Entry:* $${dayTradeMTF.price.toFixed(2)}
+*Stop Loss:* $${dayTradeMTF.stop_loss.toFixed(2)} (${((dayTradeMTF.stop_loss / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP1:* $${dayTradeMTF.take_profit_1.toFixed(2)} (${((dayTradeMTF.take_profit_1 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP2:* $${dayTradeMTF.take_profit_2.toFixed(2)} (${((dayTradeMTF.take_profit_2 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP3:* $${dayTradeMTF.take_profit_3.toFixed(2)} (${((dayTradeMTF.take_profit_3 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
+
+${resistanceLevels.length > 0 ? `📊 *Key Levels:*
+🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
+🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}
+
+` : ''}💼 *Position:* ${dayPosition.units} lots ($${dayPosition.value.toLocaleString()})
+💰 *Risk:* $${dayPosition.risk_amount} (${dayPosition.risk_pct}%)
+📊 *R:R:* ${dayPosition.reward_risk_ratio}:1
+
+${dayPosition.warning ? `⚠️ ${dayPosition.warning}` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🌊 *SWING TRADE SIGNAL*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${swingTradeMTF.isValid ? '✅' : '❌'} *${swingTradeMTF.signal_type}* (${swingTradeMTF.final_confidence}% confidence)
+
+*Entry:* $${swingTradeMTF.price.toFixed(2)}
+*Stop Loss:* $${swingTradeMTF.stop_loss.toFixed(2)} (${((swingTradeMTF.stop_loss / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP1:* $${swingTradeMTF.take_profit_1.toFixed(2)} (${((swingTradeMTF.take_profit_1 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP2:* $${swingTradeMTF.take_profit_2.toFixed(2)} (${((swingTradeMTF.take_profit_2 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
+*TP3:* $${swingTradeMTF.take_profit_3.toFixed(2)} (${((swingTradeMTF.take_profit_3 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
+
+${resistanceLevels.length > 0 ? `📊 *Key Levels:*
+🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
+🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}
+
+` : ''}💼 *Position:* ${swingPosition.units} lots ($${swingPosition.value.toLocaleString()})
+💰 *Risk:* $${swingPosition.risk_amount} (${swingPosition.risk_pct}%)
+📊 *R:R:* ${swingPosition.reward_risk_ratio}:1
+
+${swingPosition.warning ? `⚠️ ${swingPosition.warning}` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 *RECOMMENDATION*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${dayTradeMTF.isValid && dayTradeMTF.signal_type !== 'HOLD' ? 
+  `✅ Day Trade: EXECUTE ${dayTradeMTF.signal_type}` : 
+  `⚠️ Day Trade: SKIP (${dayTradeMTF.mtf_reason})`}
+
+${swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD' ? 
+  `✅ Swing Trade: EXECUTE ${swingTradeMTF.signal_type}` : 
+  `⚠️ Swing Trade: SKIP (${swingTradeMTF.mtf_reason})`}
+
+🌐 Dashboard: ${c.req.url.replace('/api/automation/analyze-and-notify', '')}
+      `.trim()
+      
+      const { sendTelegramMessage } = await import('./lib/telegram')
+      const success = await sendTelegramMessage(
+        { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+        message
+      )
+      
+      telegramSent = success
+    }
+    
+    results.steps[3].status = telegramSent ? 'completed' : 'failed'
+    results.steps[3].data = { telegramSent }
+    
+    // Save to database
+    if (dayTradeMTF.isValid || swingTradeMTF.isValid) {
+      for (const signal of [dayTradeMTF, swingTradeMTF]) {
+        if (signal.isValid) {
+          await DB.prepare(`
+            INSERT INTO mtf_signals 
+            (timestamp, signal_type, trading_style, price, stop_loss, 
+             take_profit_1, take_profit_2, take_profit_3, 
+             base_confidence, mtf_confidence, final_confidence,
+             alignment_score, alignment_type, reason, telegram_sent)
+            VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            signal.signal_type,
+            signal.trading_style,
+            signal.price,
+            signal.stop_loss,
+            signal.take_profit_1,
+            signal.take_profit_2,
+            signal.take_profit_3,
+            signal.confidence,
+            signal.final_confidence,
+            signal.final_confidence,
+            signal.alignment_score,
+            signal.alignment_type,
+            signal.reason,
+            telegramSent ? 1 : 0
+          ).run()
+        }
+      }
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Daily analysis completed',
+      results,
+      signals: {
+        day_trade: dayTradeMTF,
+        swing_trade: swingTradeMTF
+      },
+      positions: {
+        day_trade: dayPosition,
+        swing_trade: swingPosition
+      },
+      alignment,
+      telegram_sent: telegramSent
+    })
+    
+  } catch (error: any) {
+    console.error('[ANALYZE-NOTIFY-GET] Error:', error)
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      stack: error.stack 
+    }, 500)
+  }
+})
+
 export default app
