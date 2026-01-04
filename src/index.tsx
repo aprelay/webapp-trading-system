@@ -3743,6 +3743,24 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
     let telegramSent = false
     
     if (config.telegram_bot_token && config.telegram_chat_id) {
+      // Calculate Support & Resistance Levels from last 20 x 1h candles
+      const candles1h = await DB.prepare(`
+        SELECT high, low FROM market_data 
+        WHERE timeframe = '1h'
+        ORDER BY timestamp DESC 
+        LIMIT 20
+      `).all()
+      
+      let resistanceLevels: number[] = []
+      let supportLevels: number[] = []
+      
+      if (candles1h.results && candles1h.results.length >= 20) {
+        const highs = (candles1h.results as any[]).map(c => c.high).sort((a: number, b: number) => b - a)
+        const lows = (candles1h.results as any[]).map(c => c.low).sort((a: number, b: number) => a - b)
+        resistanceLevels = highs.slice(0, 3) // Top 3 highs
+        supportLevels = lows.slice(0, 3) // Bottom 3 lows
+      }
+      
       // Format comprehensive message
       const message = `
 🤖 *AUTOMATED DAILY ANALYSIS*
@@ -3772,7 +3790,11 @@ ${dayTradeMTF.isValid ? '✅' : '❌'} *${dayTradeMTF.signal_type}* (${dayTradeM
 *TP2:* $${dayTradeMTF.take_profit_2.toFixed(2)} (${((dayTradeMTF.take_profit_2 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
 *TP3:* $${dayTradeMTF.take_profit_3.toFixed(2)} (${((dayTradeMTF.take_profit_3 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
 
-💼 *Position:* ${dayPosition.units} lots ($${dayPosition.value.toLocaleString()})
+${resistanceLevels.length > 0 ? `📊 *Key Levels:*
+🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
+🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}
+
+` : ''}💼 *Position:* ${dayPosition.units} lots ($${dayPosition.value.toLocaleString()})
 💰 *Risk:* $${dayPosition.risk_amount} (${dayPosition.risk_pct}%)
 📊 *R:R:* ${dayPosition.reward_risk_ratio}:1
 
@@ -3790,7 +3812,11 @@ ${swingTradeMTF.isValid ? '✅' : '❌'} *${swingTradeMTF.signal_type}* (${swing
 *TP2:* $${swingTradeMTF.take_profit_2.toFixed(2)} (${((swingTradeMTF.take_profit_2 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
 *TP3:* $${swingTradeMTF.take_profit_3.toFixed(2)} (${((swingTradeMTF.take_profit_3 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
 
-💼 *Position:* ${swingPosition.units} lots ($${swingPosition.value.toLocaleString()})
+${resistanceLevels.length > 0 ? `📊 *Key Levels:*
+🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
+🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}
+
+` : ''}💼 *Position:* ${swingPosition.units} lots ($${swingPosition.value.toLocaleString()})
 💰 *Risk:* $${swingPosition.risk_amount} (${swingPosition.risk_pct}%)
 📊 *R:R:* ${swingPosition.reward_risk_ratio}:1
 
