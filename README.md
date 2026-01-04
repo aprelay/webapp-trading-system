@@ -8,20 +8,22 @@ A comprehensive trading analysis system for Gold/USD (XAU/USD) that provides aut
 
 ## ✅ SYSTEM IS FULLY OPERATIONAL
 
-### Current Status (January 2nd, 2026):
+### Current Status (January 4th, 2026):
 - ✅ **Production**: https://gold-trading-system.pages.dev/
 - ✅ **API Backend**: Cloudflare Pages (Edge deployment)
-- ✅ **Auto-Fetch**: Running every 15 minutes (background cron)
-- ✅ **Telegram Alerts**: Working and sending signals
+- ✅ **Auto-Fetch**: Running every 10 minutes (background cron)
+- ✅ **Telegram Alerts**: Working with Support & Resistance levels
 - ✅ **Database**: Cloudflare D1 (SQLite)
 - ✅ **Market Data**: Real-time XAU/USD (Twelve Data API)
-- ✅ **Version**: December 31st (stable) + critical fixes
+- ✅ **Monitoring System**: 7 data sources tracked
+- ✅ **Version**: Latest with S/R feature
 
-### Recent Fixes (Today):
-1. ✅ Fixed auto-fetch to use latest data (was 4 days old)
-2. ✅ Fixed MTF fetch timeout for mobile users (30s → 180s)
-3. ✅ Fixed JavaScript syntax errors (42 newline issues)
-4. ✅ Clarified Telegram alert rules
+### Recent Updates:
+1. ✅ **Support & Resistance Levels** - Auto-fetch alerts now include top 3 resistance/support from last 20x1h candles
+2. ✅ **Monitoring Dashboard** - Track endpoint health and data freshness (7 data sources)
+3. ✅ **Fixed Monitoring** - "Check Now" no longer triggers AI alerts (uses /health endpoint)
+4. ✅ **Data Freshness** - Live tracking without monitoring tables (fallback mode)
+5. ✅ **Auto-fetch Optimization** - Increased from 15min to 10min intervals
 
 ---
 
@@ -77,9 +79,17 @@ A comprehensive trading analysis system for Gold/USD (XAU/USD) that provides aut
 ### 📱 Telegram Integration
 - **Instant Alerts**: Receive signals immediately on your phone
 - **Formatted Messages**: Clear entry, stop loss, take profit
+- **Support & Resistance Levels**: Key price zones from last 20x1h candles
 - **Trade Context**: Confidence score and reasoning
 - **Dual Signals**: Both day trade and swing trade sent
 - **Test Function**: Verify Telegram bot is working
+
+#### Support & Resistance Display
+Each Telegram alert now includes:
+- 🔴 **Resistance**: Top 3 highest prices (sell zones)
+- 🟢 **Support**: Bottom 3 lowest prices (buy zones)
+- Calculated from last 20 hours of market data
+- Helps identify key price levels for entries/exits
 
 ### 🖥️ Web Dashboard
 - **Real-Time Data**: Latest gold prices and indicators
@@ -355,19 +365,18 @@ Risk only 1-2% of account per trade.
 
 ## 🔄 Updates and Maintenance
 
-### Last Updated: 2026-01-02
-### Version: 2.0.0 (December 31st stable + fixes)
+### Last Updated: 2026-01-04
+### Version: 2.1.0 (S/R Feature + Monitoring System)
 ### Status: Production Ready (Cloudflare Pages)
 
-### Recent Changes (January 2nd, 2026):
-- ✅ Reverted to stable December 31st version
-- ✅ Fixed critical auto-fetch bug (was using 4-day-old data)
-- ✅ Fixed MTF fetch timeout for mobile users
-- ✅ Fixed JavaScript syntax errors (42 double-escaped newlines)
-- ✅ Increased MTF timeout from 30s to 180s (+60% mobile success)
-- ✅ Added data timestamp verification
-- ✅ Clarified Telegram alert rules
-- ✅ Created comprehensive documentation (11 files)
+### Recent Changes (January 4th, 2026):
+- ✅ **Support & Resistance Levels** - Added to all auto-fetch Telegram alerts
+- ✅ **Monitoring System** - Comprehensive health and data freshness tracking
+- ✅ **Fixed Monitoring Alerts** - Check Now button no longer triggers AI analysis
+- ✅ **Data Freshness Tracking** - Live monitoring of 7 data sources (30min stale threshold)
+- ✅ **Auto-fetch Optimization** - Reduced interval from 15min to 10min
+- ✅ **S/R Calculation** - Uses last 20x1h candles for key levels
+- ✅ **Production Deployment** - All features live on Cloudflare Pages
 
 ### Git History:
 - **Backup Branch**: `backup-jan2-2026` (contains January improvements)
