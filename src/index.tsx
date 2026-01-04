@@ -2577,6 +2577,153 @@ app.get('/api/cron/auto-ai-scan', async (c) => {
   }
 })
 
+// 🏦 HEDGE FUND CRON ENDPOINT
+// GET-compatible endpoint for Cloudflare Cron Triggers
+// Calls enhanced signals endpoint and sends Telegram alerts for high-confidence signals (≥80%)
+app.get('/api/cron/hedge-fund', async (c) => {
+  const startTime = Date.now()
+  
+  try {
+    console.log('[HEDGE-FUND-CRON] Starting hedge fund analysis')
+    
+    // Call the enhanced signals endpoint (POST)
+    const enhancedResponse = await fetch(
+      `${c.req.url.replace('/api/cron/hedge-fund', '/api/signals/enhanced/enhanced')}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+    
+    if (!enhancedResponse.ok) {
+      throw new Error(`Enhanced endpoint returned ${enhancedResponse.status}`)
+    }
+    
+    const result = await enhancedResponse.json()
+    
+    if (!result.success) {
+      return c.json({
+        success: false,
+        error: result.error || 'Enhanced signal generation failed',
+        execution_time_ms: Date.now() - startTime
+      })
+    }
+    
+    // Check if we should send Telegram alert (≥80% confidence for hedge fund grade)
+    const dayTrade = result.day_trade
+    const swingTrade = result.swing_trade
+    const shouldAlert = (dayTrade?.enhanced_confidence >= 80) || (swingTrade?.enhanced_confidence >= 80)
+    
+    console.log('[HEDGE-FUND-CRON] Signal confidence:', {
+      day: dayTrade?.enhanced_confidence,
+      swing: swingTrade?.enhanced_confidence,
+      shouldAlert
+    })
+    
+    // If confidence is high enough, send Telegram alert
+    let telegramSent = false
+    if (shouldAlert) {
+      const { DB } = c.env
+      
+      // Get Telegram credentials
+      const settings = await DB.prepare(`
+        SELECT setting_key, setting_value FROM user_settings
+        WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+      `).all()
+      
+      const config: any = {}
+      for (const row of settings.results || []) {
+        config[(row as any).setting_key] = (row as any).setting_value
+      }
+      
+      if (config.telegram_bot_token && config.telegram_chat_id) {
+        // Format hedge fund message
+        const message = `
+🏦 *HEDGE FUND GRADE SIGNAL*
+⏰ ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 *DAY TRADE*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${dayTrade.signal_type} (${dayTrade.enhanced_confidence}% confidence)
+
+*Entry:* $${dayTrade.price.toFixed(2)}
+*Stop Loss:* $${dayTrade.stop_loss.toFixed(2)}
+*TP1:* $${dayTrade.take_profit_1.toFixed(2)}
+*TP2:* $${dayTrade.take_profit_2.toFixed(2)}
+*TP3:* $${dayTrade.take_profit_3.toFixed(2)}
+
+📊 *Advanced Metrics:*
+• VaR(95%): $${dayTrade.var_95?.toFixed(2) || 0}
+• Drawdown: ${dayTrade.current_drawdown_pct?.toFixed(1) || 0}%
+• Portfolio Heat: ${dayTrade.portfolio_heat_pct?.toFixed(1) || 0}%
+• Profit Probability: ${result.profit_probability?.tp1 || 0}%
+
+🌊 *Market Regime:* ${result.regime?.volatility || 'UNKNOWN'}
+💧 *Liquidity:* ${result.liquidity?.score || 0}/100 ${result.liquidity?.recommendation || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🌊 *SWING TRADE*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${swingTrade.signal_type} (${swingTrade.enhanced_confidence}% confidence)
+
+*Entry:* $${swingTrade.price.toFixed(2)}
+*Stop Loss:* $${swingTrade.stop_loss.toFixed(2)}
+*TP1:* $${swingTrade.take_profit_1.toFixed(2)}
+*TP2:* $${swingTrade.take_profit_2.toFixed(2)}
+*TP3:* $${swingTrade.take_profit_3.toFixed(2)}
+
+📊 *Risk Metrics:*
+• VaR(99%): $${swingTrade.var_99?.toFixed(2) || 0}
+• Max Drawdown: ${swingTrade.current_drawdown_pct?.toFixed(1) || 0}%
+
+${result.regime?.should_trade === false ? '⚠️ *WARNING: Extreme volatility detected*' : ''}
+
+🌐 Dashboard: ${c.req.url.replace('/api/cron/hedge-fund', '')}
+        `.trim()
+        
+        // Send via Telegram
+        const { sendTelegramMessage } = await import('./lib/telegram')
+        telegramSent = await sendTelegramMessage(
+          { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
+          message
+        )
+        
+        console.log('[HEDGE-FUND-CRON] Telegram alert sent:', telegramSent)
+      }
+    }
+    
+    const executionTime = Date.now() - startTime
+    
+    return c.json({
+      success: true,
+      message: shouldAlert 
+        ? `Hedge fund signal generated and ${telegramSent ? 'sent' : 'failed to send'} to Telegram`
+        : 'Signal confidence below 80% threshold - no alert sent',
+      confidence: {
+        day_trade: dayTrade?.enhanced_confidence || 0,
+        swing_trade: swingTrade?.enhanced_confidence || 0
+      },
+      telegram_sent: telegramSent,
+      threshold: 80,
+      execution_time_ms: executionTime,
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error: any) {
+    console.error('[HEDGE-FUND-CRON] Error:', error)
+    return c.json({
+      success: false,
+      error: error.message,
+      execution_time_ms: Date.now() - startTime
+    }, 500)
+  }
+})
+
 // Fetch multi-timeframe market data (Phase 3: 90% Accuracy)
 app.post('/api/market/fetch-mtf', async (c) => {
   const { DB } = c.env;
