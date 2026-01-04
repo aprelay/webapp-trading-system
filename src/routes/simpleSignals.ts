@@ -168,6 +168,24 @@ app.post('/simple', async (c) => {
       })
       
       if (config.telegram_bot_token && config.telegram_chat_id) {
+        // Calculate Support & Resistance Levels from last 20 x 1h candles
+        const candles1h = await DB.prepare(`
+          SELECT high, low FROM market_data 
+          WHERE timeframe = '1h'
+          ORDER BY timestamp DESC 
+          LIMIT 20
+        `).all()
+        
+        let resistanceLevels: number[] = []
+        let supportLevels: number[] = []
+        
+        if (candles1h.results && candles1h.results.length >= 20) {
+          const highs = (candles1h.results as any[]).map(c => c.high).sort((a: number, b: number) => b - a)
+          const lows = (candles1h.results as any[]).map(c => c.low).sort((a: number, b: number) => a - b)
+          resistanceLevels = highs.slice(0, 3) // Top 3 highs
+          supportLevels = lows.slice(0, 3) // Bottom 3 lows
+        }
+        
         // Build SIMPLE Telegram message (matching your format)
         const emoji = daySignal.signal_type === 'BUY' ? '🟢' : daySignal.signal_type === 'SELL' ? '🔴' : '⚪'
         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' })
@@ -183,6 +201,13 @@ app.post('/simple', async (c) => {
         message += `   TP3: $${Number(daySignal.take_profit_3).toFixed(2)}\n\n`
         
         message += `🛡️ <b>Stop Loss:</b> $${Number(daySignal.stop_loss).toFixed(2)}\n\n`
+        
+        // Add Support & Resistance levels
+        if (resistanceLevels.length > 0) {
+          message += `📊 <b>Key Levels:</b>\n`
+          message += `🔴 <b>Resistance:</b> ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}\n`
+          message += `🟢 <b>Support:</b> ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}\n\n`
+        }
         
         message += `📝 <b>Reason:</b>\n`
         // Escape HTML characters in reason text (< > & symbols)
