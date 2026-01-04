@@ -18,12 +18,13 @@ A comprehensive trading analysis system for Gold/USD (XAU/USD) that provides aut
 - ✅ **Monitoring System**: 7 data sources tracked
 - ✅ **Version**: Latest with S/R feature
 
-### Recent Updates:
-1. ✅ **Support & Resistance Levels** - Auto-fetch alerts now include top 3 resistance/support from last 20x1h candles
-2. ✅ **Monitoring Dashboard** - Track endpoint health and data freshness (7 data sources)
-3. ✅ **Fixed Monitoring** - "Check Now" no longer triggers AI alerts (uses /health endpoint)
-4. ✅ **Data Freshness** - Live tracking without monitoring tables (fallback mode)
-5. ✅ **Auto-fetch Optimization** - Increased from 15min to 10min intervals
+### Recent Updates (January 4th, 2026):
+1. ✅ **CRON TIMEOUT FIX** - Added GET method support to /api/automation/analyze-and-notify (no more timeouts!)
+2. ✅ **Support & Resistance Levels** - Auto-fetch alerts now include top 3 resistance/support from last 20x1h candles
+3. ✅ **Monitoring Dashboard** - Track endpoint health and data freshness (7 data sources)
+4. ✅ **Fixed Monitoring** - "Check Now" no longer triggers AI alerts (uses /health endpoint)
+5. ✅ **Data Freshness** - Live tracking without monitoring tables (fallback mode)
+6. ✅ **Auto-fetch Optimization** - Increased from 15min to 10min intervals
 
 ---
 
