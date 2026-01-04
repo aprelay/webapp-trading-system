@@ -46,11 +46,11 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;');
 }
 
-export function formatTradeSignal(signal: any): string {
+export function formatTradeSignal(signal: any, supportResistance?: { resistance: number[], support: number[] }): string {
   const emoji = signal.signal_type === 'BUY' ? '🟢' : signal.signal_type === 'SELL' ? '🔴' : '⚪';
   const style = signal.trading_style === 'day_trade' ? '📊 Day Trade' : '📈 Swing Trade';
   
-  return `
+  let message = `
 ${emoji} <b>GOLD/USD ${signal.signal_type} SIGNAL</b> ${emoji}
 
 ${style}
@@ -63,12 +63,25 @@ ${style}
    TP3: $${signal.take_profit_3.toFixed(2)}
 
 🛡️ <b>Stop Loss:</b> $${signal.stop_loss.toFixed(2)}
+`;
 
+  // Add Support & Resistance if provided
+  if (supportResistance && supportResistance.resistance.length > 0) {
+    message += `
+📊 <b>Key Levels:</b>
+🔴 <b>Resistance:</b> ${supportResistance.resistance.map(r => `$${r.toFixed(2)}`).join(', ')}
+🟢 <b>Support:</b> ${supportResistance.support.map(s => `$${s.toFixed(2)}`).join(', ')}
+`;
+  }
+
+  message += `
 📝 <b>Reason:</b>
 ${escapeHtml(signal.reason)}
 
 ⏰ ${new Date().toLocaleString()}
   `.trim();
+  
+  return message;
 }
 
 export function formatMarketUpdate(data: any): string {

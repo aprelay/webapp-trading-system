@@ -3480,6 +3480,19 @@ app.post('/api/signals/generate-now', async (c) => {
     let telegramSent = false;
     let sentSignals: any[] = [];
     
+    // ============================================================
+    // CALCULATE SUPPORT & RESISTANCE LEVELS
+    // ============================================================
+    // Use last 20 x 1h candles for S/R calculation
+    const last20Candles = candles.slice(-20);
+    const highs = last20Candles.map(c => c.high).sort((a, b) => b - a); // Descending
+    const lows = last20Candles.map(c => c.low).sort((a, b) => a - b);   // Ascending
+    
+    const resistance = [highs[0], highs[1], highs[2]]; // Top 3 highs
+    const support = [lows[0], lows[1], lows[2]];       // Bottom 3 lows
+    
+    console.log('[GENERATE-NOW] S/R calculated - Resistance:', resistance, 'Support:', support);
+    
     // Send both signals to Telegram (regardless of confidence)
     if (config.telegram_bot_token && config.telegram_chat_id) {
       // Send day trade signal
@@ -3487,7 +3500,9 @@ app.post('/api/signals/generate-now', async (c) => {
         { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
         formatTradeSignal({
           ...dayTradeSignal,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          resistance,
+          support
         })
       );
       
@@ -3504,7 +3519,9 @@ app.post('/api/signals/generate-now', async (c) => {
         { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
         formatTradeSignal({
           ...swingTradeSignal,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          resistance,
+          support
         })
       );
       
