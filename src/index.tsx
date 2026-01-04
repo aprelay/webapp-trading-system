@@ -154,6 +154,100 @@ app.get('/', (c) => {
                     </div>
                 </div>
 
+                <!-- Market Trading Hours Clock (NEW!) -->
+                <div class="bg-gradient-to-r from-purple-900 to-indigo-900 p-6 rounded-lg border-2 border-purple-500 mb-6 shadow-xl">
+                    <h2 class="text-2xl font-bold text-white mb-4">
+                        <i class="fas fa-clock mr-3"></i>🌍 Global Market Hours
+                    </h2>
+                    <p class="text-purple-100 mb-4 text-sm">
+                        Gold/USD trades 24 hours Monday-Friday. Market opens Sunday 5:00 PM EST, closes Friday 5:00 PM EST.
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Asia Session -->
+                        <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-bold text-white">
+                                    🌏 Asia/Tokyo
+                                </h3>
+                                <span id="asiaStatus" class="px-2 py-1 rounded text-xs font-bold bg-gray-700 text-gray-300">
+                                    --
+                                </span>
+                            </div>
+                            <div class="text-center mb-2">
+                                <div id="asiaClock" class="text-3xl font-mono font-bold text-white">
+                                    --:--:--
+                                </div>
+                                <div class="text-sm text-purple-200 mt-1">JST (UTC+9)</div>
+                            </div>
+                            <div class="text-xs text-purple-200 mt-3 space-y-1">
+                                <div>Trading: 00:00 - 09:00 JST</div>
+                                <div id="asiaNextOpen" class="font-semibold">--</div>
+                            </div>
+                        </div>
+                        
+                        <!-- London Session -->
+                        <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-bold text-white">
+                                    🇬🇧 London
+                                </h3>
+                                <span id="londonStatus" class="px-2 py-1 rounded text-xs font-bold bg-gray-700 text-gray-300">
+                                    --
+                                </span>
+                            </div>
+                            <div class="text-center mb-2">
+                                <div id="londonClock" class="text-3xl font-mono font-bold text-white">
+                                    --:--:--
+                                </div>
+                                <div class="text-sm text-purple-200 mt-1">GMT (UTC+0)</div>
+                            </div>
+                            <div class="text-xs text-purple-200 mt-3 space-y-1">
+                                <div>Trading: 08:00 - 16:30 GMT</div>
+                                <div id="londonNextOpen" class="font-semibold">--</div>
+                            </div>
+                        </div>
+                        
+                        <!-- New York Session -->
+                        <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-bold text-white">
+                                    🇺🇸 New York
+                                </h3>
+                                <span id="newYorkStatus" class="px-2 py-1 rounded text-xs font-bold bg-gray-700 text-gray-300">
+                                    --
+                                </span>
+                            </div>
+                            <div class="text-center mb-2">
+                                <div id="newYorkClock" class="text-3xl font-mono font-bold text-white">
+                                    --:--:--
+                                </div>
+                                <div class="text-sm text-purple-200 mt-1">EST (UTC-5)</div>
+                            </div>
+                            <div class="text-xs text-purple-200 mt-3 space-y-1">
+                                <div>Trading: 08:00 - 17:00 EST</div>
+                                <div id="newYorkNextOpen" class="font-semibold">--</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Overall Market Status -->
+                    <div class="mt-4 bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold text-purple-200">Overall Market Status</h3>
+                                <div id="marketOverallStatus" class="text-lg font-bold text-white mt-1">
+                                    <i class="fas fa-circle-notch fa-spin"></i> Checking...
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-purple-200">Next Market Event</div>
+                                <div id="nextMarketEvent" class="text-sm font-bold text-white mt-1">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- System Health Monitoring Panel (NEW!) -->
                 <div class="bg-gradient-to-r from-blue-900 to-indigo-800 p-6 rounded-lg border-2 border-blue-500 mb-6 shadow-xl">
                     <div class="flex items-center justify-between mb-4">
@@ -420,13 +514,178 @@ app.get('/', (c) => {
                 }
             }
             
+            // Update trading clocks
+            function updateTradingClocks() {
+                const now = new Date();
+                
+                // Asia/Tokyo (UTC+9)
+                const asiaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+                const asiaHour = asiaTime.getHours();
+                const asiaDay = asiaTime.getDay(); // 0=Sunday, 6=Saturday
+                document.getElementById('asiaClock').textContent = asiaTime.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
+                });
+                
+                // Asia trading hours: 00:00-09:00 JST (Mon-Fri)
+                const asiaOpen = asiaDay >= 1 && asiaDay <= 5 && asiaHour >= 0 && asiaHour < 9;
+                const asiaWeekend = asiaDay === 0 || asiaDay === 6;
+                
+                if (asiaWeekend) {
+                    document.getElementById('asiaStatus').textContent = '🔴 CLOSED';
+                    document.getElementById('asiaStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-red-600 text-white';
+                    document.getElementById('asiaNextOpen').textContent = 'Opens: Monday 00:00 JST';
+                } else if (asiaOpen) {
+                    document.getElementById('asiaStatus').textContent = '🟢 OPEN';
+                    document.getElementById('asiaStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-green-600 text-white';
+                    const closeTime = new Date(asiaTime);
+                    closeTime.setHours(9, 0, 0, 0);
+                    const minutesUntilClose = Math.floor((closeTime - asiaTime) / 60000);
+                    document.getElementById('asiaNextOpen').textContent = \`Closes in \${Math.floor(minutesUntilClose / 60)}h \${minutesUntilClose % 60}m\`;
+                } else {
+                    document.getElementById('asiaStatus').textContent = '⚪ CLOSED';
+                    document.getElementById('asiaStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-gray-600 text-white';
+                    const nextOpen = new Date(asiaTime);
+                    if (asiaHour >= 9) {
+                        nextOpen.setDate(nextOpen.getDate() + 1);
+                    }
+                    nextOpen.setHours(0, 0, 0, 0);
+                    document.getElementById('asiaNextOpen').textContent = 'Opens: Tomorrow 00:00 JST';
+                }
+                
+                // London (UTC+0)
+                const londonTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/London' }));
+                const londonHour = londonTime.getHours();
+                const londonDay = londonTime.getDay();
+                document.getElementById('londonClock').textContent = londonTime.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
+                });
+                
+                // London trading hours: 08:00-16:30 GMT (Mon-Fri)
+                const londonOpen = londonDay >= 1 && londonDay <= 5 && 
+                    ((londonHour >= 8 && londonHour < 16) || (londonHour === 16 && londonTime.getMinutes() < 30));
+                const londonWeekend = londonDay === 0 || londonDay === 6;
+                
+                if (londonWeekend) {
+                    document.getElementById('londonStatus').textContent = '🔴 CLOSED';
+                    document.getElementById('londonStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-red-600 text-white';
+                    document.getElementById('londonNextOpen').textContent = 'Opens: Monday 08:00 GMT';
+                } else if (londonOpen) {
+                    document.getElementById('londonStatus').textContent = '🟢 OPEN';
+                    document.getElementById('londonStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-green-600 text-white';
+                    const closeTime = new Date(londonTime);
+                    closeTime.setHours(16, 30, 0, 0);
+                    const minutesUntilClose = Math.floor((closeTime - londonTime) / 60000);
+                    document.getElementById('londonNextOpen').textContent = \`Closes in \${Math.floor(minutesUntilClose / 60)}h \${minutesUntilClose % 60}m\`;
+                } else {
+                    document.getElementById('londonStatus').textContent = '⚪ CLOSED';
+                    document.getElementById('londonStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-gray-600 text-white';
+                    if (londonHour < 8) {
+                        document.getElementById('londonNextOpen').textContent = 'Opens: Today 08:00 GMT';
+                    } else {
+                        document.getElementById('londonNextOpen').textContent = 'Opens: Tomorrow 08:00 GMT';
+                    }
+                }
+                
+                // New York (UTC-5)
+                const nyTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+                const nyHour = nyTime.getHours();
+                const nyDay = nyTime.getDay();
+                document.getElementById('newYorkClock').textContent = nyTime.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
+                });
+                
+                // New York trading hours: 08:00-17:00 EST (Mon-Fri)
+                const nyOpen = nyDay >= 1 && nyDay <= 5 && nyHour >= 8 && nyHour < 17;
+                const nyWeekend = nyDay === 0 || nyDay === 6;
+                
+                if (nyWeekend) {
+                    document.getElementById('newYorkStatus').textContent = '🔴 CLOSED';
+                    document.getElementById('newYorkStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-red-600 text-white';
+                    document.getElementById('newYorkNextOpen').textContent = 'Opens: Monday 08:00 EST';
+                } else if (nyOpen) {
+                    document.getElementById('newYorkStatus').textContent = '🟢 OPEN';
+                    document.getElementById('newYorkStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-green-600 text-white';
+                    const closeTime = new Date(nyTime);
+                    closeTime.setHours(17, 0, 0, 0);
+                    const minutesUntilClose = Math.floor((closeTime - nyTime) / 60000);
+                    document.getElementById('newYorkNextOpen').textContent = \`Closes in \${Math.floor(minutesUntilClose / 60)}h \${minutesUntilClose % 60}m\`;
+                } else {
+                    document.getElementById('newYorkStatus').textContent = '⚪ CLOSED';
+                    document.getElementById('newYorkStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-gray-600 text-white';
+                    if (nyHour < 8) {
+                        document.getElementById('newYorkNextOpen').textContent = 'Opens: Today 08:00 EST';
+                    } else {
+                        document.getElementById('newYorkNextOpen').textContent = 'Opens: Tomorrow 08:00 EST';
+                    }
+                }
+                
+                // Overall market status
+                const anyOpen = asiaOpen || londonOpen || nyOpen;
+                const allWeekend = asiaWeekend && londonWeekend && nyWeekend;
+                
+                if (allWeekend) {
+                    document.getElementById('marketOverallStatus').innerHTML = '🔴 <i class="fas fa-calendar-times mr-2"></i>Weekend - All Markets Closed';
+                    document.getElementById('nextMarketEvent').textContent = 'Opens: Monday';
+                } else if (anyOpen) {
+                    const openMarkets = [];
+                    if (asiaOpen) openMarkets.push('Asia');
+                    if (londonOpen) openMarkets.push('London');
+                    if (nyOpen) openMarkets.push('New York');
+                    document.getElementById('marketOverallStatus').innerHTML = \`🟢 <i class="fas fa-chart-line mr-2"></i>\${openMarkets.join(' + ')} Open\`;
+                    
+                    // Find next closing event
+                    const events = [];
+                    if (asiaOpen) events.push({ name: 'Asia closes', time: new Date(asiaTime).setHours(9, 0, 0, 0) });
+                    if (londonOpen) events.push({ name: 'London closes', time: new Date(londonTime).setHours(16, 30, 0, 0) });
+                    if (nyOpen) events.push({ name: 'NY closes', time: new Date(nyTime).setHours(17, 0, 0, 0) });
+                    
+                    if (events.length > 0) {
+                        events.sort((a, b) => a.time - b.time);
+                        const nextEvent = events[0];
+                        const minutesUntil = Math.floor((nextEvent.time - now) / 60000);
+                        document.getElementById('nextMarketEvent').textContent = \`\${nextEvent.name} in \${Math.floor(minutesUntil / 60)}h \${minutesUntil % 60}m\`;
+                    }
+                } else {
+                    document.getElementById('marketOverallStatus').innerHTML = '⚪ <i class="fas fa-moon mr-2"></i>All Markets Closed';
+                    
+                    // Find next opening event
+                    const events = [];
+                    if (!asiaWeekend && asiaHour >= 9) {
+                        events.push({ name: 'Asia opens', time: new Date(asiaTime).setHours(24, 0, 0, 0) });
+                    } else if (!asiaWeekend) {
+                        events.push({ name: 'Asia opens', time: new Date(asiaTime).setHours(0, 0, 0, 0) });
+                    }
+                    if (!londonWeekend && londonHour < 8) {
+                        events.push({ name: 'London opens', time: new Date(londonTime).setHours(8, 0, 0, 0) });
+                    }
+                    if (!nyWeekend && nyHour < 8) {
+                        events.push({ name: 'NY opens', time: new Date(nyTime).setHours(8, 0, 0, 0) });
+                    }
+                    
+                    if (events.length > 0) {
+                        events.sort((a, b) => a.time - b.time);
+                        const nextEvent = events[0];
+                        const minutesUntil = Math.floor((nextEvent.time - now) / 60000);
+                        if (minutesUntil > 60) {
+                            document.getElementById('nextMarketEvent').textContent = \`\${nextEvent.name} in \${Math.floor(minutesUntil / 60)}h\`;
+                        } else {
+                            document.getElementById('nextMarketEvent').textContent = \`\${nextEvent.name} in \${minutesUntil}m\`;
+                        }
+                    } else {
+                        document.getElementById('nextMarketEvent').textContent = 'Opens Monday';
+                    }
+                }
+            }
+            
             // Initialize on page load
             async function init() {
                 await loadSettings();
                 await refreshData();
                 await refreshMonitoring(); // Load monitoring on startup
+                updateTradingClocks(); // Initialize clocks
                 setInterval(refreshData, 60000); // Refresh every minute
                 setInterval(refreshMonitoring, 300000); // Refresh monitoring every 5 minutes
+                setInterval(updateTradingClocks, 1000); // Update clocks every second
             }
 
             async function refreshMonitoring() {
