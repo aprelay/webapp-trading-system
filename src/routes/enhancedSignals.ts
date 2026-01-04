@@ -561,6 +561,17 @@ app.post('/enhanced', async (c) => {
         message += `*TP2:* $${enhancedDaySignal.take_profit_2.toFixed(2)} (${((enhancedDaySignal.take_profit_2 / enhancedDaySignal.price - 1) * 100).toFixed(2)}%)\n`
         message += `*TP3:* $${enhancedDaySignal.take_profit_3.toFixed(2)} (${((enhancedDaySignal.take_profit_3 / enhancedDaySignal.price - 1) * 100).toFixed(2)}%)\n\n`
         
+        // Calculate Support & Resistance Levels
+        const candlesForSR = candles1h.slice(-20) // Use last 20 candles
+        const highs = candlesForSR.map(c => c.high).sort((a, b) => b - a)
+        const lows = candlesForSR.map(c => c.low).sort((a, b) => a - b)
+        const resistanceLevels = highs.slice(0, 3) // Top 3 highs
+        const supportLevels = lows.slice(0, 3) // Bottom 3 lows
+        
+        message += `📊 *Key Levels:*\n`
+        message += `🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}\n`
+        message += `🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}\n\n`
+        
         // Confidence Breakdown
         message += `*📊 Confidence Breakdown:*\n`
         message += `Base: ${enhancedDaySignal.base_confidence.toFixed(0)}%\n`
