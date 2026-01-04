@@ -760,13 +760,29 @@ app.get('/', (c) => {
 
             async function refreshData() {
                 try {
-                    // ⚡ OPTIMIZED: Load all data in parallel using native fetch
+                    // Helper function to fetch with timeout
+                    const fetchWithTimeout = async (url, timeout = 10000) => {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), timeout);
+                        
+                        try {
+                            const response = await fetch(url, { signal: controller.signal });
+                            clearTimeout(timeoutId);
+                            return await response.json();
+                        } catch (error) {
+                            clearTimeout(timeoutId);
+                            console.error('Error fetching ' + url + ':', error.message);
+                            throw error;
+                        }
+                    };
+                    
+                    // ⚡ OPTIMIZED: Load all data in parallel with 10-second timeout per request
                     // Cron job handles fresh data fetching every minute
                     // Dashboard just displays cached data instantly
                     const [signalsRes, marketRes, indicatorsRes] = await Promise.all([
-                        fetch('/api/signals/recent').then(r => r.json()),
-                        fetch('/api/market/latest').then(r => r.json()),
-                        fetch('/api/indicators/latest').then(r => r.json())
+                        fetchWithTimeout('/api/signals/recent', 10000).catch(() => ({ signals: [] })),
+                        fetchWithTimeout('/api/market/latest', 10000).catch(() => ({ data: [] })),
+                        fetchWithTimeout('/api/indicators/latest', 10000).catch(() => ({ indicators: null }))
                     ]);
                     
                     // Display all results
@@ -781,6 +797,12 @@ app.get('/', (c) => {
                     }
                 } catch (error) {
                     console.error('Error refreshing data:', error);
+                    // Show user-friendly error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50';
+                    errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>Error loading data. Retrying...';
+                    document.body.appendChild(errorDiv);
+                    setTimeout(() => errorDiv.remove(), 3000);
                 }
             }
 
