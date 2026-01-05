@@ -2404,7 +2404,9 @@ app.get('/api/cron/auto-fetch', async (c) => {
     }
     
     // 5. Fetch real-time price to avoid stale candle prices
-    let currentPrice = candles[candles.length - 1].close;
+    // NOTE: Twelve Data returns candles in DESCENDING order (newest first)
+    // So candles[0] is the NEWEST, candles[length-1] is the OLDEST
+    let currentPrice = candles[0].close; // Use FIRST candle (newest)
     let usingRealtimePrice = false;
     
     try {
