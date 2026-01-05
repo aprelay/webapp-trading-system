@@ -2403,9 +2403,40 @@ app.get('/api/cron/auto-fetch', async (c) => {
       });
     }
     
-    // 5. Generate signals
-    const currentPrice = candles[candles.length - 1].close;
+    // 5. Fetch real-time price to avoid stale candle prices
+    let currentPrice = candles[candles.length - 1].close;
+    let usingRealtimePrice = false;
     
+    try {
+      console.log('[AUTO-FETCH] Fetching real-time price...');
+      const priceResponse = await fetch(
+        `https://api.twelvedata.com/price?symbol=XAU/USD&apikey=${apiKey}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      const priceData: any = await priceResponse.json();
+      
+      if (priceData.price) {
+        const realtimePrice = parseFloat(priceData.price);
+        const lastCandleClose = currentPrice;
+        const priceDiff = Math.abs(realtimePrice - lastCandleClose);
+        const priceDiffPct = (priceDiff / realtimePrice) * 100;
+        
+        console.log(`[AUTO-FETCH] Real-time: $${realtimePrice}, Last candle: $${lastCandleClose}, Diff: ${priceDiffPct.toFixed(2)}%`);
+        
+        // Only use real-time price if difference is reasonable (< 2%)
+        if (priceDiffPct < 2.0) {
+          currentPrice = realtimePrice;
+          usingRealtimePrice = true;
+          console.log(`[AUTO-FETCH] ✅ Using real-time price: $${realtimePrice}`);
+        } else {
+          console.log(`[AUTO-FETCH] ⚠️ Price diff too large (${priceDiffPct.toFixed(2)}%), using candle close`);
+        }
+      }
+    } catch (error: any) {
+      console.log('[AUTO-FETCH] Real-time price fetch failed, using candle close:', error.message);
+    }
+    
+    // 6. Generate signals with real-time price
     const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
     const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
     

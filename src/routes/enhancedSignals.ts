@@ -124,10 +124,44 @@ app.post('/enhanced', async (c) => {
       LIMIT 1
     `).first()
     
-    const currentPrice = (marketData as any)?.close || 0
+    let currentPrice = (marketData as any)?.close || 0
     
     if (!currentPrice) {
       return c.json({ success: false, error: 'Current price not available' }, 400)
+    }
+    
+    // Fetch real-time price to avoid stale candle prices
+    const apiKeySetting = await DB.prepare(`
+      SELECT setting_value FROM user_settings WHERE setting_key = 'twelve_data_api_key'
+    `).first()
+    const apiKey = (apiKeySetting as any)?.setting_value || '70140f57bea54c5e90768de696487d8f'
+    
+    try {
+      console.log('[ENHANCED] Fetching real-time price...');
+      const priceResponse = await fetch(
+        `https://api.twelvedata.com/price?symbol=XAU/USD&apikey=${apiKey}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      const priceData: any = await priceResponse.json();
+      
+      if (priceData.price) {
+        const realtimePrice = parseFloat(priceData.price);
+        const lastCandleClose = currentPrice;
+        const priceDiff = Math.abs(realtimePrice - lastCandleClose);
+        const priceDiffPct = (priceDiff / realtimePrice) * 100;
+        
+        console.log(`[ENHANCED] Real-time: $${realtimePrice}, Last candle: $${lastCandleClose}, Diff: ${priceDiffPct.toFixed(2)}%`);
+        
+        // Only use real-time price if difference is reasonable (< 2%)
+        if (priceDiffPct < 2.0) {
+          currentPrice = realtimePrice;
+          console.log(`[ENHANCED] ✅ Using real-time price: $${realtimePrice}`);
+        } else {
+          console.log(`[ENHANCED] ⚠️ Price diff too large (${priceDiffPct.toFixed(2)}%), using candle close`);
+        }
+      }
+    } catch (error: any) {
+      console.log('[ENHANCED] Real-time price fetch failed, using candle close:', error.message);
     }
     
     // Check price data freshness
