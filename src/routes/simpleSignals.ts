@@ -239,6 +239,60 @@ app.post('/simple', async (c) => {
     }
     
     // ============================================================
+    // STEP 4.5: SAVE SIGNALS TO DATABASE
+    // ============================================================
+    try {
+      // Save day trade signal
+      await DB.prepare(`
+        INSERT INTO signals (
+          timestamp, signal_type, trading_style, price, 
+          stop_loss, take_profit_1, take_profit_2, take_profit_3,
+          confidence, reason, telegram_sent, status, created_at
+        ) VALUES (
+          datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now')
+        )
+      `).bind(
+        daySignal.signal_type,
+        'day_trade',
+        currentPrice,
+        daySignal.stop_loss,
+        daySignal.take_profit_1,
+        daySignal.take_profit_2,
+        daySignal.take_profit_3,
+        daySignal.confidence,
+        daySignal.reason,
+        telegramSent ? 1 : 0
+      ).run()
+      
+      // Save swing trade signal
+      await DB.prepare(`
+        INSERT INTO signals (
+          timestamp, signal_type, trading_style, price, 
+          stop_loss, take_profit_1, take_profit_2, take_profit_3,
+          confidence, reason, telegram_sent, status, created_at
+        ) VALUES (
+          datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now')
+        )
+      `).bind(
+        swingSignal.signal_type,
+        'swing_trade',
+        currentPrice,
+        swingSignal.stop_loss,
+        swingSignal.take_profit_1,
+        swingSignal.take_profit_2,
+        swingSignal.take_profit_3,
+        swingSignal.confidence,
+        swingSignal.reason,
+        telegramSent ? 1 : 0
+      ).run()
+      
+      console.log('[SIMPLE] Signals saved to database')
+    } catch (e: any) {
+      console.error('[SIMPLE] Database save error:', e.message)
+      // Database save is optional, continue without it
+    }
+    
+    // ============================================================
     // STEP 5: RETURN SIMPLE FORMAT
     // ============================================================
     

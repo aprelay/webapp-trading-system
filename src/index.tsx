@@ -3462,7 +3462,7 @@ app.post('/api/signals/generate-now', async (c) => {
     }
     
     // Fallback to database if no fresh data
-    if (!candles!) {
+    if (!candles || candles.length === 0) {
       console.log('[GENERATE-NOW] Using database data (may be stale)')
       const marketData = await DB.prepare(`
         SELECT * FROM market_data 
@@ -3550,8 +3550,11 @@ app.post('/api/signals/generate-now', async (c) => {
     const highs = last20Candles.map(c => c.high).sort((a, b) => b - a); // Descending
     const lows = last20Candles.map(c => c.low).sort((a, b) => a - b);   // Ascending
     
-    const resistance = [highs[0], highs[1], highs[2]]; // Top 3 highs
-    const support = [lows[0], lows[1], lows[2]];       // Bottom 3 lows
+    // Safety check: ensure we have enough data points
+    const resistance = highs.length >= 3 ? [highs[0], highs[1], highs[2]] : 
+                      highs.length >= 1 ? [highs[0]] : [];
+    const support = lows.length >= 3 ? [lows[0], lows[1], lows[2]] : 
+                   lows.length >= 1 ? [lows[0]] : [];
     
     console.log('[GENERATE-NOW] S/R calculated - Resistance:', resistance, 'Support:', support);
     
