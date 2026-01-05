@@ -3460,7 +3460,36 @@ app.post('/api/signals/generate-now', async (c) => {
       return c.json({ success: false, error: 'Failed to calculate indicators' });
     }
     
-    const currentPrice = candles[candles.length - 1].close;
+    // Fetch real-time price to avoid stale candle prices
+    let currentPrice = candles[candles.length - 1].close;
+    let usingRealtimePrice = false;
+    
+    if (apiKey && apiKey !== 'your_api_key_here') {
+      try {
+        console.log('[GENERATE-NOW] Fetching real-time price...');
+        const priceResponse = await fetch(
+          `https://api.twelvedata.com/price?symbol=XAU/USD&apikey=${apiKey}`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        const priceData: any = await priceResponse.json();
+        
+        if (priceData.price) {
+          const realtimePrice = parseFloat(priceData.price);
+          const lastCandleClose = currentPrice;
+          const priceDiff = Math.abs(realtimePrice - lastCandleClose);
+          const priceDiffPct = (priceDiff / realtimePrice) * 100;
+          
+          console.log(`[GENERATE-NOW] Real-time: $${realtimePrice}, Last candle: $${lastCandleClose}, Diff: ${priceDiffPct.toFixed(2)}%`);
+          
+          // Use real-time price if available
+          currentPrice = realtimePrice;
+          usingRealtimePrice = true;
+        }
+      } catch (error: any) {
+        console.log('[GENERATE-NOW] Real-time price fetch failed, using candle close:', error.message);
+      }
+    }
+    
     const dayTradeSignal = generateSignal(currentPrice, indicators, 'day_trade');
     const swingTradeSignal = generateSignal(currentPrice, indicators, 'swing_trade');
     
