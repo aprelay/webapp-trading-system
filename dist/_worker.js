@@ -2188,75 +2188,36 @@ ${a}
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
                     
-                    const res = await fetchWithTimeout('/api/signals/enhanced/enhanced', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                    // Call the hedge-fund cron endpoint which includes Telegram integration
+                    const res = await fetchWithTimeout('/api/cron/hedge-fund', { method: 'GET' });
                     
                     if (res.success) {
-                        // API returns day_trade and swing_trade directly (not nested in signals)
-                        const day = res.day_trade;
-                        const swing = res.swing_trade;
-                        const alignment = res.alignment;
-                        const risk_metrics = res.risk_metrics;
-                        const regime = res.regime;
-                        const ml = res.ml_prediction;
-                        const pop = res.profit_probability;
+                        // Hedge-fund endpoint returns: message, confidence, telegram_sent
+                        const dayConf = res.confidence?.day_trade || 0;
+                        const swingConf = res.confidence?.swing_trade || 0;
                         
                         let message = '🏦 HEDGE FUND GRADE SIGNAL\\n\\n';
+                        message += res.message + '\\n\\n';
                         
-                        // Risk Warnings
-                        if (day.risk_warning) {
-                            message += '⚠️ RISK ALERT: ' + day.risk_warning + '\\n\\n';
-                        }
+                        message += '📊 CONFIDENCE:\\n';
+                        message += '📈 Day Trade: ' + dayConf.toFixed(0) + '%\\n';
+                        message += '🌊 Swing Trade: ' + swingConf.toFixed(0) + '%\\n\\n';
                         
-                        // Multi-Timeframe Alignment
-                        message += '📊 MTF ALIGNMENT: ' + alignment.type + ' (' + alignment.score + '/5)\\n\\n';
-                        
-                        // Day Trade
-                        message += '📈 DAY TRADE:\\n';
-                        message += (day.isValid ? '✅' : '❌') + ' ' + day.signal_type + ' (' + day.enhanced_confidence.toFixed(0) + '%)\\n';
-                        message += 'Entry: $' + day.price.toFixed(2) + '\\n';
-                        message += 'Stop: $' + day.stop_loss.toFixed(2) + '\\n';
-                        message += 'TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
-                        
-                        // Confidence Breakdown
-                        message += '\\nConfidence Breakdown:\\n';
-                        message += 'Base: ' + day.base_confidence.toFixed(0) + '%\\n';
-                        message += 'MTF: ' + day.mtf_confidence.toFixed(0) + '%\\n';
-                        if (day.pattern_boost > 0) message += 'Pattern: +' + day.pattern_boost.toFixed(0) + '%\\n';
-                        if (day.regime_boost > 0) message += 'Regime: +' + day.regime_boost.toFixed(0) + '%\\n';
-                        if (day.ml_boost > 0) message += 'ML: +' + day.ml_boost.toFixed(0) + '%\\n';
-                        if (day.pop_boost > 0) message += 'PoP: +' + day.pop_boost.toFixed(0) + '%\\n';
-                        message += 'FINAL: ' + day.enhanced_confidence.toFixed(0) + '%\\n\\n';
-                        
-                        // Market Regime
-                        if (regime) {
-                            message += '🌡️ REGIME: ' + (regime.trend || 'N/A') + ' | Volatility: ' + regime.volatility + '\\n';
-                            message += 'Should Trade: ' + (regime.should_trade ? '✅ YES' : '❌ NO') + '\\n\\n';
-                        }
-                        
-                        // ML Prediction
-                        if (ml && ml.direction !== 'NEUTRAL') {
-                            message += '🤖 ML: ' + ml.direction + '\\n\\n';
-                        }
-                        
-                        // Risk Metrics
-                        message += '⚡ RISK METRICS:\\n';
-                        message += 'VaR(95%): $' + risk_metrics.var_95.toFixed(2) + '\\n';
-                        message += 'VaR(99%): $' + risk_metrics.var_99.toFixed(2) + '\\n';
-                        message += 'Drawdown: ' + risk_metrics.drawdown_pct.toFixed(2) + '%\\n';
-                        message += 'Portfolio Heat: ' + risk_metrics.portfolio_heat_pct.toFixed(1) + '%\\n\\n';
-                        
-                        // Recommendation
-                        message += '💡 RECOMMENDATION:\\n';
-                        if (day.isValid && day.signal_type !== 'HOLD') {
-                            message += '✅ EXECUTE ' + day.signal_type;
-                        } else {
-                            message += '⚠️ SKIP - ' + day.mtf_reason;
-                        }
+                        message += '🎯 THRESHOLD: ≥80% (Hedge Fund Grade)\\n\\n';
                         
                         // Telegram Status
-                        message += '\\n\\n';
                         if (res.telegram_sent) {
-                            message += '📱 ✅ Sent to Telegram!';
+                            message += '📱 ✅ Alert sent to Telegram!\\n';
+                            message += '\\nCheck your Telegram for full signal details including:\\n';
+                            message += '• Entry price & stop loss\\n';
+                            message += '• Take profit levels (TP1, TP2, TP3)\\n';
+                            message += '• Risk metrics (VaR, drawdown)\\n';
+                            message += '• Market regime analysis\\n';
+                            message += '• Multi-timeframe alignment\\n';
+                        } else if (dayConf < 80 && swingConf < 80) {
+                            message += '⚪ No alert sent\\n';
+                            message += '\\nConfidence below 80% threshold.\\n';
+                            message += 'Hedge fund signals require ≥80% confidence.\\n';
                         } else {
                             message += '📱 ⚠️ Telegram not configured (check settings)';
                         }
