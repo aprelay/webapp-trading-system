@@ -62,7 +62,14 @@ app.get('/', (c) => {
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <i class="fas fa-chart-line text-yellow-500 text-3xl"></i>
-                            <h1 class="text-2xl font-bold text-yellow-500">Gold/USD Trading System (XAU/USD)</h1>
+                            <div>
+                                <h1 class="text-2xl font-bold text-yellow-500">Gold/USD Trading System (XAU/USD)</h1>
+                                <p class="text-xs text-gray-400 mt-1">
+                                    <i class="fas fa-sync-alt fa-spin text-green-400 mr-1" id="autoRefreshIcon"></i>
+                                    Auto-refresh: <span id="lastUpdated" class="text-yellow-400">--</span> 
+                                    <span class="text-gray-500 ml-2">(every 30s)</span>
+                                </p>
+                            </div>
                         </div>
                         <div class="flex items-center space-x-4">
                             <div id="currentPrice" class="text-2xl font-bold text-green-400">
@@ -683,7 +690,7 @@ app.get('/', (c) => {
                 await refreshData();
                 await refreshMonitoring(); // Load monitoring on startup
                 updateTradingClocks(); // Initialize clocks
-                setInterval(refreshData, 60000); // Refresh every minute
+                setInterval(refreshData, 30000); // Refresh every 30 seconds ⚡ FASTER AUTO-REFRESH
                 setInterval(refreshMonitoring, 300000); // Refresh monitoring every 5 minutes
                 setInterval(updateTradingClocks, 1000); // Update clocks every second
             }
@@ -760,6 +767,12 @@ app.get('/', (c) => {
 
             async function refreshData() {
                 try {
+                    // Flash the refresh icon
+                    const refreshIcon = document.getElementById('autoRefreshIcon');
+                    if (refreshIcon) {
+                        refreshIcon.classList.add('fa-spin');
+                    }
+                    
                     // Helper function to fetch with timeout
                     const fetchWithTimeout = async (url, timeout = 10000) => {
                         const controller = new AbortController();
@@ -795,6 +808,22 @@ app.get('/', (c) => {
                     if (indicatorsRes.indicators) {
                         displayIndicators(indicatorsRes.indicators);
                     }
+                    
+                    // Update last refreshed timestamp
+                    const lastUpdated = document.getElementById('lastUpdated');
+                    if (lastUpdated) {
+                        const now = new Date();
+                        lastUpdated.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                        lastUpdated.className = 'text-green-400';
+                        setTimeout(() => {
+                            if (lastUpdated) lastUpdated.className = 'text-yellow-400';
+                        }, 2000);
+                    }
+                    
+                    // Stop spinning icon
+                    if (refreshIcon) {
+                        setTimeout(() => refreshIcon.classList.remove('fa-spin'), 500);
+                    }
                 } catch (error) {
                     console.error('Error refreshing data:', error);
                     // Show user-friendly error message
@@ -803,6 +832,13 @@ app.get('/', (c) => {
                     errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>Error loading data. Retrying...';
                     document.body.appendChild(errorDiv);
                     setTimeout(() => errorDiv.remove(), 3000);
+                    
+                    // Update timestamp to show error
+                    const lastUpdated = document.getElementById('lastUpdated');
+                    if (lastUpdated) {
+                        lastUpdated.textContent = 'Error - retrying...';
+                        lastUpdated.className = 'text-red-400';
+                    }
                 }
             }
 
