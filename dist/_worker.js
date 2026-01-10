@@ -3158,47 +3158,47 @@ ${S(w.reason)}
         SELECT setting_key, setting_value FROM user_settings
         WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
       `).all(),v={};for(const E of b.results||[])v[E.setting_key]=E.setting_value;if(v.telegram_bot_token&&v.telegram_chat_id){const E=`
-🏦 *HEDGE FUND GRADE SIGNAL*
+🏦 <b>HEDGE FUND GRADE SIGNAL</b>
 ⏰ ${new Date().toISOString().replace("T"," ").substring(0,19)} UTC
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-📈 *DAY TRADE*
+📈 <b>DAY TRADE</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${u.signal_type} (${u.enhanced_confidence}% confidence)
 
-*Entry:* $${u.price.toFixed(2)}
-*Stop Loss:* $${u.stop_loss.toFixed(2)}
-*TP1:* $${u.take_profit_1.toFixed(2)}
-*TP2:* $${u.take_profit_2.toFixed(2)}
-*TP3:* $${u.take_profit_3.toFixed(2)}
+<b>Entry:</b> $${u.price.toFixed(2)}
+<b>Stop Loss:</b> $${u.stop_loss.toFixed(2)}
+<b>TP1:</b> $${u.take_profit_1.toFixed(2)}
+<b>TP2:</b> $${u.take_profit_2.toFixed(2)}
+<b>TP3:</b> $${u.take_profit_3.toFixed(2)}
 
-📊 *Advanced Metrics:*
+📊 <b>Advanced Metrics:</b>
 • VaR(95%): $${((s=u.var_95)==null?void 0:s.toFixed(2))||0}
 • Drawdown: ${((n=u.current_drawdown_pct)==null?void 0:n.toFixed(1))||0}%
 • Portfolio Heat: ${((a=u.portfolio_heat_pct)==null?void 0:a.toFixed(1))||0}%
 • Profit Probability: ${((o=m.profit_probability)==null?void 0:o.tp1)||0}%
 
-🌊 *Market Regime:* ${((i=m.regime)==null?void 0:i.volatility)||"UNKNOWN"}
-💧 *Liquidity:* ${((l=m.liquidity)==null?void 0:l.score)||0}/100 ${((r=m.liquidity)==null?void 0:r.recommendation)||""}
+🌊 <b>Market Regime:</b> ${((i=m.regime)==null?void 0:i.volatility)||"UNKNOWN"}
+💧 <b>Liquidity:</b> ${((l=m.liquidity)==null?void 0:l.score)||0}/100 ${((r=m.liquidity)==null?void 0:r.recommendation)||""}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-🌊 *SWING TRADE*
+🌊 <b>SWING TRADE</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${g.signal_type} (${g.enhanced_confidence}% confidence)
 
-*Entry:* $${g.price.toFixed(2)}
-*Stop Loss:* $${g.stop_loss.toFixed(2)}
-*TP1:* $${g.take_profit_1.toFixed(2)}
-*TP2:* $${g.take_profit_2.toFixed(2)}
-*TP3:* $${g.take_profit_3.toFixed(2)}
+<b>Entry:</b> $${g.price.toFixed(2)}
+<b>Stop Loss:</b> $${g.stop_loss.toFixed(2)}
+<b>TP1:</b> $${g.take_profit_1.toFixed(2)}
+<b>TP2:</b> $${g.take_profit_2.toFixed(2)}
+<b>TP3:</b> $${g.take_profit_3.toFixed(2)}
 
-📊 *Risk Metrics:*
+📊 <b>Risk Metrics:</b>
 • VaR(99%): $${((d=g.var_99)==null?void 0:d.toFixed(2))||0}
 • Max Drawdown: ${((c=g.current_drawdown_pct)==null?void 0:c.toFixed(1))||0}%
 
-${((_=m.regime)==null?void 0:_.should_trade)===!1?"⚠️ *WARNING: Extreme volatility detected*":""}
+${((_=m.regime)==null?void 0:_.should_trade)===!1?"⚠️ <b>WARNING: Extreme volatility detected</b>":""}
 
 🌐 Dashboard: ${e.req.url.replace("/api/cron/hedge-fund","")}
         `.trim(),{sendTelegramMessage:k}=await Promise.resolve().then(()=>Ys);f=await k({botToken:v.telegram_bot_token,chatId:v.telegram_chat_id},E),console.log("[HEDGE-FUND-CRON] Telegram alert sent:",f)}}const y=Date.now()-t;return e.json({success:!0,message:h?`Hedge fund signal generated and ${f?"sent":"failed to send"} to Telegram`:"Signal confidence below 80% threshold - no alert sent",confidence:{day_trade:(u==null?void 0:u.enhanced_confidence)||0,swing_trade:(g==null?void 0:g.enhanced_confidence)||0},telegram_sent:f,threshold:80,execution_time_ms:y,timestamp:new Date().toISOString()})}catch(p){return console.error("[HEDGE-FUND-CRON] Error:",p),e.json({success:!1,error:p.message,execution_time_ms:Date.now()-t},500)}});G.get("/api/cron/micro-trade",async e=>{const t=Date.now();try{console.log("[MICRO-CRON] Starting micro trade scan");const s=await fetch(`${e.req.url.replace("/api/cron/micro-trade","/api/micro/scan")}`,{method:"GET"});if(!s.ok)throw new Error(`Micro scanner returned ${s.status}`);const n=await s.json(),a=Date.now()-t;return e.json({...n,execution_time_ms:a,timestamp:new Date().toISOString()})}catch(s){return console.error("[MICRO-CRON] Error:",s),e.json({success:!1,error:s.message,execution_time_ms:Date.now()-t},500)}});G.post("/api/market/fetch-mtf",async e=>{const{DB:t}=e.env;try{const s=await t.prepare(`
