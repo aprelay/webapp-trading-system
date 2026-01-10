@@ -237,6 +237,45 @@ app.post('/simple', async (c) => {
           message += `🟢 <b>Support:</b> ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}\n\n`
         }
         
+        // Add Liquidity Analysis Section
+        message += `💧 <b>LIQUIDITY ANALYSIS:</b>\n`
+        const liquidityEmoji = daySignal.liquidity_score && daySignal.liquidity_score >= 70 ? '🟢' :
+                               daySignal.liquidity_score && daySignal.liquidity_score >= 50 ? '🟡' : '🔴'
+        message += `${liquidityEmoji} <b>Score:</b> ${daySignal.liquidity_score || 50}/100\n`
+        message += `🌐 <b>Session:</b> ${daySignal.session || 'UNKNOWN'} (${daySignal.time_zone || 'MEDIUM'} LIQUIDITY)\n`
+        message += `📊 <b>Volume:</b> ${daySignal.volume_trend || 'STABLE'} (${daySignal.volume_percentile || 50}%ile)\n`
+        message += `💰 <b>Spread:</b> ~${daySignal.estimated_spread_pips || 40} pips\n`
+        message += `📉 <b>Impact:</b> ~${daySignal.price_impact_bps || 10} bps ($100K)\n`
+        
+        // Add Position Sizing Recommendation
+        const posSize = daySignal.position_size_multiplier || 1.0
+        const posSizeEmoji = posSize >= 1.0 ? '🟢' : posSize >= 0.75 ? '🟡' : '🔴'
+        message += `\n💼 <b>POSITION SIZING:</b>\n`
+        message += `${posSizeEmoji} <b>Recommended:</b> ${(posSize * 100).toFixed(0)}% of normal size\n`
+        if (posSize < 0.75) {
+          message += `⚠️ <b>Warning:</b> Reduced position due to liquidity\n`
+        } else if (daySignal.optimal_for_trading) {
+          message += `✅ <b>Status:</b> Optimal for trading\n`
+        }
+        
+        // Add Liquidity Warnings if present
+        if (daySignal.liquidity_warnings && daySignal.liquidity_warnings !== '[]') {
+          try {
+            const warnings = JSON.parse(daySignal.liquidity_warnings)
+            if (warnings.length > 0) {
+              message += `\n⚠️ <b>WARNINGS:</b>\n`
+              warnings.slice(0, 2).forEach((w: string) => {
+                // Remove emoji from warning (already in main text)
+                const cleanWarning = w.replace(/[⚠️🔴]/g, '').trim()
+                message += `• ${cleanWarning}\n`
+              })
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+        message += `\n`
+        
         message += `📝 <b>Reason:</b>\n`
         // Escape HTML characters in reason text (< > & symbols)
         const escapedReason = String(daySignal.reason)
