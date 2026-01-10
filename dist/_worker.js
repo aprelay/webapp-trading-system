@@ -2264,8 +2264,8 @@ Make sure Telegram Bot Token and Chat ID are configured in Settings.');
                     
                     // Fetch daily stats
                     const statsRes = await fetchWithTimeout('/api/micro/stats/daily?date=' + today);
-                    if (statsRes.success && statsRes.data) {
-                        const stats = statsRes.data;
+                    if (statsRes.success && statsRes.stats) {
+                        const stats = statsRes.stats;
                         document.getElementById('microSignalsToday').textContent = stats.total_signals || 0;
                         
                         if (stats.total_signals > 0) {
@@ -2276,6 +2276,11 @@ Make sure Telegram Bot Token and Chat ID are configured in Settings.');
                         }
                         
                         document.getElementById('microDailyPnL').textContent = '--'; // TODO: Track P&L
+                    } else {
+                        // No stats yet - show defaults
+                        document.getElementById('microSignalsToday').textContent = '0';
+                        document.getElementById('microWinRate').textContent = '--';
+                        document.getElementById('microDailyPnL').textContent = '--';
                     }
                     
                     // Fetch recent signals
