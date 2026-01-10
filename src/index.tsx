@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { calculateIndicators, generateSignal, type Candle } from './lib/technicalAnalysis'
+import { calculateIndicators, generateSignal, generateSignalWithLiquidity, type Candle } from './lib/technicalAnalysis'
 import { sendTelegramMessage, formatTradeSignal, formatMarketUpdate } from './lib/telegram'
 import enhancedSignalsRouter from './routes/enhancedSignals'
 import simpleSignalsRouter from './routes/simpleSignals'
@@ -4165,10 +4165,27 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
     
     const currentPrice = (marketData as any)?.close || 0
     
+    // Fetch candles for liquidity analysis
+    const candlesForLiquidity = await DB.prepare(`
+      SELECT timestamp, open, high, low, close, volume FROM market_data 
+      WHERE timeframe = '1h'
+      ORDER BY timestamp DESC 
+      LIMIT 20
+    `).all()
+    
+    const formattedCandles = (candlesForLiquidity.results || []).map((c: any) => ({
+      timestamp: c.timestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume || 1
+    })).reverse() // Reverse to get chronological order
+    
     const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
     const h1Indicators = mtfIndicators['1h']
-    const dayTradeSignal = generateSignal(currentPrice, h1Indicators, 'day_trade')
-    const swingTradeSignal = generateSignal(currentPrice, h1Indicators, 'swing_trade')
+    const dayTradeSignal = generateSignalWithLiquidity(currentPrice, h1Indicators, formattedCandles, 'day_trade')
+    const swingTradeSignal = generateSignalWithLiquidity(currentPrice, h1Indicators, formattedCandles, 'swing_trade')
     
     const dayValidation = validateMultiTimeframeSignal(dayTradeSignal.signal_type, alignment)
     const swingValidation = validateMultiTimeframeSignal(swingTradeSignal.signal_type, alignment)
@@ -4307,6 +4324,17 @@ ${resistanceLevels.length > 0 ? `📊 *Key Levels:*
 
 ${dayPosition.warning ? `⚠️ ${dayPosition.warning}` : ''}
 
+💧 *LIQUIDITY ANALYSIS:*
+${dayTradeSignal.liquidity_score >= 70 ? '🟢' : dayTradeSignal.liquidity_score >= 50 ? '🟡' : '🔴'} *Score:* ${dayTradeSignal.liquidity_score}/100
+🌐 *Session:* ${dayTradeSignal.session} (${dayTradeSignal.time_zone} LIQUIDITY)
+📊 *Volume:* ${dayTradeSignal.volume_trend} (${dayTradeSignal.volume_percentile}%ile)
+💰 *Spread:* ~${dayTradeSignal.estimated_spread_pips} pips
+📉 *Impact:* ~${dayTradeSignal.price_impact_bps} bps ($100K)
+
+💼 *POSITION SIZING:*
+${dayTradeSignal.position_size_multiplier >= 1.0 ? '🟢' : dayTradeSignal.position_size_multiplier >= 0.75 ? '🟡' : '🔴'} *Recommended:* ${(dayTradeSignal.position_size_multiplier * 100).toFixed(0)}% of normal size
+${dayTradeSignal.optimal_for_trading ? '✅ *Status:* Optimal for trading' : '⚠️ *Status:* Sub-optimal liquidity'}
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 🌊 *SWING TRADE SIGNAL*
 ━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4328,6 +4356,17 @@ ${resistanceLevels.length > 0 ? `📊 *Key Levels:*
 📊 *R:R:* ${swingPosition.reward_risk_ratio}:1
 
 ${swingPosition.warning ? `⚠️ ${swingPosition.warning}` : ''}
+
+💧 *LIQUIDITY ANALYSIS:*
+${swingTradeSignal.liquidity_score >= 70 ? '🟢' : swingTradeSignal.liquidity_score >= 50 ? '🟡' : '🔴'} *Score:* ${swingTradeSignal.liquidity_score}/100
+🌐 *Session:* ${swingTradeSignal.session} (${swingTradeSignal.time_zone} LIQUIDITY)
+📊 *Volume:* ${swingTradeSignal.volume_trend} (${swingTradeSignal.volume_percentile}%ile)
+💰 *Spread:* ~${swingTradeSignal.estimated_spread_pips} pips
+📉 *Impact:* ~${swingTradeSignal.price_impact_bps} bps ($100K)
+
+💼 *POSITION SIZING:*
+${swingTradeSignal.position_size_multiplier >= 1.0 ? '🟢' : swingTradeSignal.position_size_multiplier >= 0.75 ? '🟡' : '🔴'} *Recommended:* ${(swingTradeSignal.position_size_multiplier * 100).toFixed(0)}% of normal size
+${swingTradeSignal.optimal_for_trading ? '✅ *Status:* Optimal for trading' : '⚠️ *Status:* Sub-optimal liquidity'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 📝 *RECOMMENDATION*
@@ -4559,10 +4598,27 @@ app.get('/api/automation/analyze-and-notify', async (c) => {
     
     const currentPrice = (marketData as any)?.close || 0
     
+    // Fetch candles for liquidity analysis
+    const candlesForLiquidity = await DB.prepare(`
+      SELECT timestamp, open, high, low, close, volume FROM market_data 
+      WHERE timeframe = '1h'
+      ORDER BY timestamp DESC 
+      LIMIT 20
+    `).all()
+    
+    const formattedCandles = (candlesForLiquidity.results || []).map((c: any) => ({
+      timestamp: c.timestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume || 1
+    })).reverse() // Reverse to get chronological order
+    
     const alignment = analyzeTimeframeAlignment(mtfIndicators, currentPrice)
     const h1Indicators = mtfIndicators['1h']
-    const dayTradeSignal = generateSignal(currentPrice, h1Indicators, 'day_trade')
-    const swingTradeSignal = generateSignal(currentPrice, h1Indicators, 'swing_trade')
+    const dayTradeSignal = generateSignalWithLiquidity(currentPrice, h1Indicators, formattedCandles, 'day_trade')
+    const swingTradeSignal = generateSignalWithLiquidity(currentPrice, h1Indicators, formattedCandles, 'swing_trade')
     
     const dayValidation = validateMultiTimeframeSignal(dayTradeSignal.signal_type, alignment)
     const swingValidation = validateMultiTimeframeSignal(swingTradeSignal.signal_type, alignment)
@@ -4700,6 +4756,17 @@ ${resistanceLevels.length > 0 ? `📊 *Key Levels:*
 
 ${dayPosition.warning ? `⚠️ ${dayPosition.warning}` : ''}
 
+💧 *LIQUIDITY ANALYSIS:*
+${dayTradeSignal.liquidity_score >= 70 ? '🟢' : dayTradeSignal.liquidity_score >= 50 ? '🟡' : '🔴'} *Score:* ${dayTradeSignal.liquidity_score}/100
+🌐 *Session:* ${dayTradeSignal.session} (${dayTradeSignal.time_zone} LIQUIDITY)
+📊 *Volume:* ${dayTradeSignal.volume_trend} (${dayTradeSignal.volume_percentile}%ile)
+💰 *Spread:* ~${dayTradeSignal.estimated_spread_pips} pips
+📉 *Impact:* ~${dayTradeSignal.price_impact_bps} bps ($100K)
+
+💼 *POSITION SIZING:*
+${dayTradeSignal.position_size_multiplier >= 1.0 ? '🟢' : dayTradeSignal.position_size_multiplier >= 0.75 ? '🟡' : '🔴'} *Recommended:* ${(dayTradeSignal.position_size_multiplier * 100).toFixed(0)}% of normal size
+${dayTradeSignal.optimal_for_trading ? '✅ *Status:* Optimal for trading' : '⚠️ *Status:* Sub-optimal liquidity'}
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 🌊 *SWING TRADE SIGNAL*
 ━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4721,6 +4788,17 @@ ${resistanceLevels.length > 0 ? `📊 *Key Levels:*
 📊 *R:R:* ${swingPosition.reward_risk_ratio}:1
 
 ${swingPosition.warning ? `⚠️ ${swingPosition.warning}` : ''}
+
+💧 *LIQUIDITY ANALYSIS:*
+${swingTradeSignal.liquidity_score >= 70 ? '🟢' : swingTradeSignal.liquidity_score >= 50 ? '🟡' : '🔴'} *Score:* ${swingTradeSignal.liquidity_score}/100
+🌐 *Session:* ${swingTradeSignal.session} (${swingTradeSignal.time_zone} LIQUIDITY)
+📊 *Volume:* ${swingTradeSignal.volume_trend} (${swingTradeSignal.volume_percentile}%ile)
+💰 *Spread:* ~${swingTradeSignal.estimated_spread_pips} pips
+📉 *Impact:* ~${swingTradeSignal.price_impact_bps} bps ($100K)
+
+💼 *POSITION SIZING:*
+${swingTradeSignal.position_size_multiplier >= 1.0 ? '🟢' : swingTradeSignal.position_size_multiplier >= 0.75 ? '🟡' : '🔴'} *Recommended:* ${(swingTradeSignal.position_size_multiplier * 100).toFixed(0)}% of normal size
+${swingTradeSignal.optimal_for_trading ? '✅ *Status:* Optimal for trading' : '⚠️ *Status:* Sub-optimal liquidity'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 📝 *RECOMMENDATION*
