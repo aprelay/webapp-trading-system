@@ -638,4 +638,130 @@ app.get('/debug/data-check', async (c) => {
   }
 })
 
+/**
+ * TEST Endpoint - Send sample micro trade alert to Telegram
+ */
+app.get('/test-alert', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    // Get Telegram config
+    const settings = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings
+      WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+    `).all()
+    
+    const config: any = {}
+    for (const row of settings.results || []) {
+      config[(row as any).setting_key] = (row as any).setting_value
+    }
+    
+    if (!config.telegram_bot_token || !config.telegram_chat_id) {
+      return c.json({
+        success: false,
+        message: 'Telegram not configured',
+        config: {
+          hasToken: !!config.telegram_bot_token,
+          hasChat: !!config.telegram_chat_id
+        }
+      }, 400)
+    }
+    
+    // Create sample micro trade signal
+    const sampleSignal: MicroTradeSetup = {
+      signal_type: 'BUY',
+      price: 4509.88,
+      stop_loss: 4501.88,  // 8 pips
+      take_profit_1: 4519.88,  // 10 pips
+      take_profit_2: 4527.88,  // 18 pips
+      take_profit_3: 4534.88,  // 25 pips
+      confidence: 78.5,
+      setup_type: 'BREAKOUT',
+      trend_5m: 'BULLISH',
+      trend_15m: 'BULLISH',
+      indicators_5m: {
+        rsi: 68.5,
+        macd: 2.15,
+        macd_signal: 1.85,
+        macd_histogram: 0.30,
+        adx: 32.8,
+        stochastic_k: 75.2,
+        stochastic_d: 72.8,
+        ema_20: 4505.50,
+        volume: 1250
+      },
+      reason: '📈 BREAKOUT Setup: Price broke above 15m resistance at $4508.50 with strong volume. 5m trend: BULLISH ✅, 15m trend: BULLISH ✅. RSI showing momentum (68.5), MACD bullish divergence, ADX confirming trend strength (32.8)'
+    }
+    
+    const liquidityMetrics = {
+      liquidity_score: 85,
+      session: 'NEW_YORK',
+      time_zone: 'HIGH',
+      volume_trend: 'INCREASING',
+      volume_percentile: 95,
+      estimated_spread_pips: 25,
+      price_impact_bps: 8,
+      market_depth_score: 80,
+      optimal_for_trading: true
+    }
+    
+    const positionSize = {
+      multiplier: 0.95,
+      lots: 0.19,
+      value: 950,
+      risk_amount: 7.60,
+      risk_percent: 0.08
+    }
+    
+    // Format the alert
+    const message = formatMicroTradeAlert(
+      sampleSignal,
+      liquidityMetrics.liquidity_score,
+      liquidityMetrics.session,
+      liquidityMetrics.volume_trend,
+      liquidityMetrics.volume_percentile,
+      liquidityMetrics.estimated_spread_pips,
+      positionSize,
+      999  // Test signal number
+    )
+    
+    // Add TEST marker
+    const testMessage = `⚠️ *TEST ALERT - MARKET CLOSED (WEEKEND)* ⚠️\n\n${message}\n\n✅ This is a test alert to show you what micro-trade signals will look like.\n\n📅 Real signals will start appearing when market opens Monday.`
+    
+    // Send to Telegram
+    const sent = await sendTelegramMessage(
+      config.telegram_bot_token,
+      config.telegram_chat_id,
+      testMessage
+    )
+    
+    if (sent) {
+      return c.json({
+        success: true,
+        message: 'Test alert sent to Telegram successfully!',
+        preview: testMessage,
+        telegram_config: {
+          hasToken: true,
+          hasChat: true,
+          chatId: config.telegram_chat_id
+        }
+      })
+    } else {
+      return c.json({
+        success: false,
+        message: 'Failed to send test alert to Telegram',
+        preview: testMessage
+      }, 500)
+    }
+    
+  } catch (error: any) {
+    console.error('[MICRO TEST] Error:', error)
+    return c.json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    }, 500)
+  }
+})
+
 export default app

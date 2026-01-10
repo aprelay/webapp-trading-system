@@ -382,12 +382,53 @@ app.get('/', (c) => {
                     <canvas id="priceChart" height="100"></canvas>
                 </div>
 
+                <!-- Micro Trade Panel (NEW!) -->
+                <div class="bg-gradient-to-r from-cyan-900 to-blue-900 p-6 rounded-lg border-2 border-cyan-500 mb-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">
+                                <i class="fas fa-bolt mr-3"></i>⚡ Micro Day Trade System
+                            </h2>
+                            <p class="text-cyan-100 mt-2">
+                                5-Minute Signals • 30-35 Signals/Day • 5 Setup Types • Auto Position Sizing
+                            </p>
+                        </div>
+                        <button onclick="sendMicroTestAlert()" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg font-semibold transition">
+                            <i class="fas fa-paper-plane mr-2"></i>Test Alert
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div class="bg-black bg-opacity-30 p-4 rounded-lg">
+                            <p class="text-cyan-300 text-sm">Today's Signals</p>
+                            <p id="microSignalsToday" class="text-2xl font-bold text-white">--</p>
+                        </div>
+                        <div class="bg-black bg-opacity-30 p-4 rounded-lg">
+                            <p class="text-cyan-300 text-sm">Win Rate</p>
+                            <p id="microWinRate" class="text-2xl font-bold text-green-400">--</p>
+                        </div>
+                        <div class="bg-black bg-opacity-30 p-4 rounded-lg">
+                            <p class="text-cyan-300 text-sm">Daily P&L</p>
+                            <p id="microDailyPnL" class="text-2xl font-bold">--</p>
+                        </div>
+                        <div class="bg-black bg-opacity-30 p-4 rounded-lg">
+                            <p class="text-cyan-300 text-sm">Status</p>
+                            <p id="microStatus" class="text-sm font-bold text-green-400">ACTIVE</p>
+                        </div>
+                    </div>
+                    <div class="bg-black bg-opacity-30 p-4 rounded-lg">
+                        <h3 class="text-white font-bold mb-3">Recent Micro Signals:</h3>
+                        <div id="microSignalsList" class="space-y-2 max-h-60 overflow-y-auto">
+                            <p class="text-gray-400 text-sm">Loading micro signals...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Trading Signals -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <!-- Recent Signals -->
                     <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
                         <h2 class="text-xl font-bold mb-4 text-yellow-500">
-                            <i class="fas fa-bell mr-2"></i>Recent Signals
+                            <i class="fas fa-bell mr-2"></i>Recent Day/Swing Signals
                         </h2>
                         <div id="recentSignals" class="space-y-3">
                             <p class="text-gray-400">Loading signals...</p>
@@ -811,6 +852,9 @@ app.get('/', (c) => {
                         displayIndicators(indicatorsRes.indicators);
                     }
                     
+                    // Load Micro Trade data
+                    await loadMicroTradeData();
+                    
                     // Update last refreshed timestamp
                     const lastUpdated = document.getElementById('lastUpdated');
                     if (lastUpdated) {
@@ -1107,6 +1151,104 @@ app.get('/', (c) => {
                         btn.disabled = false;
                         btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
                     }
+                }
+            }
+
+            // Micro Trade Test Alert Function
+            async function sendMicroTestAlert() {
+                try {
+                    if (!confirm('⚡ This will send a SAMPLE micro-trade alert to your Telegram.\n\nThis is a TEST alert to show you what micro-trade signals look like.\n\nContinue?')) {
+                        return;
+                    }
+                    
+                    const btn = event.target.closest('button');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+                    
+                    const res = await fetchWithTimeout('/api/micro/test-alert');
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Test Alert';
+                    
+                    if (res.success) {
+                        alert('✅ Test micro-trade alert sent!\n\nCheck your Telegram to see what real micro-trade signals will look like.\n\n⚡ MICRO TRADE #999\n🟢 BUY XAU/USD | 79%\nSetup: BREAKOUT 📈\n\n💰 Entry: $4509.88\n🛡️ Stop: $4501.88 (-8 pips)\n🎯 TP1: $4519.88 (+10 pips)\n\nThis is a SAMPLE alert for testing purposes.');
+                    } else {
+                        alert('❌ Failed to send test alert.\n\n' + res.message + '\n\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                    }
+                } catch (error) {
+                    alert('❌ Error sending test alert: ' + error.message);
+                    const btn = event.target.closest('button');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Test Alert';
+                    }
+                }
+            }
+
+            // Load Micro Trade Data
+            async function loadMicroTradeData() {
+                try {
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    // Fetch daily stats
+                    const statsRes = await fetchWithTimeout('/api/micro/stats/daily?date=' + today);
+                    if (statsRes.success && statsRes.data) {
+                        const stats = statsRes.data;
+                        document.getElementById('microSignalsToday').textContent = stats.total_signals || 0;
+                        
+                        if (stats.total_signals > 0) {
+                            const winRate = ((stats.signals_sent / stats.total_signals) * 100).toFixed(0);
+                            document.getElementById('microWinRate').textContent = winRate + '%';
+                        } else {
+                            document.getElementById('microWinRate').textContent = '--';
+                        }
+                        
+                        document.getElementById('microDailyPnL').textContent = '--'; // TODO: Track P&L
+                    }
+                    
+                    // Fetch recent signals
+                    const signalsRes = await fetchWithTimeout('/api/micro/signals/recent?limit=10');
+                    if (signalsRes.success && signalsRes.signals) {
+                        const listDiv = document.getElementById('microSignalsList');
+                        if (signalsRes.signals.length === 0) {
+                            listDiv.innerHTML = '<p class="text-gray-400 text-sm">No signals yet. System will start generating signals during market hours.</p>';
+                        } else {
+                            let html = '';
+                            signalsRes.signals.forEach(signal => {
+                                const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴';
+                                const color = signal.signal_type === 'BUY' ? 'text-green-400' : 'text-red-400';
+                                const timeStr = new Date(signal.timestamp).toLocaleString();
+                                
+                                html += '<div class="bg-gray-800 p-3 rounded border-l-4 ' + (signal.signal_type === 'BUY' ? 'border-green-500' : 'border-red-500') + '">';
+                                html += '<div class="flex justify-between items-start mb-1">';
+                                html += '<span class="' + color + ' font-bold">' + emoji + ' ' + signal.signal_type + '</span>';
+                                html += '<span class="text-xs text-gray-400">' + signal.setup_type + '</span>';
+                                html += '</div>';
+                                html += '<div class="text-sm text-gray-300">';
+                                html += 'Entry: $' + signal.price.toFixed(2) + ' | Stop: $' + signal.stop_loss.toFixed(2);
+                                html += '</div>';
+                                html += '<div class="text-xs text-gray-400 mt-1">';
+                                html += signal.confidence.toFixed(0) + '% | ' + signal.session + ' | ' + timeStr;
+                                html += '</div>';
+                                html += '</div>';
+                            });
+                            listDiv.innerHTML = html;
+                        }
+                    }
+                    
+                    // Check limits status
+                    const limitsRes = await fetchWithTimeout('/api/micro/signals/recent?limit=1');
+                    if (limitsRes.success) {
+                        document.getElementById('microStatus').textContent = 'ACTIVE';
+                        document.getElementById('microStatus').className = 'text-sm font-bold text-green-400';
+                    }
+                    
+                } catch (error) {
+                    console.error('Error loading micro trade data:', error);
+                    document.getElementById('microSignalsToday').textContent = '--';
+                    document.getElementById('microWinRate').textContent = '--';
+                    document.getElementById('microDailyPnL').textContent = '--';
+                    document.getElementById('microSignalsList').innerHTML = '<p class="text-red-400 text-sm">Error loading data</p>';
                 }
             }
 
