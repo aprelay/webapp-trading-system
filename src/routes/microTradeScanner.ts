@@ -280,17 +280,17 @@ app.get('/scan', async (c) => {
       volume: c.volume || 1
     })).reverse()
     
-    // Step 3: Fetch 15-minute candles for confirmation
+    // Step 3: Fetch 15-minute candles for confirmation (need at least 50 for indicators)
     const candles15m = await DB.prepare(`
       SELECT timestamp, open, high, low, close, volume 
       FROM market_data 
       WHERE timeframe = '15m'
       ORDER BY timestamp DESC 
-      LIMIT 30
+      LIMIT 60
     `).all()
     
-    if (!candles15m.results || candles15m.results.length < 10) {
-      results.message = 'Insufficient 15m candle data'
+    if (!candles15m.results || candles15m.results.length < 50) {
+      results.message = `Insufficient 15m candle data (have ${candles15m.results?.length || 0}, need 50)`
       return c.json(results)
     }
     
@@ -307,8 +307,17 @@ app.get('/scan', async (c) => {
     const indicators5m = calculateIndicators(formatted5m)
     const indicators15m = calculateIndicators(formatted15m)
     
-    if (!indicators5m || !indicators15m) {
-      results.message = 'Failed to calculate indicators'
+    if (!indicators5m) {
+      console.error('[MICRO] Failed to calculate 5m indicators - data length:', formatted5m.length)
+      results.message = 'Failed to calculate 5m indicators'
+      results.data = { candles5m_count: formatted5m.length, first_candle: formatted5m[0], last_candle: formatted5m[formatted5m.length - 1] }
+      return c.json(results)
+    }
+    
+    if (!indicators15m) {
+      console.error('[MICRO] Failed to calculate 15m indicators - data length:', formatted15m.length)
+      results.message = 'Failed to calculate 15m indicators'
+      results.data = { candles15m_count: formatted15m.length }
       return c.json(results)
     }
     
@@ -569,6 +578,60 @@ app.get('/stats/daily', async (c) => {
       date,
       stats: stats || null,
       limits: limits || null
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+/**
+ * Debug endpoint - check what data is available
+ */
+app.get('/debug/data-check', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    // Check 5m data
+    const count5m = await DB.prepare(`
+      SELECT COUNT(*) as count FROM market_data WHERE timeframe = '5m'
+    `).first() as any
+    
+    const latest5m = await DB.prepare(`
+      SELECT timestamp, close FROM market_data WHERE timeframe = '5m' ORDER BY timestamp DESC LIMIT 1
+    `).first() as any
+    
+    // Check 15m data
+    const count15m = await DB.prepare(`
+      SELECT COUNT(*) as count FROM market_data WHERE timeframe = '15m'
+    `).first() as any
+    
+    const latest15m = await DB.prepare(`
+      SELECT timestamp, close FROM market_data WHERE timeframe = '15m' ORDER BY timestamp DESC LIMIT 1
+    `).first() as any
+    
+    // Check all timeframes
+    const allTimeframes = await DB.prepare(`
+      SELECT timeframe, COUNT(*) as count, MAX(timestamp) as latest 
+      FROM market_data 
+      GROUP BY timeframe
+      ORDER BY timeframe
+    `).all()
+    
+    return c.json({
+      success: true,
+      data: {
+        candles_5m: {
+          count: count5m?.count || 0,
+          latest: latest5m?.timestamp || null,
+          price: latest5m?.close || null
+        },
+        candles_15m: {
+          count: count15m?.count || 0,
+          latest: latest15m?.timestamp || null,
+          price: latest15m?.close || null
+        },
+        all_timeframes: allTimeframes.results || []
+      }
     })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
