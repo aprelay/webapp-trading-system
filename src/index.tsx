@@ -11,6 +11,7 @@ import backtestRouter from './routes/backtest'
 import telegramCommandsRouter from './routes/telegramCommands'
 import aiAnalysisRouter from './routes/aiAnalysis'
 import monitoringRouter from './routes/monitoring'
+import microTradeScannerRouter from './routes/microTradeScanner'
 
 type Bindings = {
   DB: D1Database;
@@ -31,6 +32,7 @@ app.route('/api/backtest', backtestRouter)
 app.route('/api/telegram', telegramCommandsRouter)
 app.route('/api/ai', aiAnalysisRouter)
 app.route('/api/monitoring', monitoringRouter)
+app.route('/api/micro', microTradeScannerRouter)
 
 // Homepage - Dashboard
 app.get('/', (c) => {
@@ -3027,6 +3029,43 @@ ${result.regime?.should_trade === false ? '⚠️ *WARNING: Extreme volatility d
     
   } catch (error: any) {
     console.error('[HEDGE-FUND-CRON] Error:', error)
+    return c.json({
+      success: false,
+      error: error.message,
+      execution_time_ms: Date.now() - startTime
+    }, 500)
+  }
+})
+
+// Micro Trade Scanner Cron - runs every 5 minutes
+// Generates high-frequency micro trades (30-35 signals/day, 5-minute timeframe)
+app.get('/api/cron/micro-trade', async (c) => {
+  const startTime = Date.now()
+  
+  try {
+    console.log('[MICRO-CRON] Starting micro trade scan')
+    
+    // Call the micro trade scanner
+    const scanResponse = await fetch(
+      `${c.req.url.replace('/api/cron/micro-trade', '/api/micro/scan')}`,
+      { method: 'GET' }
+    )
+    
+    if (!scanResponse.ok) {
+      throw new Error(`Micro scanner returned ${scanResponse.status}`)
+    }
+    
+    const result = await scanResponse.json()
+    const executionTime = Date.now() - startTime
+    
+    return c.json({
+      ...result,
+      execution_time_ms: executionTime,
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error: any) {
+    console.error('[MICRO-CRON] Error:', error)
     return c.json({
       success: false,
       error: error.message,
