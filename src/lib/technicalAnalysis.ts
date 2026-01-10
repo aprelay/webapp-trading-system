@@ -1,4 +1,5 @@
 // Technical Analysis Library for Gold/USD Trading
+import { calculateLiquidityScore, type LiquidityMetrics } from './liquidityAnalysis';
 
 export interface Candle {
   timestamp: string;
@@ -51,6 +52,19 @@ export interface TradeSignal {
   take_profit_3: number;
   confidence: number;
   reason: string;
+  // Liquidity fields
+  liquidity_score?: number;
+  session?: string;
+  time_zone?: string;
+  volume_trend?: string;
+  volume_percentile?: number;
+  estimated_spread_pips?: number;
+  price_impact_bps?: number;
+  market_depth_score?: number;
+  optimal_for_trading?: boolean;
+  liquidity_warnings?: string;
+  liquidity_recommendation?: string;
+  position_size_multiplier?: number;
 }
 
 // Calculate Simple Moving Average
@@ -633,5 +647,83 @@ export function generateSignal(
     take_profit_3: parseFloat(takeProfit3.toFixed(2)),
     confidence: parseFloat(confidence.toFixed(1)),
     reason: signals.join(', ')
+  };
+}
+
+/**
+ * Generate signal with liquidity analysis integrated
+ * This function combines technical analysis with liquidity metrics
+ */
+export function generateSignalWithLiquidity(
+  currentPrice: number,
+  indicators: TechnicalIndicators,
+  candles: Candle[],
+  tradingStyle: 'day_trade' | 'swing_trade'
+): TradeSignal {
+  // Step 1: Generate base technical signal
+  const baseSignal = generateSignal(currentPrice, indicators, tradingStyle);
+  
+  // Step 2: Calculate liquidity metrics
+  const liquidityMetrics: LiquidityMetrics = calculateLiquidityScore(candles);
+  
+  // Step 3: Adjust confidence based on liquidity
+  let adjustedConfidence = baseSignal.confidence;
+  
+  // Reduce confidence for poor liquidity
+  if (liquidityMetrics.liquidity_score < 50) {
+    adjustedConfidence *= 0.85; // Reduce by 15%
+  } else if (liquidityMetrics.liquidity_score < 60) {
+    adjustedConfidence *= 0.90; // Reduce by 10%
+  } else if (liquidityMetrics.liquidity_score < 70) {
+    adjustedConfidence *= 0.95; // Reduce by 5%
+  }
+  
+  // Boost confidence for excellent liquidity
+  if (liquidityMetrics.optimal_for_trading && liquidityMetrics.liquidity_score >= 80) {
+    adjustedConfidence = Math.min(adjustedConfidence * 1.05, 95); // Boost by 5%, max 95%
+  }
+  
+  // Step 4: Calculate position size multiplier based on liquidity
+  let positionSizeMultiplier = 1.0; // Default full size
+  
+  if (liquidityMetrics.liquidity_score < 40) {
+    positionSizeMultiplier = 0.25; // Reduce to 25%
+  } else if (liquidityMetrics.liquidity_score < 50) {
+    positionSizeMultiplier = 0.50; // Reduce to 50%
+  } else if (liquidityMetrics.liquidity_score < 60) {
+    positionSizeMultiplier = 0.75; // Reduce to 75%
+  } else if (liquidityMetrics.liquidity_score >= 80 && liquidityMetrics.optimal_for_trading) {
+    positionSizeMultiplier = 1.0; // Full size (can potentially use 1.25x for premium accounts)
+  }
+  
+  // Step 5: Update signal reason with liquidity insights
+  let enhancedReason = baseSignal.reason;
+  
+  if (liquidityMetrics.session) {
+    enhancedReason += ` | Session: ${liquidityMetrics.session}`;
+  }
+  
+  if (liquidityMetrics.warnings.length > 0) {
+    enhancedReason += ` | ⚠️ ${liquidityMetrics.warnings[0]}`; // Add first warning
+  }
+  
+  // Step 6: Return enhanced signal with liquidity data
+  return {
+    ...baseSignal,
+    confidence: parseFloat(adjustedConfidence.toFixed(1)),
+    reason: enhancedReason,
+    // Liquidity fields
+    liquidity_score: liquidityMetrics.liquidity_score,
+    session: liquidityMetrics.session,
+    time_zone: liquidityMetrics.time_of_day_zone,
+    volume_trend: liquidityMetrics.volume_trend,
+    volume_percentile: liquidityMetrics.volume_percentile,
+    estimated_spread_pips: liquidityMetrics.estimated_spread_pips,
+    price_impact_bps: liquidityMetrics.price_impact_bps,
+    market_depth_score: liquidityMetrics.market_depth_score,
+    optimal_for_trading: liquidityMetrics.optimal_for_trading,
+    liquidity_warnings: JSON.stringify(liquidityMetrics.warnings),
+    liquidity_recommendation: liquidityMetrics.recommendation,
+    position_size_multiplier: positionSizeMultiplier
   };
 }

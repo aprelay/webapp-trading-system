@@ -11,7 +11,7 @@
  */
 
 import { Hono } from 'hono'
-import { calculateIndicators, generateSignal, type Candle } from '../lib/technicalAnalysis'
+import { calculateIndicators, generateSignal, generateSignalWithLiquidity, type Candle } from '../lib/technicalAnalysis'
 import { sendTelegramMessage } from '../lib/telegram'
 import { calculateLiquidityScore, type LiquidityMetrics } from '../lib/liquidityAnalysis'
 import { checkTradingSafety, formatEvent } from '../lib/economicCalendar'

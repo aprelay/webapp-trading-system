@@ -13,7 +13,7 @@
  */
 
 import { Hono } from 'hono'
-import { calculateIndicators, generateSignal, type Candle } from '../lib/technicalAnalysis'
+import { calculateIndicators, generateSignal, generateSignalWithLiquidity, type Candle } from '../lib/technicalAnalysis'
 import { sendTelegramMessage } from '../lib/telegram'
 
 type Bindings = {
@@ -130,16 +130,44 @@ app.post('/simple', async (c) => {
     })
     
     // ============================================================
-    // STEP 3: GENERATE SIGNALS
+    // STEP 3: GENERATE SIGNALS WITH LIQUIDITY ANALYSIS
     // ============================================================
     
-    // Call generateSignal with correct signature: (currentPrice, indicators, tradingStyle)
-    const daySignal = generateSignal(currentPrice, indicators, 'day_trade')
-    const swingSignal = generateSignal(currentPrice, indicators, 'swing_trade')
+    // Get recent candles for liquidity analysis (need at least 20 candles)
+    const recentCandles = await DB.prepare(`
+      SELECT timestamp, open, high, low, close, volume
+      FROM market_data
+      WHERE timeframe = '1h'
+      ORDER BY timestamp DESC
+      LIMIT 25
+    `).all()
     
-    console.log('[SIMPLE] Generated signals:', {
-      day: daySignal.signal_type,
-      swing: swingSignal.signal_type
+    const candlesForLiquidity: Candle[] = (recentCandles.results || []).map((c: any) => ({
+      timestamp: c.timestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume || 1
+    })).reverse() // Reverse to get chronological order
+    
+    // Generate signals with liquidity analysis
+    const daySignal = generateSignalWithLiquidity(currentPrice, indicators, candlesForLiquidity, 'day_trade')
+    const swingSignal = generateSignalWithLiquidity(currentPrice, indicators, candlesForLiquidity, 'swing_trade')
+    
+    console.log('[SIMPLE] Generated signals with liquidity:', {
+      day: {
+        type: daySignal.signal_type,
+        confidence: daySignal.confidence,
+        liquidity_score: daySignal.liquidity_score,
+        session: daySignal.session
+      },
+      swing: {
+        type: swingSignal.signal_type,
+        confidence: swingSignal.confidence,
+        liquidity_score: swingSignal.liquidity_score,
+        session: swingSignal.session
+      }
     })
     
     // ============================================================
@@ -247,9 +275,14 @@ app.post('/simple', async (c) => {
         INSERT INTO signals (
           timestamp, signal_type, trading_style, price, 
           stop_loss, take_profit_1, take_profit_2, take_profit_3,
-          confidence, reason, telegram_sent, status, created_at
+          confidence, reason, telegram_sent, status, created_at,
+          liquidity_score, session, time_zone, volume_trend, volume_percentile,
+          estimated_spread_pips, price_impact_bps, market_depth_score,
+          optimal_for_trading, liquidity_warnings, liquidity_recommendation,
+          position_size_multiplier
         ) VALUES (
-          datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now')
+          datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now'),
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
       `).bind(
         daySignal.signal_type,
@@ -261,7 +294,20 @@ app.post('/simple', async (c) => {
         daySignal.take_profit_3,
         daySignal.confidence,
         daySignal.reason,
-        telegramSent ? 1 : 0
+        telegramSent ? 1 : 0,
+        // Liquidity fields
+        daySignal.liquidity_score || 50,
+        daySignal.session || 'UNKNOWN',
+        daySignal.time_zone || 'MEDIUM',
+        daySignal.volume_trend || 'STABLE',
+        daySignal.volume_percentile || 50,
+        daySignal.estimated_spread_pips || 40,
+        daySignal.price_impact_bps || 10,
+        daySignal.market_depth_score || 50,
+        daySignal.optimal_for_trading ? 1 : 0,
+        daySignal.liquidity_warnings || '[]',
+        daySignal.liquidity_recommendation || 'No recommendation',
+        daySignal.position_size_multiplier || 1.0
       ).run()
       
       // Save swing trade signal
@@ -269,9 +315,14 @@ app.post('/simple', async (c) => {
         INSERT INTO signals (
           timestamp, signal_type, trading_style, price, 
           stop_loss, take_profit_1, take_profit_2, take_profit_3,
-          confidence, reason, telegram_sent, status, created_at
+          confidence, reason, telegram_sent, status, created_at,
+          liquidity_score, session, time_zone, volume_trend, volume_percentile,
+          estimated_spread_pips, price_impact_bps, market_depth_score,
+          optimal_for_trading, liquidity_warnings, liquidity_recommendation,
+          position_size_multiplier
         ) VALUES (
-          datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now')
+          datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now'),
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
       `).bind(
         swingSignal.signal_type,
@@ -283,7 +334,20 @@ app.post('/simple', async (c) => {
         swingSignal.take_profit_3,
         swingSignal.confidence,
         swingSignal.reason,
-        telegramSent ? 1 : 0
+        telegramSent ? 1 : 0,
+        // Liquidity fields
+        swingSignal.liquidity_score || 50,
+        swingSignal.session || 'UNKNOWN',
+        swingSignal.time_zone || 'MEDIUM',
+        swingSignal.volume_trend || 'STABLE',
+        swingSignal.volume_percentile || 50,
+        swingSignal.estimated_spread_pips || 40,
+        swingSignal.price_impact_bps || 10,
+        swingSignal.market_depth_score || 50,
+        swingSignal.optimal_for_trading ? 1 : 0,
+        swingSignal.liquidity_warnings || '[]',
+        swingSignal.liquidity_recommendation || 'No recommendation',
+        swingSignal.position_size_multiplier || 1.0
       ).run()
       
       console.log('[SIMPLE] Signals saved to database')
