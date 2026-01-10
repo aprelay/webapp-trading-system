@@ -1157,7 +1157,7 @@ app.get('/', (c) => {
             // Micro Trade Test Alert Function
             async function sendMicroTestAlert() {
                 try {
-                    if (!confirm('⚡ This will send a SAMPLE micro-trade alert to your Telegram.\n\nThis is a TEST alert to show you what micro-trade signals look like.\n\nContinue?')) {
+                    if (!confirm('⚡ This will send a SAMPLE micro-trade alert to your Telegram.\\n\\nThis is a TEST alert to show you what micro-trade signals look like.\\n\\nContinue?')) {
                         return;
                     }
                     
@@ -1171,9 +1171,9 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Test Alert';
                     
                     if (res.success) {
-                        alert('✅ Test micro-trade alert sent!\n\nCheck your Telegram to see what real micro-trade signals will look like.\n\n⚡ MICRO TRADE #999\n🟢 BUY XAU/USD | 79%\nSetup: BREAKOUT 📈\n\n💰 Entry: $4509.88\n🛡️ Stop: $4501.88 (-8 pips)\n🎯 TP1: $4519.88 (+10 pips)\n\nThis is a SAMPLE alert for testing purposes.');
+                        alert('✅ Test micro-trade alert sent!\\n\\nCheck your Telegram to see what real micro-trade signals will look like.\\n\\n⚡ MICRO TRADE #999\\n🟢 BUY XAU/USD | 79%\\nSetup: BREAKOUT 📈\\n\\n💰 Entry: $4509.88\\n🛡️ Stop: $4501.88 (-8 pips)\\n🎯 TP1: $4519.88 (+10 pips)\\n\\nThis is a SAMPLE alert for testing purposes.');
                     } else {
-                        alert('❌ Failed to send test alert.\n\n' + res.message + '\n\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                        alert('❌ Failed to send test alert.\\n\\n' + res.message + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
