@@ -960,26 +960,26 @@ ${a}
       UPDATE micro_trade_limits 
       SET paused_until = ?, pause_reason = ?, updated_at = datetime('now')
       WHERE date = ?
-    `).bind(a.toISOString(),"Daily loss limit (-80 pips)",t).run(),{allowed:!1,reason:"Daily loss limit reached (-80 pips)",signals_sent_today:s.signals_sent_today,max_signals:n}}return{allowed:!0,signals_sent_today:s.signals_sent_today,max_signals:n}}function oi(e,t,s){const a=t>=80?1:t>=70?.9:t>=60?.7:.5,o=e.confidence>=75?1:e.confidence>=70?.9:e.confidence>=65?.8:.7,l={BREAKOUT:1,CONTINUATION:.95,PATTERN:.9,REVERSAL:.8,BOUNCE:.75}[e.setup_type]||.7,r=a*o*l,d=1e3*r,c=d/1e3*.1,m=Math.abs(e.price-e.stop_loss)/e.price*1e4*.01*c*100,u=m/1e4*100;return{multiplier:r,lots:Number(c.toFixed(2)),value:Number(d.toFixed(0)),risk_amount:Number(m.toFixed(2)),risk_percent:Number(u.toFixed(2))}}function pn(e,t,s,n,a,o,i,l){const r=e.signal_type==="BUY"?"🟢":"🔴",d={BREAKOUT:"📈",CONTINUATION:"➡️",REVERSAL:"🔄",BOUNCE:"⚡",PATTERN:"📊"}[e.setup_type]||"📍",c=t>=75?"🟢":t>=60?"🟡":"🔴",_=e.confidence>=75?"⭐⭐⭐":e.confidence>=70?"⭐⭐":e.confidence>=65?"⭐":"",p=Math.abs(e.price-e.stop_loss)/e.price*1e4,m=Math.abs(e.take_profit_1-e.price)/e.price*1e4,u=m/p,g=new Date,h=`${g.getUTCHours().toString().padStart(2,"0")}:${g.getUTCMinutes().toString().padStart(2,"0")} UTC`;let f=`${r} *MICRO TRADE #${l}* ${d}
+    `).bind(a.toISOString(),"Daily loss limit (-80 pips)",t).run(),{allowed:!1,reason:"Daily loss limit reached (-80 pips)",signals_sent_today:s.signals_sent_today,max_signals:n}}return{allowed:!0,signals_sent_today:s.signals_sent_today,max_signals:n}}function oi(e,t,s){const a=t>=80?1:t>=70?.9:t>=60?.7:.5,o=e.confidence>=75?1:e.confidence>=70?.9:e.confidence>=65?.8:.7,l={BREAKOUT:1,CONTINUATION:.95,PATTERN:.9,REVERSAL:.8,BOUNCE:.75}[e.setup_type]||.7,r=a*o*l,d=1e3*r,c=d/1e3*.1,m=Math.abs(e.price-e.stop_loss)/e.price*1e4*.01*c*100,u=m/1e4*100;return{multiplier:r,lots:Number(c.toFixed(2)),value:Number(d.toFixed(0)),risk_amount:Number(m.toFixed(2)),risk_percent:Number(u.toFixed(2))}}function pn(e,t,s,n,a,o,i,l){const r=e.signal_type==="BUY"?"🟢":"🔴",d={BREAKOUT:"📈",CONTINUATION:"➡️",REVERSAL:"🔄",BOUNCE:"⚡",PATTERN:"📊"}[e.setup_type]||"📍",c=t>=75?"🟢":t>=60?"🟡":"🔴",_=e.confidence>=75?"⭐⭐⭐":e.confidence>=70?"⭐⭐":e.confidence>=65?"⭐":"",p=Math.abs(e.price-e.stop_loss)/e.price*1e4,m=Math.abs(e.take_profit_1-e.price)/e.price*1e4,u=m/p,g=new Date,h=`${g.getUTCHours().toString().padStart(2,"0")}:${g.getUTCMinutes().toString().padStart(2,"0")} UTC`;let f=`${r} <b>MICRO TRADE #${l}</b> ${d}
 
-`;f+=`*${e.signal_type}* XAU/USD | ${e.confidence.toFixed(0)}% ${_}
+`;f+=`<b>${e.signal_type}</b> XAU/USD | ${e.confidence.toFixed(0)}% ${_}
 `,f+=`Setup: ${e.setup_type} ${e.trend_5m==="BULLISH"?"📈":e.trend_5m==="BEARISH"?"📉":"➡️"}
 
-`,f+=`💰 *Entry:* $${e.price.toFixed(2)} (NOW!)
-`,f+=`🛡️ *Stop:* $${e.stop_loss.toFixed(2)} (-${p.toFixed(0)} pips)
-`,f+=`🎯 *TP1:* $${e.take_profit_1.toFixed(2)} (+${m.toFixed(0)} pips) - Take 50%
-`,f+=`🎯 *TP2:* $${e.take_profit_2.toFixed(2)} - Take 30%
-`,f+=`🎯 *TP3:* $${e.take_profit_3.toFixed(2)} - Trail rest
+`,f+=`💰 <b>Entry:</b> $${e.price.toFixed(2)} (NOW!)
+`,f+=`🛡️ <b>Stop:</b> $${e.stop_loss.toFixed(2)} (-${p.toFixed(0)} pips)
+`,f+=`🎯 <b>TP1:</b> $${e.take_profit_1.toFixed(2)} (+${m.toFixed(0)} pips) - Take 50%
+`,f+=`🎯 <b>TP2:</b> $${e.take_profit_2.toFixed(2)} - Take 30%
+`,f+=`🎯 <b>TP3:</b> $${e.take_profit_3.toFixed(2)} - Trail rest
 
 `,f+=`💧 Liquidity: ${c} ${t}/100 | ${s}
 `,f+=`📊 Volume: ${n} (${a}%ile)
 `,f+=`💰 Spread: ~${o} pips | R:R 1:${u.toFixed(1)}
 
-`;const y=i.multiplier>=.9?"🟢":i.multiplier>=.7?"🟡":"🔴";return f+=`${y} *Position:* ${i.lots} lots ($${i.value})
-`,f+=`⚠️ *Risk:* $${i.risk_amount} (${i.risk_percent}%)
+`;const y=i.multiplier>=.9?"🟢":i.multiplier>=.7?"🟡":"🔴";return f+=`${y} <b>Position:</b> ${i.lots} lots ($${i.value})
+`,f+=`⚠️ <b>Risk:</b> $${i.risk_amount} (${i.risk_percent}%)
 
-`,f+=`⏱️ *Valid:* 15 minutes
-`,f+=`⚡ *Execute immediately!*
+`,f+=`⏱️ <b>Valid:</b> 15 minutes
+`,f+=`⚡ <b>Execute immediately!</b>
 
 `,f+=`━━━━━━━━━━━━━━━━━━━━
 `,f+=`${e.reason}

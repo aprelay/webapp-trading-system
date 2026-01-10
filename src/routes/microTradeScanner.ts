@@ -725,13 +725,12 @@ app.get('/test-alert', async (c) => {
       999  // Test signal number
     )
     
-    // Add TEST marker
-    const testMessage = `⚠️ *TEST ALERT - MARKET CLOSED (WEEKEND)* ⚠️\n\n${message}\n\n✅ This is a test alert to show you what micro-trade signals will look like.\n\n📅 Real signals will start appearing when market opens Monday.`
+    // Add TEST marker (using HTML format)
+    const testMessage = `⚠️ <b>TEST ALERT - MARKET CLOSED (WEEKEND)</b> ⚠️\n\n${message}\n\n✅ This is a test alert to show you what micro-trade signals will look like.\n\n📅 Real signals will start appearing when market opens Monday.`
     
     // Send to Telegram
     const sent = await sendTelegramMessage(
-      config.telegram_bot_token,
-      config.telegram_chat_id,
+      { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
       testMessage
     )
     
