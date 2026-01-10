@@ -3099,49 +3099,49 @@ app.get('/api/cron/hedge-fund', async (c) => {
       }
       
       if (config.telegram_bot_token && config.telegram_chat_id) {
-        // Format hedge fund message
+        // Format hedge fund message (using HTML format)
         const message = `
-🏦 *HEDGE FUND GRADE SIGNAL*
+🏦 <b>HEDGE FUND GRADE SIGNAL</b>
 ⏰ ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-📈 *DAY TRADE*
+📈 <b>DAY TRADE</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${dayTrade.signal_type} (${dayTrade.enhanced_confidence}% confidence)
 
-*Entry:* $${dayTrade.price.toFixed(2)}
-*Stop Loss:* $${dayTrade.stop_loss.toFixed(2)}
-*TP1:* $${dayTrade.take_profit_1.toFixed(2)}
-*TP2:* $${dayTrade.take_profit_2.toFixed(2)}
-*TP3:* $${dayTrade.take_profit_3.toFixed(2)}
+<b>Entry:</b> $${dayTrade.price.toFixed(2)}
+<b>Stop Loss:</b> $${dayTrade.stop_loss.toFixed(2)}
+<b>TP1:</b> $${dayTrade.take_profit_1.toFixed(2)}
+<b>TP2:</b> $${dayTrade.take_profit_2.toFixed(2)}
+<b>TP3:</b> $${dayTrade.take_profit_3.toFixed(2)}
 
-📊 *Advanced Metrics:*
+📊 <b>Advanced Metrics:</b>
 • VaR(95%): $${dayTrade.var_95?.toFixed(2) || 0}
 • Drawdown: ${dayTrade.current_drawdown_pct?.toFixed(1) || 0}%
 • Portfolio Heat: ${dayTrade.portfolio_heat_pct?.toFixed(1) || 0}%
 • Profit Probability: ${result.profit_probability?.tp1 || 0}%
 
-🌊 *Market Regime:* ${result.regime?.volatility || 'UNKNOWN'}
-💧 *Liquidity:* ${result.liquidity?.score || 0}/100 ${result.liquidity?.recommendation || ''}
+🌊 <b>Market Regime:</b> ${result.regime?.volatility || 'UNKNOWN'}
+💧 <b>Liquidity:</b> ${result.liquidity?.score || 0}/100 ${result.liquidity?.recommendation || ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-🌊 *SWING TRADE*
+🌊 <b>SWING TRADE</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${swingTrade.signal_type} (${swingTrade.enhanced_confidence}% confidence)
 
-*Entry:* $${swingTrade.price.toFixed(2)}
-*Stop Loss:* $${swingTrade.stop_loss.toFixed(2)}
-*TP1:* $${swingTrade.take_profit_1.toFixed(2)}
-*TP2:* $${swingTrade.take_profit_2.toFixed(2)}
-*TP3:* $${swingTrade.take_profit_3.toFixed(2)}
+<b>Entry:</b> $${swingTrade.price.toFixed(2)}
+<b>Stop Loss:</b> $${swingTrade.stop_loss.toFixed(2)}
+<b>TP1:</b> $${swingTrade.take_profit_1.toFixed(2)}
+<b>TP2:</b> $${swingTrade.take_profit_2.toFixed(2)}
+<b>TP3:</b> $${swingTrade.take_profit_3.toFixed(2)}
 
-📊 *Risk Metrics:*
+📊 <b>Risk Metrics:</b>
 • VaR(99%): $${swingTrade.var_99?.toFixed(2) || 0}
 • Max Drawdown: ${swingTrade.current_drawdown_pct?.toFixed(1) || 0}%
 
-${result.regime?.should_trade === false ? '⚠️ *WARNING: Extreme volatility detected*' : ''}
+${result.regime?.should_trade === false ? '⚠️ <b>WARNING: Extreme volatility detected</b>' : ''}
 
 🌐 Dashboard: ${c.req.url.replace('/api/cron/hedge-fund', '')}
         `.trim()
