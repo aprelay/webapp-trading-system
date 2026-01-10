@@ -205,26 +205,26 @@ function formatMicroTradeAlert(
   const now = new Date()
   const timeStr = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')} UTC`
   
-  let message = `${emoji} *MICRO TRADE #${signalNumber}* ${setupEmoji}\n\n`
-  message += `*${signal.signal_type}* XAU/USD | ${signal.confidence.toFixed(0)}% ${confidenceEmoji}\n`
+  let message = `${emoji} <b>MICRO TRADE #${signalNumber}</b> ${setupEmoji}\n\n`
+  message += `<b>${signal.signal_type}</b> XAU/USD | ${signal.confidence.toFixed(0)}% ${confidenceEmoji}\n`
   message += `Setup: ${signal.setup_type} ${signal.trend_5m === 'BULLISH' ? '📈' : signal.trend_5m === 'BEARISH' ? '📉' : '➡️'}\n\n`
   
-  message += `💰 *Entry:* $${signal.price.toFixed(2)} (NOW!)\n`
-  message += `🛡️ *Stop:* $${signal.stop_loss.toFixed(2)} (-${stopPips.toFixed(0)} pips)\n`
-  message += `🎯 *TP1:* $${signal.take_profit_1.toFixed(2)} (+${tp1Pips.toFixed(0)} pips) - Take 50%\n`
-  message += `🎯 *TP2:* $${signal.take_profit_2.toFixed(2)} - Take 30%\n`
-  message += `🎯 *TP3:* $${signal.take_profit_3.toFixed(2)} - Trail rest\n\n`
+  message += `💰 <b>Entry:</b> $${signal.price.toFixed(2)} (NOW!)\n`
+  message += `🛡️ <b>Stop:</b> $${signal.stop_loss.toFixed(2)} (-${stopPips.toFixed(0)} pips)\n`
+  message += `🎯 <b>TP1:</b> $${signal.take_profit_1.toFixed(2)} (+${tp1Pips.toFixed(0)} pips) - Take 50%\n`
+  message += `🎯 <b>TP2:</b> $${signal.take_profit_2.toFixed(2)} - Take 30%\n`
+  message += `🎯 <b>TP3:</b> $${signal.take_profit_3.toFixed(2)} - Trail rest\n\n`
   
   message += `💧 Liquidity: ${liquidityEmoji} ${liquidityScore}/100 | ${session}\n`
   message += `📊 Volume: ${volumeTrend} (${volumePercentile}%ile)\n`
   message += `💰 Spread: ~${estimatedSpread} pips | R:R 1:${rrRatio.toFixed(1)}\n\n`
   
   const posEmoji = positionSize.multiplier >= 0.9 ? '🟢' : positionSize.multiplier >= 0.7 ? '🟡' : '🔴'
-  message += `${posEmoji} *Position:* ${positionSize.lots} lots ($${positionSize.value})\n`
-  message += `⚠️ *Risk:* $${positionSize.risk_amount} (${positionSize.risk_percent}%)\n\n`
+  message += `${posEmoji} <b>Position:</b> ${positionSize.lots} lots ($${positionSize.value})\n`
+  message += `⚠️ <b>Risk:</b> $${positionSize.risk_amount} (${positionSize.risk_percent}%)\n\n`
   
-  message += `⏱️ *Valid:* 15 minutes\n`
-  message += `⚡ *Execute immediately!*\n\n`
+  message += `⏱️ <b>Valid:</b> 15 minutes\n`
+  message += `⚡ <b>Execute immediately!</b>\n\n`
   
   message += `━━━━━━━━━━━━━━━━━━━━\n`
   message += `${signal.reason}\n\n`
