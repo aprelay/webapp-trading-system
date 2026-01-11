@@ -134,13 +134,13 @@ app.get('/', (c) => {
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
                             <h2 class="text-2xl font-bold text-white mb-2">
-                                <i class="fas fa-crosshairs mr-3"></i> 5M-Assassin Scanner (Every 5 Minutes)
+                                <i class="fas fa-crosshairs mr-3"></i>🎯 5M-Assassin Scanner (Every 5 Minutes)
                             </h2>
                             <p class="text-green-100 mb-4">
                                 7-Layer Analysis • A/B/C Grading • Instant Telegram Alerts for A-Grade Setups • Auto-running in background
                             </p>
                             <div id="scannerStatus" class="text-sm text-green-200">
-                                 Auto-scanning every 5 minutes... Click button to scan NOW →
+                                🤖 Auto-scanning every 5 minutes... Click button to scan NOW →
                             </div>
                         </div>
                         <button 
@@ -168,7 +168,7 @@ app.get('/', (c) => {
                 <!-- Market Trading Hours Clock (NEW!) -->
                 <div class="bg-gradient-to-r from-purple-900 to-indigo-900 p-6 rounded-lg border-2 border-purple-500 mb-6 shadow-xl">
                     <h2 class="text-2xl font-bold text-white mb-4">
-                        <i class="fas fa-clock mr-3"></i> Global Market Hours
+                        <i class="fas fa-clock mr-3"></i>🌍 Global Market Hours
                     </h2>
                     <p class="text-purple-100 mb-4 text-sm">
                         Gold/USD trades 24 hours Monday-Friday. Market opens Sunday 5:00 PM EST, closes Friday 5:00 PM EST.
@@ -179,7 +179,7 @@ app.get('/', (c) => {
                         <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="text-lg font-bold text-white">
-                                     Asia/Tokyo
+                                    🌏 Asia/Tokyo
                                 </h3>
                                 <span id="asiaStatus" class="px-2 py-1 rounded text-xs font-bold bg-gray-700 text-gray-300">
                                     --
@@ -201,7 +201,7 @@ app.get('/', (c) => {
                         <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="text-lg font-bold text-white">
-                                     London
+                                    🇬🇧 London
                                 </h3>
                                 <span id="londonStatus" class="px-2 py-1 rounded text-xs font-bold bg-gray-700 text-gray-300">
                                     --
@@ -223,7 +223,7 @@ app.get('/', (c) => {
                         <div class="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="text-lg font-bold text-white">
-                                     New York
+                                    🇺🇸 New York
                                 </h3>
                                 <span id="newYorkStatus" class="px-2 py-1 rounded text-xs font-bold bg-gray-700 text-gray-300">
                                     --
@@ -264,7 +264,7 @@ app.get('/', (c) => {
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex-1">
                             <h2 class="text-2xl font-bold text-white mb-2">
-                                <i class="fas fa-heartbeat mr-3"></i> System Health Monitor
+                                <i class="fas fa-heartbeat mr-3"></i>🔍 System Health Monitor
                             </h2>
                             <p class="text-blue-100 mb-2">
                                 Real-time health checks • 5 Endpoints • 7 Data Sources • Auto-monitoring every 5 minutes
@@ -389,7 +389,7 @@ app.get('/', (c) => {
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h2 class="text-2xl font-bold text-white">
-                                <i class="fas fa-bolt mr-3"></i> Hybrid Micro Signals (Live)
+                                <i class="fas fa-bolt mr-3"></i>🎯 Hybrid Micro Signals (Live)
                             </h2>
                             <p class="text-cyan-100 mt-2">
                                 Grade A+/A/B • 10 Quality Filters • Position Sizing 0.5x-2x • Auto Telegram Alerts
@@ -483,7 +483,7 @@ app.get('/', (c) => {
                             <i class="fab fa-telegram mr-2"></i>Test Telegram
                         </button>
                         <button id="testAlertBtn" onclick="sendTestAlert()" class="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-lg font-semibold transition">
-                            <i class="fas fa-paper-plane mr-2"></i> Send Test A-Grade Alert
+                            <i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert
                         </button>
                         <button id="fetchBtn" onclick="fetchMarketData()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition">
                             <i class="fas fa-download mr-2"></i>Fetch Market Data
@@ -492,13 +492,13 @@ app.get('/', (c) => {
                             <i class="fas fa-chart-line mr-2"></i>Generate Signal NOW
                         </button>
                         <button id="enhancedBtn" onclick="generateEnhancedSignal()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold transition">
-                            <i class="fas fa-rocket mr-2"></i> Hedge Fund Signal
+                            <i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal
                         </button>
                         <button onclick="runBacktest()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold transition">
-                            <i class="fas fa-history mr-2"></i> Run Backtest
+                            <i class="fas fa-history mr-2"></i>📊 Run Backtest
                         </button>
                         <button onclick="runAIAnalysis(event)" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-lg" id="aiAnalysisBtn">
-                            <i class="fas fa-brain mr-2"></i> AI Market Analysis
+                            <i class="fas fa-brain mr-2"></i>🤖 AI Market Analysis
                         </button>
                     </div>
                 </div>
@@ -516,7 +516,7 @@ app.get('/', (c) => {
                 <!-- AI Market Analysis Panel -->
                 <div id="aiAnalysisResults" class="bg-gradient-to-r from-cyan-900 to-blue-900 p-6 rounded-lg border-2 border-cyan-400 mt-6 hidden">
                     <h3 class="text-2xl font-bold text-white mb-4">
-                        <i class="fas fa-brain mr-2"></i> AI Market Analysis
+                        <i class="fas fa-brain mr-2"></i>🤖 AI Market Analysis
                     </h3>
                     <div id="aiAnalysisDetails" class="space-y-4 text-white">
                         <!-- Analysis will be inserted here -->
@@ -563,7 +563,7 @@ app.get('/', (c) => {
                 clock: '<i class="fas fa-clock text-gray-400"></i>'
             };
             
-            //  Helper function: Native fetch with timeout
+            // ⚡ Helper function: Native fetch with timeout
             async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -603,18 +603,18 @@ app.get('/', (c) => {
                 const asiaWeekend = asiaDay === 0 || asiaDay === 6;
                 
                 if (asiaWeekend) {
-                    document.getElementById('asiaStatus').textContent = 'CLOSED';
+                    document.getElementById('asiaStatus').textContent = '🔴 CLOSED';
                     document.getElementById('asiaStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-red-600 text-white';
                     document.getElementById('asiaNextOpen').textContent = 'Opens: Monday 00:00 JST';
                 } else if (asiaOpen) {
-                    document.getElementById('asiaStatus').textContent = 'OPEN';
+                    document.getElementById('asiaStatus').textContent = '🟢 OPEN';
                     document.getElementById('asiaStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-green-600 text-white';
                     const closeTime = new Date(asiaTime);
                     closeTime.setHours(9, 0, 0, 0);
                     const minutesUntilClose = Math.floor((closeTime - asiaTime) / 60000);
                     document.getElementById('asiaNextOpen').textContent = \`Closes in \${Math.floor(minutesUntilClose / 60)}h \${minutesUntilClose % 60}m\`;
                 } else {
-                    document.getElementById('asiaStatus').textContent = 'CLOSED';
+                    document.getElementById('asiaStatus').textContent = '⚪ CLOSED';
                     document.getElementById('asiaStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-gray-600 text-white';
                     const nextOpen = new Date(asiaTime);
                     if (asiaHour >= 9) {
@@ -638,18 +638,18 @@ app.get('/', (c) => {
                 const londonWeekend = londonDay === 0 || londonDay === 6;
                 
                 if (londonWeekend) {
-                    document.getElementById('londonStatus').textContent = 'CLOSED';
+                    document.getElementById('londonStatus').textContent = '🔴 CLOSED';
                     document.getElementById('londonStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-red-600 text-white';
                     document.getElementById('londonNextOpen').textContent = 'Opens: Monday 08:00 GMT';
                 } else if (londonOpen) {
-                    document.getElementById('londonStatus').textContent = 'OPEN';
+                    document.getElementById('londonStatus').textContent = '🟢 OPEN';
                     document.getElementById('londonStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-green-600 text-white';
                     const closeTime = new Date(londonTime);
                     closeTime.setHours(16, 30, 0, 0);
                     const minutesUntilClose = Math.floor((closeTime - londonTime) / 60000);
                     document.getElementById('londonNextOpen').textContent = \`Closes in \${Math.floor(minutesUntilClose / 60)}h \${minutesUntilClose % 60}m\`;
                 } else {
-                    document.getElementById('londonStatus').textContent = 'CLOSED';
+                    document.getElementById('londonStatus').textContent = '⚪ CLOSED';
                     document.getElementById('londonStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-gray-600 text-white';
                     if (londonHour < 8) {
                         document.getElementById('londonNextOpen').textContent = 'Opens: Today 08:00 GMT';
@@ -671,18 +671,18 @@ app.get('/', (c) => {
                 const nyWeekend = nyDay === 0 || nyDay === 6;
                 
                 if (nyWeekend) {
-                    document.getElementById('newYorkStatus').textContent = 'CLOSED';
+                    document.getElementById('newYorkStatus').textContent = '🔴 CLOSED';
                     document.getElementById('newYorkStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-red-600 text-white';
                     document.getElementById('newYorkNextOpen').textContent = 'Opens: Monday 08:00 EST';
                 } else if (nyOpen) {
-                    document.getElementById('newYorkStatus').textContent = 'OPEN';
+                    document.getElementById('newYorkStatus').textContent = '🟢 OPEN';
                     document.getElementById('newYorkStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-green-600 text-white';
                     const closeTime = new Date(nyTime);
                     closeTime.setHours(17, 0, 0, 0);
                     const minutesUntilClose = Math.floor((closeTime - nyTime) / 60000);
                     document.getElementById('newYorkNextOpen').textContent = \`Closes in \${Math.floor(minutesUntilClose / 60)}h \${minutesUntilClose % 60}m\`;
                 } else {
-                    document.getElementById('newYorkStatus').textContent = 'CLOSED';
+                    document.getElementById('newYorkStatus').textContent = '⚪ CLOSED';
                     document.getElementById('newYorkStatus').className = 'px-2 py-1 rounded text-xs font-bold bg-gray-600 text-white';
                     if (nyHour < 8) {
                         document.getElementById('newYorkNextOpen').textContent = 'Opens: Today 08:00 EST';
@@ -696,7 +696,7 @@ app.get('/', (c) => {
                 const allWeekend = asiaWeekend && londonWeekend && nyWeekend;
                 
                 if (allWeekend) {
-                    document.getElementById('marketOverallStatus').innerHTML = ' <i class="fas fa-calendar-times mr-2"></i>Weekend - All Markets Closed';
+                    document.getElementById('marketOverallStatus').innerHTML = '🔴 <i class="fas fa-calendar-times mr-2"></i>Weekend - All Markets Closed';
                     document.getElementById('nextMarketEvent').textContent = 'Opens: Monday';
                 } else if (anyOpen) {
                     const openMarkets = [];
@@ -718,7 +718,7 @@ app.get('/', (c) => {
                         document.getElementById('nextMarketEvent').textContent = \`\${nextEvent.name} in \${Math.floor(minutesUntil / 60)}h \${minutesUntil % 60}m\`;
                     }
                 } else {
-                    document.getElementById('marketOverallStatus').innerHTML = ' <i class="fas fa-moon mr-2"></i>All Markets Closed';
+                    document.getElementById('marketOverallStatus').innerHTML = '⚪ <i class="fas fa-moon mr-2"></i>All Markets Closed';
                     
                     // Find next opening event
                     const events = [];
@@ -755,7 +755,7 @@ app.get('/', (c) => {
                 await refreshData();
                 await refreshMonitoring(); // Load monitoring on startup
                 updateTradingClocks(); // Initialize clocks
-                setInterval(refreshData, 30000); // Refresh every 30 seconds  FASTER AUTO-REFRESH
+                setInterval(refreshData, 30000); // Refresh every 30 seconds ⚡ FASTER AUTO-REFRESH
                 setInterval(refreshMonitoring, 300000); // Refresh monitoring every 5 minutes
                 setInterval(updateTradingClocks, 1000); // Update clocks every second
             }
@@ -825,7 +825,7 @@ app.get('/', (c) => {
                     button.disabled = false;
                 } catch (error) {
                     console.error('Error refreshing monitoring:', error);
-                    document.getElementById('monitoringStatus').innerHTML = ' Error loading monitoring data';
+                    document.getElementById('monitoringStatus').innerHTML = '❌ Error loading monitoring data';
                     document.getElementById('monitorButton').disabled = false;
                 }
             }
@@ -854,7 +854,7 @@ app.get('/', (c) => {
                         }
                     };
                     
-                    //  OPTIMIZED: Load all data in parallel with 10-second timeout per request
+                    // ⚡ OPTIMIZED: Load all data in parallel with 10-second timeout per request
                     // Cron job handles fresh data fetching every minute
                     // Dashboard just displays cached data instantly
                     const [signalsRes, marketRes, indicatorsRes] = await Promise.all([
@@ -1136,19 +1136,19 @@ app.get('/', (c) => {
                 try {
                     const res = await fetchWithTimeout('/api/telegram/test', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     if (res.success) {
-                        alert('SUCCESS:  Telegram test message sent successfully!');
+                        alert('✅ Telegram test message sent successfully!');
                     } else {
-                        alert('ERROR:  Failed to send Telegram message. Check your settings.');
+                        alert('❌ Failed to send Telegram message. Check your settings.');
                     }
                 } catch (error) {
-                    alert('ERROR:  Error: ' + error.message);
+                    alert('❌ Error: ' + error.message);
                 }
             }
 
             // Send Test A-Grade Alert
             async function sendTestAlert() {
                 try {
-                    if (!confirm(' This will send a SAMPLE A-grade 5M setup alert to your Telegram.\\n\\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\\n\\nContinue?')) {
+                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\\n\\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\\n\\nContinue?')) {
                         return;
                     }
                     
@@ -1159,19 +1159,19 @@ app.get('/', (c) => {
                     const res = await fetchWithTimeout('/api/scanner/test-alert', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
                     
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Send Test A-Grade Alert';
+                    btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
                     
                     if (res.success) {
-                        alert('SUCCESS:  Test A-grade alert sent!\\n\\nCheck your Telegram to see what real alerts will look like.\\n\\nGrade: Grade: A (87%)\\nSignal: Signal: BUY\\nEntry: Entry: $4386.50\\nStop: Stop: $4401.50\\nTP1: TP1: $4356.20\\n\\nThis is a SAMPLE alert for testing purposes.');
+                        alert('✅ Test A-grade alert sent!\\n\\nCheck your Telegram to see what real alerts will look like.\\n\\n📊 Grade: A (87%)\\n🟢 Signal: BUY\\n💰 Entry: $4386.50\\n🛡️ Stop: $4401.50\\n🎯 TP1: $4356.20\\n\\nThis is a SAMPLE alert for testing purposes.');
                     } else {
-                        alert('ERROR:  Failed to send test alert.\\n\\n' + res.error + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                        alert('❌ Failed to send test alert.\\n\\n' + res.error + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
                     }
                 } catch (error) {
-                    alert('ERROR:  Error sending test alert: ' + error.message);
+                    alert('❌ Error sending test alert: ' + error.message);
                     const btn = document.getElementById('testAlertBtn');
                     if (btn) {
                         btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Send Test A-Grade Alert';
+                        btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
                     }
                 }
             }
@@ -1179,7 +1179,7 @@ app.get('/', (c) => {
             // Micro Trade Test Alert Function
             async function sendMicroTestAlert() {
                 try {
-                    if (!confirm('TARGET:  This will send a HYBRID GRADE A signal to your Telegram.\n\nThis test alert includes:\n Grade A badge (7/10 filters passed)\n Position multiplier (1.0x)\n Quality metrics\n\nContinue?')) {
+                    if (!confirm('🎯 This will send a HYBRID GRADE A signal to your Telegram.\n\nThis test alert includes:\n✅ Grade A badge (7/10 filters passed)\n✅ Position multiplier (1.0x)\n✅ Quality metrics\n\nContinue?')) {
                         return;
                     }
                     
@@ -1193,14 +1193,14 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Test Alert';
                     
                     if (res.success) {
-                        alert('SUCCESS:  Hybrid Grade A signal sent!\n\nCheck your Telegram for:\n\nSignal: HIGH-QUALITY SIGNAL [A]\nSignal #' + (res.signal?.signal_number || 'N/A') + '\nBUY XAU/USD\nGrade: A\nFilters: 7/10\nPosition: 1.0x\n\n Signal also stored in database and will appear on dashboard after refresh!');
+                        alert('✅ Hybrid Grade A signal sent!\n\nCheck your Telegram for:\n\n🟢 HIGH-QUALITY SIGNAL [A]\nSignal #' + (res.signal?.signal_number || 'N/A') + '\nBUY XAU/USD\nGrade: A ⭐\nFilters: 7/10\nPosition: 1.0x\n\n✅ Signal also stored in database and will appear on dashboard after refresh!');
                         // Refresh the dashboard to show the new signal
                         await refreshData();
                     } else {
-                        alert('ERROR:  Failed to send test alert.\n\n' + (res.message || res.error) + '\n\nMake sure database migration is applied.');
+                        alert('❌ Failed to send test alert.\n\n' + (res.message || res.error) + '\n\nMake sure database migration is applied.');
                     }
                 } catch (error) {
-                    alert('ERROR:  Error sending test alert: ' + error.message);
+                    alert('❌ Error sending test alert: ' + error.message);
                     const btn = event.target.closest('button');
                     if (btn) {
                         btn.disabled = false;
@@ -1404,15 +1404,15 @@ app.get('/', (c) => {
                         // Add action message
                         if (scan.grade === 'A' || scan.grade === 'A+') {
                             html += '<div class="mt-3 p-3 bg-green-500 bg-opacity-30 rounded border border-green-400">';
-                            html += '<p class="text-sm font-bold text-green-200"> HIGH PROBABILITY SETUP - CONSIDER TRADING!</p>';
+                            html += '<p class="text-sm font-bold text-green-200">🎯 HIGH PROBABILITY SETUP - CONSIDER TRADING!</p>';
                             html += '</div>';
                         } else if (scan.grade === 'B') {
                             html += '<div class="mt-3 p-3 bg-yellow-500 bg-opacity-30 rounded border border-yellow-400">';
-                            html += '<p class="text-sm font-bold text-yellow-200"> DECENT SETUP - WAIT FOR CONFIRMATION</p>';
+                            html += '<p class="text-sm font-bold text-yellow-200">⚠️ DECENT SETUP - WAIT FOR CONFIRMATION</p>';
                             html += '</div>';
                         } else {
                             html += '<div class="mt-3 p-3 bg-gray-500 bg-opacity-30 rounded border border-gray-400">';
-                            html += '<p class="text-sm font-bold text-gray-200"> LOW QUALITY SETUP - SKIP</p>';
+                            html += '<p class="text-sm font-bold text-gray-200">❌ LOW QUALITY SETUP - SKIP</p>';
                             html += '</div>';
                         }
                         
@@ -1420,15 +1420,15 @@ app.get('/', (c) => {
                         resultsDiv.classList.remove('hidden');
                         
                         // Update status
-                        statusDiv.innerHTML = ' Scan complete at ' + new Date(res.timestamp).toLocaleTimeString() + ' - Grade: ' + gradeEmoji + ' ' + scan.grade;
+                        statusDiv.innerHTML = '✅ Scan complete at ' + new Date(res.timestamp).toLocaleTimeString() + ' - Grade: ' + gradeEmoji + ' ' + scan.grade;
                         
                         // Show alert for A-grade
                         if (scan.grade === 'A' || scan.grade === 'A+') {
-                            alert('TARGET:  ' + scan.grade + '-GRADE SETUP DETECTED!\\n\\nSignal: ' + scan.signal + '\\nEntry: $' + scan.entry.toFixed(2) + '\\nStop: $' + scan.stop_loss.toFixed(2) + '\\nTP1: $' + scan.targets[0].toFixed(2) + '\\n\\nCheck dashboard for full details!');
+                            alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\\n\\nSignal: ' + scan.signal + '\\nEntry: $' + scan.entry.toFixed(2) + '\\nStop: $' + scan.stop_loss.toFixed(2) + '\\nTP1: $' + scan.targets[0].toFixed(2) + '\\n\\nCheck dashboard for full details!');
                         }
                     } else {
-                        alert('ERROR:  Scanner error: ' + res.error);
-                        statusDiv.innerHTML = ' Scan failed - ' + res.error;
+                        alert('❌ Scanner error: ' + res.error);
+                        statusDiv.innerHTML = '❌ Scan failed - ' + res.error;
                     }
                     
                     // Re-enable button
@@ -1437,10 +1437,10 @@ app.get('/', (c) => {
                     
                 } catch (error) {
                     console.error('5M Scanner error:', error);
-                    alert('ERROR:  Error running 5M scan: ' + error.message);
+                    alert('❌ Error running 5M scan: ' + error.message);
                     document.getElementById('scan5mButton').disabled = false;
                     document.getElementById('scan5mButtonText').innerHTML = 'Scan 5M NOW!';
-                    document.getElementById('scannerStatus').innerHTML = ' Error: ' + error.message;
+                    document.getElementById('scannerStatus').innerHTML = '❌ Error: ' + error.message;
                 }
             }
 
@@ -1460,15 +1460,15 @@ app.get('/', (c) => {
                     }, 180000); // 180 second timeout for slow mobile networks
                     
                     if (res.success) {
-                        let message = ' Market Data Fetched Successfully!\\n\\n';
-                        message += ' Fetched ' + res.totalCount + ' candles across 5 timeframes\\n\\n';
-                        message += ' Ready for:\\n';
+                        let message = '✅ Market Data Fetched Successfully!\\n\\n';
+                        message += '📊 Fetched ' + res.totalCount + ' candles across 5 timeframes\\n\\n';
+                        message += '✅ Ready for:\\n';
                         message += '   • Generate Signal NOW (simple)\\n';
                         message += '   • Hedge Fund Signal (all 10 features)\\n\\n';
                         message += 'Click either button to analyze current market!';
                         alert(message);
                     } else {
-                        alert('SUCCESS:  Partial Success\\n\\nFetched ' + res.totalCount + ' candles\\n\\nSome timeframes may have errors. Check console for details.');
+                        alert('✅ Partial Success\\n\\nFetched ' + res.totalCount + ' candles\\n\\nSome timeframes may have errors. Check console for details.');
                     }
                     
                     await refreshData();
@@ -1476,7 +1476,7 @@ app.get('/', (c) => {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-download mr-2"></i>Fetch Market Data';
                 } catch (error) {
-                    alert('ERROR:  Error fetching data: ' + error.message);
+                    alert('❌ Error fetching data: ' + error.message);
                     const btn = document.getElementById('fetchBtn');
                     if (btn) {
                         btn.disabled = false;
@@ -1502,38 +1502,38 @@ app.get('/', (c) => {
                         const emoji = day.signal_type === 'BUY' ? ICONS.green : day.signal_type === 'SELL' ? ICONS.red : ICONS.gray;
                         
                         let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\\n\\n';
-                        message += ' Day Trade\\n';
-                        message += ' Price: $' + day.price.toFixed(2) + '\\n';
-                        message += ' Confidence: ' + day.confidence.toFixed(1) + '%\\n\\n';
+                        message += '📊 Day Trade\\n';
+                        message += '💰 Price: $' + day.price.toFixed(2) + '\\n';
+                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\\n\\n';
                         
-                        message += ' Take Profits:\\n';
+                        message += '🎯 Take Profits:\\n';
                         message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
                         message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\\n';
                         message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\\n\\n';
                         
-                        message += ' Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n\\n';
+                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n\\n';
                         
-                        message += ' Reason:\\n' + day.reason + '\\n\\n';
+                        message += '📝 Reason:\\n' + day.reason + '\\n\\n';
                         
                         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
                         message += '⏰ ' + timestamp;
                         
                         if (res.telegram_sent) {
-                            message += '\\n\\n Sent to Telegram!';
+                            message += '\\n\\n📱 Sent to Telegram!';
                         } else {
-                            message += '\\n\\n Telegram not configured';
+                            message += '\\n\\n⚠️ Telegram not configured';
                         }
                         
                         alert(message);
                         await refreshData();
                     } else {
-                        alert('ERROR:  Error: ' + res.error);
+                        alert('❌ Error: ' + res.error);
                     }
                     
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Generate Signal NOW';
                 } catch (error) {
-                    alert('ERROR:  Error: ' + error.message);
+                    alert('❌ Error: ' + error.message);
                     const btn = document.getElementById('generateBtn');
                     if (btn) {
                         btn.disabled = false;
@@ -1556,18 +1556,18 @@ app.get('/', (c) => {
                         const dayConf = res.confidence?.day_trade || 0;
                         const swingConf = res.confidence?.swing_trade || 0;
                         
-                        let message = ' HEDGE FUND GRADE SIGNAL\\n\\n';
+                        let message = '🏦 HEDGE FUND GRADE SIGNAL\\n\\n';
                         message += res.message + '\\n\\n';
                         
-                        message += ' CONFIDENCE:\\n';
-                        message += ' Day Trade: ' + dayConf.toFixed(0) + '%\\n';
-                        message += ' Swing Trade: ' + swingConf.toFixed(0) + '%\\n\\n';
+                        message += '📊 CONFIDENCE:\\n';
+                        message += '📈 Day Trade: ' + dayConf.toFixed(0) + '%\\n';
+                        message += '🌊 Swing Trade: ' + swingConf.toFixed(0) + '%\\n\\n';
                         
-                        message += ' THRESHOLD: ≥80% (Hedge Fund Grade)\\n\\n';
+                        message += '🎯 THRESHOLD: ≥80% (Hedge Fund Grade)\\n\\n';
                         
                         // Telegram Status
                         if (res.telegram_sent) {
-                            message += '  Alert sent to Telegram!\\n';
+                            message += '📱 ✅ Alert sent to Telegram!\\n';
                             message += '\\nCheck your Telegram for full signal details including:\\n';
                             message += '• Entry price & stop loss\\n';
                             message += '• Take profit levels (TP1, TP2, TP3)\\n';
@@ -1575,27 +1575,27 @@ app.get('/', (c) => {
                             message += '• Market regime analysis\\n';
                             message += '• Multi-timeframe alignment\\n';
                         } else if (dayConf < 80 && swingConf < 80) {
-                            message += ' No alert sent\\n';
+                            message += '⚪ No alert sent\\n';
                             message += '\\nConfidence below 80% threshold.\\n';
                             message += 'Hedge fund signals require ≥80% confidence.\\n';
                         } else {
-                            message += '  Telegram not configured (check settings)';
+                            message += '📱 ⚠️ Telegram not configured (check settings)';
                         }
                         
                         alert(message);
                         await refreshData();
                     } else {
-                        alert('ERROR:  Error: ' + res.error);
+                        alert('❌ Error: ' + res.error);
                     }
                     
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-rocket mr-2"></i> Hedge Fund Signal';
+                    btn.innerHTML = '<i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal';
                 } catch (error) {
-                    alert('ERROR:  Error: ' + error.message);
+                    alert('❌ Error: ' + error.message);
                     const btn = document.getElementById('enhancedBtn');
                     if (btn) {
                         btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-rocket mr-2"></i> Hedge Fund Signal';
+                        btn.innerHTML = '<i class="fas fa-rocket mr-2"></i>🏦 Hedge Fund Signal';
                     }
                 }
             }
@@ -1623,7 +1623,7 @@ app.get('/', (c) => {
                         // Update status
                         statusDiv.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-2"></i>' +
                             'Analysis completed at ' + new Date().toLocaleTimeString() +
-                            (telegram_sent ? ' |  Sent to Telegram' : ' |  Telegram not configured');
+                            (telegram_sent ? ' | 📱 Sent to Telegram' : ' | ⚠️ Telegram not configured');
                         
                         // Build results display
                         let html = '';
@@ -1684,15 +1684,15 @@ app.get('/', (c) => {
                         html += '<h4 class="font-bold mb-2">Recommendation:</h4>';
                         
                         if (day.isValid && day.signal_type !== 'HOLD') {
-                            html += '<div class="text-green-400 font-bold"> Day Trade: EXECUTE ' + day.signal_type + '</div>';
+                            html += '<div class="text-green-400 font-bold">✅ Day Trade: EXECUTE ' + day.signal_type + '</div>';
                         } else {
-                            html += '<div class="text-yellow-400"> Day Trade: SKIP (' + day.mtf_reason + ')</div>';
+                            html += '<div class="text-yellow-400">⚠️ Day Trade: SKIP (' + day.mtf_reason + ')</div>';
                         }
                         
                         if (swing.isValid && swing.signal_type !== 'HOLD') {
-                            html += '<div class="text-green-400 font-bold"> Swing Trade: EXECUTE ' + swing.signal_type + '</div>';
+                            html += '<div class="text-green-400 font-bold">✅ Swing Trade: EXECUTE ' + swing.signal_type + '</div>';
                         } else {
-                            html += '<div class="text-yellow-400"> Swing Trade: SKIP (' + swing.mtf_reason + ')</div>';
+                            html += '<div class="text-yellow-400">⚠️ Swing Trade: SKIP (' + swing.mtf_reason + ')</div>';
                         }
                         html += '</div>';
                         
@@ -1802,13 +1802,13 @@ app.get('/', (c) => {
                         html += '<h4 class="font-bold text-white mb-2">Verdict:</h4>';
                         
                         if (r.win_rate >= 70 && r.profit_factor >= 2.0) {
-                            html += '<div class="text-green-300"> <strong>STRATEGY VALIDATED</strong> - Excellent performance! Win rate > 70% and Profit Factor > 2.0</div>';
+                            html += '<div class="text-green-300">✅ <strong>STRATEGY VALIDATED</strong> - Excellent performance! Win rate > 70% and Profit Factor > 2.0</div>';
                             html += '<div class="text-green-200 text-sm mt-2">This strategy is ready for paper trading and live execution.</div>';
                         } else if (r.win_rate >= 60 && r.profit_factor >= 1.5) {
-                            html += '<div class="text-yellow-300"> <strong>GOOD PERFORMANCE</strong> - Strategy shows promise but needs refinement.</div>';
+                            html += '<div class="text-yellow-300">⚠️ <strong>GOOD PERFORMANCE</strong> - Strategy shows promise but needs refinement.</div>';
                             html += '<div class="text-yellow-200 text-sm mt-2">Consider increasing confidence threshold or adding filters.</div>';
                         } else {
-                            html += '<div class="text-red-300"> <strong>NEEDS IMPROVEMENT</strong> - Performance below target.</div>';
+                            html += '<div class="text-red-300">❌ <strong>NEEDS IMPROVEMENT</strong> - Performance below target.</div>';
                             html += '<div class="text-red-200 text-sm mt-2">Adjust strategy parameters before live trading.</div>';
                         }
                         
@@ -1836,7 +1836,7 @@ app.get('/', (c) => {
 
             // AI Market Analysis
             async function runAIAnalysis(event) {
-                console.log(' AI Analysis button clicked!', event);
+                console.log('🤖 AI Analysis button clicked!', event);
                 
                 const btn = event.target.closest('button');
                 if (!btn) {
@@ -1860,7 +1860,7 @@ app.get('/', (c) => {
                     return;
                 }
                 
-                console.log(' All elements found, calling API...');
+                console.log('✅ All elements found, calling API...');
                 
                 resultsDiv.classList.remove('hidden');
                 resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1868,9 +1868,9 @@ app.get('/', (c) => {
                 try {
                     detailsDiv.innerHTML = '<div class="bg-cyan-900 bg-opacity-50 border border-cyan-500 p-4 rounded-lg text-white"><i class="fas fa-brain fa-spin mr-2"></i>AI analyzing market conditions...</div>';
                     
-                    console.log(' Calling /api/ai/market-analysis...');
+                    console.log('📡 Calling /api/ai/market-analysis...');
                     const res = await fetchWithTimeout('/api/ai/market-analysis', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-                    console.log(' API response received:', res.data);
+                    console.log('✅ API response received:', res.data);
                     
                     btn.disabled = false;
                     btn.innerHTML = originalText;
@@ -1906,7 +1906,7 @@ app.get('/', (c) => {
                         html += '<h4 class="font-bold text-white mb-3"><i class="fas fa-crosshairs mr-2"></i>Key Levels</h4>';
                         html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
                         
-                        html += '<div><div class="text-red-300 font-semibold mb-2"> Resistance Levels:</div>';
+                        html += '<div><div class="text-red-300 font-semibold mb-2">🔴 Resistance Levels:</div>';
                         for (const level of analysis.key_levels.resistance) {
                             html += '<div class="text-red-400 ml-4">$' + level.toFixed(2) + '</div>';
                         }
@@ -1944,7 +1944,7 @@ app.get('/', (c) => {
                         // Recommendation
                         html += '<div class="p-4 rounded-lg ' + (analysis.recommendation.action === 'BUY' ? 'bg-green-900 bg-opacity-50 border border-green-500' : analysis.recommendation.action === 'SELL' ? 'bg-red-900 bg-opacity-50 border border-red-500' : 'bg-yellow-900 bg-opacity-50 border border-yellow-500') + '">';
                         html += '<h4 class="font-bold text-white mb-2"><i class="fas fa-lightbulb mr-2"></i>AI Recommendation</h4>';
-                        html += '<div class="text-lg font-semibold text-white mb-2">' + (analysis.recommendation.action === 'WAIT' ? '⏰ WAIT' : analysis.recommendation.action === 'BUY' ? ' BUY' : ' SELL') + '</div>';
+                        html += '<div class="text-lg font-semibold text-white mb-2">' + (analysis.recommendation.action === 'WAIT' ? '⏰ WAIT' : analysis.recommendation.action === 'BUY' ? '📈 BUY' : '📉 SELL') + '</div>';
                         html += '<div class="text-gray-200">' + analysis.recommendation.reason + '</div>';
                         if (analysis.recommendation.entry_range) {
                             html += '<div class="mt-3 grid grid-cols-2 gap-2 text-sm">';
@@ -1964,7 +1964,7 @@ app.get('/', (c) => {
                             '</div>';
                     }
                 } catch (error) {
-                    console.error(' AI Analysis error:', error);
+                    console.error('❌ AI Analysis error:', error);
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                     detailsDiv.innerHTML = '<div class="bg-red-900 bg-opacity-50 border border-red-500 p-4 rounded-lg text-white">' +
@@ -2097,7 +2097,7 @@ app.post('/api/telegram/test', async (c) => {
     
     const success = await sendTelegramMessage(
       { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
-      ' <b>Test Alert</b>\n\nYour Gold/USD Trading System is connected and working!\n\n Telegram alerts are active.'
+      '🔔 <b>Test Alert</b>\n\nYour Gold/USD Trading System is connected and working!\n\n✅ Telegram alerts are active.'
     );
     
     return c.json({ success });
@@ -2257,7 +2257,7 @@ app.get('/api/market/fetch', async (c) => {
     
     const values = data['values'];
     
-    //  OPTIMIZED: Batch insert using D1 batch() for 10x faster performance
+    // ⚡ OPTIMIZED: Batch insert using D1 batch() for 10x faster performance
     const statements = values.map(item => {
       return DB.prepare(`
         INSERT OR REPLACE INTO market_data (timestamp, open, high, low, close, volume, timeframe)
@@ -2348,7 +2348,7 @@ app.post('/api/market/fetch', async (c) => {
     
     const values = data['values'];
     
-    //  OPTIMIZED: Build candles array and batch insert
+    // ⚡ OPTIMIZED: Build candles array and batch insert
     const candles: Candle[] = values.map(item => ({
       timestamp: item.datetime,
       open: parseFloat(item.open) || 0,
@@ -2469,7 +2469,7 @@ app.post('/api/market/fetch', async (c) => {
   }
 })
 
-//  LIGHTWEIGHT CRON ENDPOINT - Fast response for cron-job.org
+// 🚀 LIGHTWEIGHT CRON ENDPOINT - Fast response for cron-job.org
 // Returns immediately to avoid 502 timeouts
 // Actual data fetching happens via separate manual trigger
 app.get('/api/cron/ping', async (c) => {
@@ -2508,7 +2508,7 @@ app.get('/api/cron/ping', async (c) => {
   }
 })
 
-//  ENHANCED CRON ENDPOINT - Full automation with Telegram alerts
+// 🚀 ENHANCED CRON ENDPOINT - Full automation with Telegram alerts
 // This endpoint is specifically designed for cron-job.org
 // GET request compatible + Signal generation + Telegram alerts
 app.get('/api/cron/auto-fetch', async (c) => {
@@ -2632,9 +2632,9 @@ app.get('/api/cron/auto-fetch', async (c) => {
         if (priceDiffPct < 2.0) {
           currentPrice = realtimePrice;
           usingRealtimePrice = true;
-          console.log(`[AUTO-FETCH]  Using real-time price: $${realtimePrice}`);
+          console.log(`[AUTO-FETCH] ✅ Using real-time price: $${realtimePrice}`);
         } else {
-          console.log(`[AUTO-FETCH]  Price diff too large (${priceDiffPct.toFixed(2)}%), using candle close`);
+          console.log(`[AUTO-FETCH] ⚠️ Price diff too large (${priceDiffPct.toFixed(2)}%), using candle close`);
         }
       }
     } catch (error: any) {
@@ -2732,7 +2732,7 @@ app.get('/api/cron/auto-fetch', async (c) => {
         
         debugInfo.day_trade_send_attempted = true;
         
-        console.log('[AUTO-FETCH]  Day trade meets criteria! Sending alert...');
+        console.log('[AUTO-FETCH] ✅ Day trade meets criteria! Sending alert...');
         
         // Escape HTML in reason text
         const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -2745,18 +2745,18 @@ app.get('/api/cron/auto-fetch', async (c) => {
         const message = `${emoji} <b>GOLD/USD ${dayTradeSignal.signal_type} SIGNAL</b>
 ${convictionLabel}
 
- <b>Day Trade</b>
- Price: $${currentPrice.toFixed(2)}
- Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
+📊 <b>Day Trade</b>
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
 
- <b>Take Profits:</b>
+🎯 <b>Take Profits:</b>
    TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
    TP2: $${dayTradeSignal.take_profit_2.toFixed(2)}
    TP3: $${dayTradeSignal.take_profit_3.toFixed(2)}
 
- <b>Stop Loss:</b> $${dayTradeSignal.stop_loss.toFixed(2)}
+🛡️ <b>Stop Loss:</b> $${dayTradeSignal.stop_loss.toFixed(2)}
 
- <b>Reason:</b>
+📝 <b>Reason:</b>
 ${escapeHtml(dayTradeSignal.reason)}
 
 ⏰ ${new Date().toLocaleString()}`;
@@ -2775,19 +2775,19 @@ ${escapeHtml(dayTradeSignal.reason)}
           
           // HIGH CONVICTION: Send reminder alerts
           if (isHighConviction && dayTradeSignal.signal_type !== 'HOLD') {
-            console.log('[AUTO-FETCH]  HIGH CONVICTION signal detected! Sending reminder alerts...');
+            console.log('[AUTO-FETCH] 🔥 HIGH CONVICTION signal detected! Sending reminder alerts...');
             
             // Wait 2 minutes, send first reminder
             setTimeout(async () => {
               const reminder1 = `${emoji} <b>${ICONS.warning} REMINDER: HIGH CONVICTION SIGNAL</b>
 
- <b>${dayTradeSignal.signal_type} Day Trade</b>
- Current Price: $${currentPrice.toFixed(2)}
- Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
+📊 <b>${dayTradeSignal.signal_type} Day Trade</b>
+💰 Current Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
 
- Entry: $${currentPrice.toFixed(2)}
- Stop: $${dayTradeSignal.stop_loss.toFixed(2)}
- TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
+🎯 Entry: $${currentPrice.toFixed(2)}
+🛡️ Stop: $${dayTradeSignal.stop_loss.toFixed(2)}
+🎯 TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
 
 ⏰ Don't miss this trade!`;
               
@@ -2803,14 +2803,14 @@ ${escapeHtml(dayTradeSignal.reason)}
             setTimeout(async () => {
               const reminder2 = `${emoji} <b>${ICONS.warning} FINAL REMINDER: HIGH CONVICTION</b>
 
- <b>${dayTradeSignal.signal_type} Signal Still Valid</b>
- Price: $${currentPrice.toFixed(2)}
- Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
+📊 <b>${dayTradeSignal.signal_type} Signal Still Valid</b>
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${dayTradeSignal.confidence.toFixed(1)}%
 
- Last chance to enter this trade!
+🔥 Last chance to enter this trade!
 
- TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
- Stop: $${dayTradeSignal.stop_loss.toFixed(2)}`;
+🎯 TP1: $${dayTradeSignal.take_profit_1.toFixed(2)}
+🛡️ Stop: $${dayTradeSignal.stop_loss.toFixed(2)}`;
               
               await sendTelegramMessage({
                 botToken: telegramBotToken,
@@ -2851,18 +2851,18 @@ ${escapeHtml(dayTradeSignal.reason)}
         const message = `${emoji} <b>GOLD/USD ${swingTradeSignal.signal_type} SIGNAL</b>
 ${convictionLabel}
 
- <b>Swing Trade</b>
- Price: $${currentPrice.toFixed(2)}
- Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
+📈 <b>Swing Trade</b>
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
 
- <b>Take Profits:</b>
+🎯 <b>Take Profits:</b>
    TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
    TP2: $${swingTradeSignal.take_profit_2.toFixed(2)}
    TP3: $${swingTradeSignal.take_profit_3.toFixed(2)}
 
- <b>Stop Loss:</b> $${swingTradeSignal.stop_loss.toFixed(2)}
+🛡️ <b>Stop Loss:</b> $${swingTradeSignal.stop_loss.toFixed(2)}
 
- <b>Reason:</b>
+📝 <b>Reason:</b>
 ${escapeHtml(swingTradeSignal.reason)}
 
 ⏰ ${new Date().toLocaleString()}`;
@@ -2880,19 +2880,19 @@ ${escapeHtml(swingTradeSignal.reason)}
           
           // HIGH CONVICTION: Send reminder alerts
           if (isHighConviction && swingTradeSignal.signal_type !== 'HOLD') {
-            console.log('[AUTO-FETCH]  HIGH CONVICTION swing signal! Sending reminder alerts...');
+            console.log('[AUTO-FETCH] 🔥 HIGH CONVICTION swing signal! Sending reminder alerts...');
             
             // Wait 3 minutes, send first reminder
             setTimeout(async () => {
               const reminder1 = `${emoji} <b>${ICONS.warning} REMINDER: HIGH CONVICTION SWING</b>
 
- <b>${swingTradeSignal.signal_type} Swing Trade</b>
- Current Price: $${currentPrice.toFixed(2)}
- Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
+📈 <b>${swingTradeSignal.signal_type} Swing Trade</b>
+💰 Current Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
 
- Entry: $${currentPrice.toFixed(2)}
- Stop: $${swingTradeSignal.stop_loss.toFixed(2)}
- TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
+🎯 Entry: $${currentPrice.toFixed(2)}
+🛡️ Stop: $${swingTradeSignal.stop_loss.toFixed(2)}
+🎯 TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
 
 ⏰ Don't miss this swing trade!`;
               
@@ -2908,14 +2908,14 @@ ${escapeHtml(swingTradeSignal.reason)}
             setTimeout(async () => {
               const reminder2 = `${emoji} <b>${ICONS.warning} FINAL REMINDER: HIGH CONVICTION</b>
 
- <b>${swingTradeSignal.signal_type} Swing Still Valid</b>
- Price: $${currentPrice.toFixed(2)}
- Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
+📈 <b>${swingTradeSignal.signal_type} Swing Still Valid</b>
+💰 Price: $${currentPrice.toFixed(2)}
+📊 Confidence: ${swingTradeSignal.confidence.toFixed(1)}%
 
- Last chance for this swing trade!
+🔥 Last chance for this swing trade!
 
- TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
- Stop: $${swingTradeSignal.stop_loss.toFixed(2)}`;
+🎯 TP1: $${swingTradeSignal.take_profit_1.toFixed(2)}
+🛡️ Stop: $${swingTradeSignal.stop_loss.toFixed(2)}`;
               
               await sendTelegramMessage({
                 botToken: telegramBotToken,
@@ -2984,8 +2984,8 @@ ${escapeHtml(swingTradeSignal.reason)}
         }
       },
       message: telegramSent ? 
-        ` Alerts sent: ${alertsSent.join(', ')}` : 
-        ' No alerts sent (signals below confidence threshold)'
+        `✅ Alerts sent: ${alertsSent.join(', ')}` : 
+        '⚪ No alerts sent (signals below confidence threshold)'
     });
     
   } catch (error: any) {
@@ -2998,7 +2998,7 @@ ${escapeHtml(swingTradeSignal.reason)}
   }
 })
 
-//  TEST ENDPOINT - Debug auto-fetch settings
+// 🧪 TEST ENDPOINT - Debug auto-fetch settings
 app.get('/api/test/auto-fetch-settings', async (c) => {
   const { DB } = c.env;
   
@@ -3033,7 +3033,7 @@ app.get('/api/test/auto-fetch-settings', async (c) => {
   }
 });
 
-//  AI AUTO-SCAN CRON ENDPOINT
+// 🤖 AI AUTO-SCAN CRON ENDPOINT
 // Automatic AI Market Analysis with Telegram alerts (≥65% confidence)
 // Runs AI analysis and sends alerts for both BUY and SELL signals
 app.get('/api/cron/auto-ai-scan', async (c) => {
@@ -3075,8 +3075,8 @@ app.get('/api/cron/auto-ai-scan', async (c) => {
         ai_scan_enabled: true,
         analysis: result,
         message: result.analysis?.telegram_sent ? 
-          ' AI analysis complete - Telegram alert sent' : 
-          ' AI analysis complete - No alert (confidence < 65% or HOLD)'
+          '🤖 AI analysis complete - Telegram alert sent' : 
+          '🤖 AI analysis complete - No alert (confidence < 65% or HOLD)'
       });
     }
     
@@ -3094,7 +3094,7 @@ app.get('/api/cron/auto-ai-scan', async (c) => {
   }
 })
 
-//  HEDGE FUND CRON ENDPOINT
+// 🏦 HEDGE FUND CRON ENDPOINT
 // GET-compatible endpoint for Cloudflare Cron Triggers
 // Calls enhanced signals endpoint and sends Telegram alerts for high-confidence signals (≥80%)
 app.get('/api/cron/hedge-fund', async (c) => {
@@ -3158,12 +3158,12 @@ app.get('/api/cron/hedge-fund', async (c) => {
       if (config.telegram_bot_token && config.telegram_chat_id) {
         // Format hedge fund message (using HTML format)
         const message = `
- <b>HEDGE FUND GRADE SIGNAL</b>
+🏦 <b>HEDGE FUND GRADE SIGNAL</b>
 ⏰ ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
 
-
- <b>DAY TRADE</b>
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 <b>DAY TRADE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${dayTrade.signal_type} (${dayTrade.enhanced_confidence}% confidence)
 
@@ -3173,18 +3173,18 @@ ${dayTrade.signal_type} (${dayTrade.enhanced_confidence}% confidence)
 <b>TP2:</b> $${dayTrade.take_profit_2.toFixed(2)}
 <b>TP3:</b> $${dayTrade.take_profit_3.toFixed(2)}
 
- <b>Advanced Metrics:</b>
+📊 <b>Advanced Metrics:</b>
 • VaR(95%): $${dayTrade.var_95?.toFixed(2) || 0}
 • Drawdown: ${dayTrade.current_drawdown_pct?.toFixed(1) || 0}%
 • Portfolio Heat: ${dayTrade.portfolio_heat_pct?.toFixed(1) || 0}%
 • Profit Probability: ${result.profit_probability?.tp1 || 0}%
 
- <b>Market Regime:</b> ${result.regime?.volatility || 'UNKNOWN'}
- <b>Liquidity:</b> ${result.liquidity?.score || 0}/100 ${result.liquidity?.recommendation || ''}
+🌊 <b>Market Regime:</b> ${result.regime?.volatility || 'UNKNOWN'}
+💧 <b>Liquidity:</b> ${result.liquidity?.score || 0}/100 ${result.liquidity?.recommendation || ''}
 
-
- <b>SWING TRADE</b>
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🌊 <b>SWING TRADE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${swingTrade.signal_type} (${swingTrade.enhanced_confidence}% confidence)
 
@@ -3194,13 +3194,13 @@ ${swingTrade.signal_type} (${swingTrade.enhanced_confidence}% confidence)
 <b>TP2:</b> $${swingTrade.take_profit_2.toFixed(2)}
 <b>TP3:</b> $${swingTrade.take_profit_3.toFixed(2)}
 
- <b>Risk Metrics:</b>
+📊 <b>Risk Metrics:</b>
 • VaR(99%): $${swingTrade.var_99?.toFixed(2) || 0}
 • Max Drawdown: ${swingTrade.current_drawdown_pct?.toFixed(1) || 0}%
 
-${result.regime?.should_trade === false ? ' <b>WARNING: Extreme volatility detected</b>' : ''}
+${result.regime?.should_trade === false ? '⚠️ <b>WARNING: Extreme volatility detected</b>' : ''}
 
- Dashboard: ${c.req.url.replace('/api/cron/hedge-fund', '')}
+🌐 Dashboard: ${c.req.url.replace('/api/cron/hedge-fund', '')}
         `.trim()
         
         // Send via Telegram
@@ -3573,10 +3573,10 @@ app.post('/api/signals/generate-mtf', async (c) => {
       if (dayTradeMTF.isValid && dayTradeMTF.signal_type !== 'HOLD') {
         const daySuccess = await sendTelegramMessage(
           { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
-          ` MULTI-TIMEFRAME CONFIRMED\n\n${formatTradeSignal({
+          `🎯 MULTI-TIMEFRAME CONFIRMED\n\n${formatTradeSignal({
             ...dayTradeMTF,
             timestamp: new Date().toISOString()
-          })}\n\nGrade: ${formatAlignmentReport(alignment)}`
+          })}\n\n📊 ${formatAlignmentReport(alignment)}`
         );
         
         if (daySuccess) {
@@ -3590,10 +3590,10 @@ app.post('/api/signals/generate-mtf', async (c) => {
       if (swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD') {
         const swingSuccess = await sendTelegramMessage(
           { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
-          ` MULTI-TIMEFRAME CONFIRMED\n\n${formatTradeSignal({
+          `🎯 MULTI-TIMEFRAME CONFIRMED\n\n${formatTradeSignal({
             ...swingTradeMTF,
             timestamp: new Date().toISOString()
-          })}\n\nGrade: ${formatAlignmentReport(alignment)}`
+          })}\n\n📊 ${formatAlignmentReport(alignment)}`
         );
         
         if (swingSuccess) {
@@ -3692,9 +3692,9 @@ app.post('/api/signals/generate-now', async (c) => {
             volume: parseFloat(item.volume) || 0
           }));
           usedFreshData = true;
-          console.log('[GENERATE-NOW]  Fresh data fetched! Price:', candles[candles.length - 1].close)
+          console.log('[GENERATE-NOW] ✅ Fresh data fetched! Price:', candles[candles.length - 1].close)
         } else {
-          console.log('[GENERATE-NOW]  API returned insufficient data, falling back to database')
+          console.log('[GENERATE-NOW] ⚠️ API returned insufficient data, falling back to database')
         }
       } catch (apiError: any) {
         console.error('[GENERATE-NOW] API fetch failed:', apiError.message)
@@ -4530,12 +4530,12 @@ app.post('/api/automation/analyze-and-notify', async (c) => {
       
       // Format comprehensive message
       const message = `
- *AUTOMATED DAILY ANALYSIS*
+🤖 *AUTOMATED DAILY ANALYSIS*
 ⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC
 
-
- *MULTI-TIMEFRAME ALIGNMENT*
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 *MULTI-TIMEFRAME ALIGNMENT*
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${alignment.type} (${alignment.score}/5 timeframes)
 Confidence Boost: +${alignment.confidenceBoost}%
@@ -4545,9 +4545,9 @@ ${alignment.trends.map(t => {
   return `${icon} *${t.timeframe}*: ${t.trend} (${t.confidence.toFixed(0)}%)`
 }).join('\n')}
 
-
- *DAY TRADE SIGNAL*
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 *DAY TRADE SIGNAL*
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${dayTradeMTF.isValid ? ICONS.check : ICONS.times} *${dayTradeMTF.signal_type}* (${dayTradeMTF.final_confidence}% confidence)
 
@@ -4557,30 +4557,30 @@ ${dayTradeMTF.isValid ? ICONS.check : ICONS.times} *${dayTradeMTF.signal_type}* 
 *TP2:* $${dayTradeMTF.take_profit_2.toFixed(2)} (${((dayTradeMTF.take_profit_2 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
 *TP3:* $${dayTradeMTF.take_profit_3.toFixed(2)} (${((dayTradeMTF.take_profit_3 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
 
-${resistanceLevels.length > 0 ? ` *Key Levels:*
- *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
+${resistanceLevels.length > 0 ? `📊 *Key Levels:*
+🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
 🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}
 
-` : ''} *Position:* ${dayPosition.units} lots ($${dayPosition.value.toLocaleString()})
- *Risk:* $${dayPosition.risk_amount} (${dayPosition.risk_pct}%)
- *R:R:* ${dayPosition.reward_risk_ratio}:1
+` : ''}💼 *Position:* ${dayPosition.units} lots ($${dayPosition.value.toLocaleString()})
+💰 *Risk:* $${dayPosition.risk_amount} (${dayPosition.risk_pct}%)
+📊 *R:R:* ${dayPosition.reward_risk_ratio}:1
 
-${dayPosition.warning ? ` ${dayPosition.warning}` : ''}
+${dayPosition.warning ? `⚠️ ${dayPosition.warning}` : ''}
 
- *LIQUIDITY ANALYSIS:*
+💧 *LIQUIDITY ANALYSIS:*
 ${dayTradeSignal.liquidity_score >= 70 ? ICONS.green : dayTradeSignal.liquidity_score >= 50 ? '🟡' : ICONS.red} *Score:* ${dayTradeSignal.liquidity_score}/100
- *Session:* ${dayTradeSignal.session} (${dayTradeSignal.time_zone} LIQUIDITY)
- *Volume:* ${dayTradeSignal.volume_trend} (${dayTradeSignal.volume_percentile}%ile)
- *Spread:* ~${dayTradeSignal.estimated_spread_pips} pips
- *Impact:* ~${dayTradeSignal.price_impact_bps} bps ($100K)
+🌐 *Session:* ${dayTradeSignal.session} (${dayTradeSignal.time_zone} LIQUIDITY)
+📊 *Volume:* ${dayTradeSignal.volume_trend} (${dayTradeSignal.volume_percentile}%ile)
+💰 *Spread:* ~${dayTradeSignal.estimated_spread_pips} pips
+📉 *Impact:* ~${dayTradeSignal.price_impact_bps} bps ($100K)
 
- *POSITION SIZING:*
+💼 *POSITION SIZING:*
 ${dayTradeSignal.position_size_multiplier >= 1.0 ? ICONS.green : dayTradeSignal.position_size_multiplier >= 0.75 ? '🟡' : ICONS.red} *Recommended:* ${(dayTradeSignal.position_size_multiplier * 100).toFixed(0)}% of normal size
-${dayTradeSignal.optimal_for_trading ? ' *Status:* Optimal for trading' : ' *Status:* Sub-optimal liquidity'}
+${dayTradeSignal.optimal_for_trading ? '✅ *Status:* Optimal for trading' : '⚠️ *Status:* Sub-optimal liquidity'}
 
-
- *SWING TRADE SIGNAL*
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🌊 *SWING TRADE SIGNAL*
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${swingTradeMTF.isValid ? ICONS.check : ICONS.times} *${swingTradeMTF.signal_type}* (${swingTradeMTF.final_confidence}% confidence)
 
@@ -4590,40 +4590,40 @@ ${swingTradeMTF.isValid ? ICONS.check : ICONS.times} *${swingTradeMTF.signal_typ
 *TP2:* $${swingTradeMTF.take_profit_2.toFixed(2)} (${((swingTradeMTF.take_profit_2 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
 *TP3:* $${swingTradeMTF.take_profit_3.toFixed(2)} (${((swingTradeMTF.take_profit_3 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
 
-${resistanceLevels.length > 0 ? ` *Key Levels:*
- *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
+${resistanceLevels.length > 0 ? `📊 *Key Levels:*
+🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
 🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}
 
-` : ''} *Position:* ${swingPosition.units} lots ($${swingPosition.value.toLocaleString()})
- *Risk:* $${swingPosition.risk_amount} (${swingPosition.risk_pct}%)
- *R:R:* ${swingPosition.reward_risk_ratio}:1
+` : ''}💼 *Position:* ${swingPosition.units} lots ($${swingPosition.value.toLocaleString()})
+💰 *Risk:* $${swingPosition.risk_amount} (${swingPosition.risk_pct}%)
+📊 *R:R:* ${swingPosition.reward_risk_ratio}:1
 
-${swingPosition.warning ? ` ${swingPosition.warning}` : ''}
+${swingPosition.warning ? `⚠️ ${swingPosition.warning}` : ''}
 
- *LIQUIDITY ANALYSIS:*
+💧 *LIQUIDITY ANALYSIS:*
 ${swingTradeSignal.liquidity_score >= 70 ? ICONS.green : swingTradeSignal.liquidity_score >= 50 ? '🟡' : ICONS.red} *Score:* ${swingTradeSignal.liquidity_score}/100
- *Session:* ${swingTradeSignal.session} (${swingTradeSignal.time_zone} LIQUIDITY)
- *Volume:* ${swingTradeSignal.volume_trend} (${swingTradeSignal.volume_percentile}%ile)
- *Spread:* ~${swingTradeSignal.estimated_spread_pips} pips
- *Impact:* ~${swingTradeSignal.price_impact_bps} bps ($100K)
+🌐 *Session:* ${swingTradeSignal.session} (${swingTradeSignal.time_zone} LIQUIDITY)
+📊 *Volume:* ${swingTradeSignal.volume_trend} (${swingTradeSignal.volume_percentile}%ile)
+💰 *Spread:* ~${swingTradeSignal.estimated_spread_pips} pips
+📉 *Impact:* ~${swingTradeSignal.price_impact_bps} bps ($100K)
 
- *POSITION SIZING:*
+💼 *POSITION SIZING:*
 ${swingTradeSignal.position_size_multiplier >= 1.0 ? ICONS.green : swingTradeSignal.position_size_multiplier >= 0.75 ? '🟡' : ICONS.red} *Recommended:* ${(swingTradeSignal.position_size_multiplier * 100).toFixed(0)}% of normal size
-${swingTradeSignal.optimal_for_trading ? ' *Status:* Optimal for trading' : ' *Status:* Sub-optimal liquidity'}
+${swingTradeSignal.optimal_for_trading ? '✅ *Status:* Optimal for trading' : '⚠️ *Status:* Sub-optimal liquidity'}
 
-
- *RECOMMENDATION*
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 *RECOMMENDATION*
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${dayTradeMTF.isValid && dayTradeMTF.signal_type !== 'HOLD' ? 
-  ` Day Trade: EXECUTE ${dayTradeMTF.signal_type}` : 
-  ` Day Trade: SKIP (${dayTradeMTF.mtf_reason})`}
+  `✅ Day Trade: EXECUTE ${dayTradeMTF.signal_type}` : 
+  `⚠️ Day Trade: SKIP (${dayTradeMTF.mtf_reason})`}
 
 ${swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD' ? 
-  ` Swing Trade: EXECUTE ${swingTradeMTF.signal_type}` : 
-  ` Swing Trade: SKIP (${swingTradeMTF.mtf_reason})`}
+  `✅ Swing Trade: EXECUTE ${swingTradeMTF.signal_type}` : 
+  `⚠️ Swing Trade: SKIP (${swingTradeMTF.mtf_reason})`}
 
- Dashboard: ${c.req.url.replace('/api/automation/analyze-and-notify', '')}
+🌐 Dashboard: ${c.req.url.replace('/api/automation/analyze-and-notify', '')}
       `.trim()
       
       const success = await sendTelegramMessage(
@@ -4962,12 +4962,12 @@ app.get('/api/automation/analyze-and-notify', async (c) => {
       }
       
       const message = `
- *AUTOMATED DAILY ANALYSIS*
+🤖 *AUTOMATED DAILY ANALYSIS*
 ⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC
 
-
- *MULTI-TIMEFRAME ALIGNMENT*
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 *MULTI-TIMEFRAME ALIGNMENT*
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${alignment.type} (${alignment.score}/5 timeframes)
 Confidence Boost: +${alignment.confidenceBoost}%
@@ -4977,9 +4977,9 @@ ${alignment.trends.map((t: any) => {
   return `${icon} *${t.timeframe}*: ${t.trend} (${t.confidence.toFixed(0)}%)`
 }).join('\n')}
 
-
- *DAY TRADE SIGNAL*
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 *DAY TRADE SIGNAL*
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${dayTradeMTF.isValid ? ICONS.check : ICONS.times} *${dayTradeMTF.signal_type}* (${dayTradeMTF.final_confidence}% confidence)
 
@@ -4989,30 +4989,30 @@ ${dayTradeMTF.isValid ? ICONS.check : ICONS.times} *${dayTradeMTF.signal_type}* 
 *TP2:* $${dayTradeMTF.take_profit_2.toFixed(2)} (${((dayTradeMTF.take_profit_2 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
 *TP3:* $${dayTradeMTF.take_profit_3.toFixed(2)} (${((dayTradeMTF.take_profit_3 / dayTradeMTF.price - 1) * 100).toFixed(2)}%)
 
-${resistanceLevels.length > 0 ? ` *Key Levels:*
- *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
+${resistanceLevels.length > 0 ? `📊 *Key Levels:*
+🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
 🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}
 
-` : ''} *Position:* ${dayPosition.units} lots ($${dayPosition.value.toLocaleString()})
- *Risk:* $${dayPosition.risk_amount} (${dayPosition.risk_pct}%)
- *R:R:* ${dayPosition.reward_risk_ratio}:1
+` : ''}💼 *Position:* ${dayPosition.units} lots ($${dayPosition.value.toLocaleString()})
+💰 *Risk:* $${dayPosition.risk_amount} (${dayPosition.risk_pct}%)
+📊 *R:R:* ${dayPosition.reward_risk_ratio}:1
 
-${dayPosition.warning ? ` ${dayPosition.warning}` : ''}
+${dayPosition.warning ? `⚠️ ${dayPosition.warning}` : ''}
 
- *LIQUIDITY ANALYSIS:*
+💧 *LIQUIDITY ANALYSIS:*
 ${dayTradeSignal.liquidity_score >= 70 ? ICONS.green : dayTradeSignal.liquidity_score >= 50 ? '🟡' : ICONS.red} *Score:* ${dayTradeSignal.liquidity_score}/100
- *Session:* ${dayTradeSignal.session} (${dayTradeSignal.time_zone} LIQUIDITY)
- *Volume:* ${dayTradeSignal.volume_trend} (${dayTradeSignal.volume_percentile}%ile)
- *Spread:* ~${dayTradeSignal.estimated_spread_pips} pips
- *Impact:* ~${dayTradeSignal.price_impact_bps} bps ($100K)
+🌐 *Session:* ${dayTradeSignal.session} (${dayTradeSignal.time_zone} LIQUIDITY)
+📊 *Volume:* ${dayTradeSignal.volume_trend} (${dayTradeSignal.volume_percentile}%ile)
+💰 *Spread:* ~${dayTradeSignal.estimated_spread_pips} pips
+📉 *Impact:* ~${dayTradeSignal.price_impact_bps} bps ($100K)
 
- *POSITION SIZING:*
+💼 *POSITION SIZING:*
 ${dayTradeSignal.position_size_multiplier >= 1.0 ? ICONS.green : dayTradeSignal.position_size_multiplier >= 0.75 ? '🟡' : ICONS.red} *Recommended:* ${(dayTradeSignal.position_size_multiplier * 100).toFixed(0)}% of normal size
-${dayTradeSignal.optimal_for_trading ? ' *Status:* Optimal for trading' : ' *Status:* Sub-optimal liquidity'}
+${dayTradeSignal.optimal_for_trading ? '✅ *Status:* Optimal for trading' : '⚠️ *Status:* Sub-optimal liquidity'}
 
-
- *SWING TRADE SIGNAL*
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🌊 *SWING TRADE SIGNAL*
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${swingTradeMTF.isValid ? ICONS.check : ICONS.times} *${swingTradeMTF.signal_type}* (${swingTradeMTF.final_confidence}% confidence)
 
@@ -5022,40 +5022,40 @@ ${swingTradeMTF.isValid ? ICONS.check : ICONS.times} *${swingTradeMTF.signal_typ
 *TP2:* $${swingTradeMTF.take_profit_2.toFixed(2)} (${((swingTradeMTF.take_profit_2 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
 *TP3:* $${swingTradeMTF.take_profit_3.toFixed(2)} (${((swingTradeMTF.take_profit_3 / swingTradeMTF.price - 1) * 100).toFixed(2)}%)
 
-${resistanceLevels.length > 0 ? ` *Key Levels:*
- *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
+${resistanceLevels.length > 0 ? `📊 *Key Levels:*
+🔴 *Resistance:* ${resistanceLevels.map(r => `$${r.toFixed(2)}`).join(', ')}
 🟢 *Support:* ${supportLevels.map(s => `$${s.toFixed(2)}`).join(', ')}
 
-` : ''} *Position:* ${swingPosition.units} lots ($${swingPosition.value.toLocaleString()})
- *Risk:* $${swingPosition.risk_amount} (${swingPosition.risk_pct}%)
- *R:R:* ${swingPosition.reward_risk_ratio}:1
+` : ''}💼 *Position:* ${swingPosition.units} lots ($${swingPosition.value.toLocaleString()})
+💰 *Risk:* $${swingPosition.risk_amount} (${swingPosition.risk_pct}%)
+📊 *R:R:* ${swingPosition.reward_risk_ratio}:1
 
-${swingPosition.warning ? ` ${swingPosition.warning}` : ''}
+${swingPosition.warning ? `⚠️ ${swingPosition.warning}` : ''}
 
- *LIQUIDITY ANALYSIS:*
+💧 *LIQUIDITY ANALYSIS:*
 ${swingTradeSignal.liquidity_score >= 70 ? ICONS.green : swingTradeSignal.liquidity_score >= 50 ? '🟡' : ICONS.red} *Score:* ${swingTradeSignal.liquidity_score}/100
- *Session:* ${swingTradeSignal.session} (${swingTradeSignal.time_zone} LIQUIDITY)
- *Volume:* ${swingTradeSignal.volume_trend} (${swingTradeSignal.volume_percentile}%ile)
- *Spread:* ~${swingTradeSignal.estimated_spread_pips} pips
- *Impact:* ~${swingTradeSignal.price_impact_bps} bps ($100K)
+🌐 *Session:* ${swingTradeSignal.session} (${swingTradeSignal.time_zone} LIQUIDITY)
+📊 *Volume:* ${swingTradeSignal.volume_trend} (${swingTradeSignal.volume_percentile}%ile)
+💰 *Spread:* ~${swingTradeSignal.estimated_spread_pips} pips
+📉 *Impact:* ~${swingTradeSignal.price_impact_bps} bps ($100K)
 
- *POSITION SIZING:*
+💼 *POSITION SIZING:*
 ${swingTradeSignal.position_size_multiplier >= 1.0 ? ICONS.green : swingTradeSignal.position_size_multiplier >= 0.75 ? '🟡' : ICONS.red} *Recommended:* ${(swingTradeSignal.position_size_multiplier * 100).toFixed(0)}% of normal size
-${swingTradeSignal.optimal_for_trading ? ' *Status:* Optimal for trading' : ' *Status:* Sub-optimal liquidity'}
+${swingTradeSignal.optimal_for_trading ? '✅ *Status:* Optimal for trading' : '⚠️ *Status:* Sub-optimal liquidity'}
 
-
- *RECOMMENDATION*
-
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 *RECOMMENDATION*
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${dayTradeMTF.isValid && dayTradeMTF.signal_type !== 'HOLD' ? 
-  ` Day Trade: EXECUTE ${dayTradeMTF.signal_type}` : 
-  ` Day Trade: SKIP (${dayTradeMTF.mtf_reason})`}
+  `✅ Day Trade: EXECUTE ${dayTradeMTF.signal_type}` : 
+  `⚠️ Day Trade: SKIP (${dayTradeMTF.mtf_reason})`}
 
 ${swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD' ? 
-  ` Swing Trade: EXECUTE ${swingTradeMTF.signal_type}` : 
-  ` Swing Trade: SKIP (${swingTradeMTF.mtf_reason})`}
+  `✅ Swing Trade: EXECUTE ${swingTradeMTF.signal_type}` : 
+  `⚠️ Swing Trade: SKIP (${swingTradeMTF.mtf_reason})`}
 
- Dashboard: ${c.req.url.replace('/api/automation/analyze-and-notify', '')}
+🌐 Dashboard: ${c.req.url.replace('/api/automation/analyze-and-notify', '')}
       `.trim()
       
       const { sendTelegramMessage } = await import('./lib/telegram')
