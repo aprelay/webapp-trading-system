@@ -249,6 +249,16 @@ app.get('/test-alert', async (c) => {
  * Main Hybrid Micro Scanner Endpoint
  */
 app.get('/scan', async (c) => {
+  return handleScan(c);
+});
+
+// POST support for Cloudflare Cron Triggers
+app.post('/scan', async (c) => {
+  return handleScan(c);
+});
+
+// Shared handler function for both GET and POST
+async function handleScan(c: any) {
   const { DB } = c.env
   const startTime = Date.now()
   
@@ -469,7 +479,7 @@ app.get('/scan', async (c) => {
       error: error.message
     }, 500)
   }
-})
+}
 
 /**
  * Get recent hybrid signals for dashboard

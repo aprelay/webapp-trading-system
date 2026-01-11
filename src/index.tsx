@@ -5111,4 +5111,46 @@ ${swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD' ?
   }
 })
 
-export default app
+// 🤖 Cloudflare Cron Trigger Handler - Automatic Hybrid Micro Scanner
+// Runs every 5 minutes (configured in wrangler.jsonc: */5 * * * *)
+export default {
+  fetch: app.fetch,
+  
+  async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
+    console.log('[CRON] Cloudflare scheduled trigger fired:', new Date().toISOString());
+    
+    try {
+      // Call hybrid-micro scanner endpoint (supports both GET and POST)
+      const baseUrl = 'https://gold-trading-system.pages.dev';
+      const request = new Request(`${baseUrl}/api/hybrid-micro/scan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // Execute the scan
+      const response = await app.fetch(request, env, ctx);
+      const result: any = await response.json();
+      
+      console.log('[CRON] Hybrid scanner result:', JSON.stringify(result));
+      
+      // Log success/failure
+      if (result.success) {
+        console.log('[CRON] ✅ Scan completed:', result.message);
+        if (result.signal) {
+          console.log('[CRON] 📊 Signal generated:', result.signal.grade, result.signal.signal_type, '@', result.signal.price);
+          if (result.telegram_sent) {
+            console.log('[CRON] 📱 Telegram alert sent successfully');
+          }
+        } else {
+          console.log('[CRON] ℹ️ No signal generated this scan');
+        }
+      } else {
+        console.log('[CRON] ⚠️ Scan completed with issue:', result.message || result.error);
+      }
+    } catch (error) {
+      console.error('[CRON] ❌ Scheduled scan failed:', error);
+    }
+  }
+}
