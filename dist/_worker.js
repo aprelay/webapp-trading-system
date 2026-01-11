@@ -3656,7 +3656,8 @@ ${((p=m.regime)==null?void 0:p.should_trade)===!1?"⚠️ <b>WARNING: Extreme vo
 ${f.type} (${f.score}/5 timeframes)
 Confidence Boost: +${f.confidenceBoost}%
 
-${f.trends.map(V=>`${V.trend==="BULLISH"?"📈":V.trend==="BEARISH"?"📉":"➡️"} *${V.timeframe}*: ${V.trend} (${V.confidence.toFixed(0)}%)`).join("\\n")}
+${f.trends.map(V=>`${V.trend==="BULLISH"?"📈":V.trend==="BEARISH"?"📉":"➡️"} *${V.timeframe}*: ${V.trend} (${V.confidence.toFixed(0)}%)`).join(`
+`)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 *DAY TRADE SIGNAL*
@@ -3797,7 +3798,8 @@ ${k.isValid&&k.signal_type!=="HOLD"?`✅ Swing Trade: EXECUTE ${k.signal_type}`:
 ${u.type} (${u.score}/5 timeframes)
 Confidence Boost: +${u.confidenceBoost}%
 
-${u.trends.map(U=>`${U.trend==="BULLISH"?"📈":U.trend==="BEARISH"?"📉":"➡️"} *${U.timeframe}*: ${U.trend} (${U.confidence.toFixed(0)}%)`).join("\\n")}
+${u.trends.map(U=>`${U.trend==="BULLISH"?"📈":U.trend==="BEARISH"?"📉":"➡️"} *${U.timeframe}*: ${U.trend} (${U.confidence.toFixed(0)}%)`).join(`
+`)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 *DAY TRADE SIGNAL*

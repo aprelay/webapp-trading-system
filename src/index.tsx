@@ -4554,7 +4554,7 @@ Confidence Boost: +${alignment.confidenceBoost}%
 ${alignment.trends.map(t => {
   const icon = t.trend === 'BULLISH' ? '📈' : t.trend === 'BEARISH' ? '📉' : '➡️'
   return `${icon} *${t.timeframe}*: ${t.trend} (${t.confidence.toFixed(0)}%)`
-}).join('\\n')}
+}).join('\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 *DAY TRADE SIGNAL*
@@ -4986,7 +4986,7 @@ Confidence Boost: +${alignment.confidenceBoost}%
 ${alignment.trends.map((t: any) => {
   const icon = t.trend === 'BULLISH' ? '📈' : t.trend === 'BEARISH' ? '📉' : '➡️'
   return `${icon} *${t.timeframe}*: ${t.trend} (${t.confidence.toFixed(0)}%)`
-}).join('\\n')}
+}).join('\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 *DAY TRADE SIGNAL*
