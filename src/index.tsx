@@ -543,6 +543,15 @@ app.get('/', (c) => {
         <script>
             let priceChart = null;
             
+            // Helper: Safe emoji rendering (no emoji literals in JS to avoid encoding issues)
+            const ICONS = {
+                success: '<i class="fas fa-check-circle text-green-400"></i>',
+                warning: '<i class="fas fa-exclamation-triangle text-yellow-400"></i>',
+                error: '<i class="fas fa-times-circle text-red-400"></i>',
+                check: '<i class="fas fa-check text-green-400"></i>',
+                times: '<i class="fas fa-times text-red-400"></i>'
+            };
+            
             // ⚡ Helper function: Native fetch with timeout
             async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
                 const controller = new AbortController();
@@ -777,8 +786,8 @@ app.get('/', (c) => {
                         document.getElementById('dataTotal').textContent = totalSources;
                         
                         // Update status message
-                        const emoji = data.overall_status === 'healthy' ? '✅' : '⚠️';
-                        statusDiv.innerHTML = emoji + ' System ' + data.overall_status + ' • ' + healthyEndpoints + '/' + totalEndpoints + ' endpoints healthy • ' + freshSources + '/' + totalSources + ' data fresh • Last checked: ' + new Date().toLocaleTimeString();
+                        const statusIconMain = data.overall_status === 'healthy' ? ICONS.success : ICONS.warning;
+                        statusDiv.innerHTML = statusIconMain + ' System ' + data.overall_status + ' • ' + healthyEndpoints + '/' + totalEndpoints + ' endpoints healthy • ' + freshSources + '/' + totalSources + ' data fresh • Last checked: ' + new Date().toLocaleTimeString();
                         
                         // Show detailed endpoint status
                         if (data.endpoints && data.endpoints.length > 0) {
@@ -787,7 +796,7 @@ app.get('/', (c) => {
                             
                             let html = '';
                             data.endpoints.forEach(endpoint => {
-                                const statusIcon = endpoint.status === 'healthy' ? '✅' : '❌';
+                                const statusIcon = endpoint.status === 'healthy' ? ICONS.check : ICONS.times;
                                 const statusColor = endpoint.status === 'healthy' ? 'text-green-400' : 'text-red-400';
                                 html += '<div class="flex justify-between items-center py-1 border-b border-blue-700">' +
                                     '<span class="' + statusColor + '">' + statusIcon + ' ' + endpoint.endpoint_name + '</span>' +
@@ -799,7 +808,7 @@ app.get('/', (c) => {
                             detailsDiv.classList.remove('hidden');
                         }
                     } else {
-                        statusDiv.innerHTML = '❌ Error loading monitoring data';
+                        statusDiv.innerHTML = ICONS.error + ' Error loading monitoring data';
                     }
                     
                     button.disabled = false;
@@ -1224,27 +1233,29 @@ app.get('/', (c) => {
                             let html = '';
                             signalsRes.signals.forEach(signal => {
                                 try {
-                                    const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴';
-                                    const color = signal.signal_type === 'BUY' ? 'text-green-400' : 'text-red-400';
+                                    const isBuy = signal.signal_type === 'BUY';
+                                    const color = isBuy ? 'text-green-400' : 'text-red-400';
+                                    const iconClass = isBuy ? 'fa-circle text-green-500' : 'fa-circle text-red-500';
                                     const timeStr = new Date(signal.created_at || signal.timestamp).toLocaleString();
                                     
                                     // Hybrid grade badge
                                     const grade = signal.grade || 'B';
                                     let gradeBadgeClass = 'bg-blue-500';
-                                    let gradeIcon = '✓';
+                                    let gradeText = 'B';
                                     if (grade === 'A+') {
                                         gradeBadgeClass = 'bg-yellow-500 text-black';
-                                        gradeIcon = '⭐⭐';
+                                        gradeText = 'A+';
                                     } else if (grade === 'A') {
                                         gradeBadgeClass = 'bg-green-500';
-                                        gradeIcon = '⭐';
+                                        gradeText = 'A';
                                     }
                                     
-                                    html += '<div class="bg-gray-800 p-3 rounded border-l-4 ' + (signal.signal_type === 'BUY' ? 'border-green-500' : 'border-red-500') + '">';
+                                    html += '<div class="bg-gray-800 p-3 rounded border-l-4 ' + (isBuy ? 'border-green-500' : 'border-red-500') + '">';
                                     html += '<div class="flex justify-between items-start mb-2">';
                                     html += '<div class="flex items-center gap-2">';
-                                    html += '<span class="' + color + ' font-bold">' + emoji + ' ' + signal.signal_type + '</span>';
-                                    html += '<span class="text-xs px-2 py-1 rounded font-bold ' + gradeBadgeClass + '">' + gradeIcon + ' ' + grade + '</span>';
+                                    html += '<i class="fas ' + iconClass + '"></i>';
+                                    html += '<span class="' + color + ' font-bold">' + signal.signal_type + '</span>';
+                                    html += '<span class="text-xs px-2 py-1 rounded font-bold ' + gradeBadgeClass + '">' + gradeText + '</span>';
                                     html += '</div>';
                                     html += '<span class="text-xs text-gray-400">' + (signal.setup_type || 'SETUP') + '</span>';
                                     html += '</div>';
