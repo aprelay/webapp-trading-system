@@ -472,6 +472,55 @@ app.get('/scan', async (c) => {
 })
 
 /**
+ * Get recent hybrid signals for dashboard
+ */
+app.get('/signals/recent', async (c) => {
+  const { DB } = c.env
+  const limit = parseInt(c.req.query('limit') || '10')
+  
+  try {
+    const signals = await DB.prepare(`
+      SELECT 
+        id,
+        signal_type,
+        price,
+        stop_loss,
+        take_profit_1,
+        take_profit_2,
+        take_profit_3,
+        confidence,
+        setup_type,
+        trend_5m,
+        trend_15m,
+        grade,
+        filters_passed,
+        position_multiplier,
+        telegram_sent,
+        timestamp,
+        created_at
+      FROM micro_trade_signals 
+      WHERE grade IS NOT NULL
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `).bind(limit).all()
+    
+    return c.json({
+      success: true,
+      signals: signals.results || [],
+      count: signals.results?.length || 0
+    })
+    
+  } catch (error: any) {
+    console.error('[HYBRID-MICRO] Error fetching signals:', error)
+    return c.json({
+      success: false,
+      error: error.message,
+      signals: []
+    }, 500)
+  }
+})
+
+/**
  * Test hybrid system
  */
 app.get('/test', async (c) => {

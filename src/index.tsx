@@ -1215,8 +1215,8 @@ app.get('/', (c) => {
                         document.getElementById('microDailyPnL').textContent = '--';
                     }
                     
-                    // Fetch recent signals
-                    const signalsRes = await fetchWithTimeout('/api/micro/signals/recent?limit=10');
+                    // Fetch recent HYBRID signals (includes grade/filters/position_multiplier)
+                    const signalsRes = await fetchWithTimeout('/api/hybrid-micro/signals/recent?limit=10');
                     if (signalsRes.success && signalsRes.signals) {
                         const listDiv = document.getElementById('microSignalsList');
                         if (signalsRes.signals.length === 0) {
