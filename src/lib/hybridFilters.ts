@@ -461,45 +461,53 @@ export function filterConfluence(
   const checks = []
   
   // RSI check
-  if (signalType === 'BUY' && indicators.rsi < 50) {
+  const rsi = indicators.rsi_14 || indicators.rsi || 50
+  if (signalType === 'BUY' && rsi < 50) {
     agreeing++
     checks.push('RSI oversold')
-  } else if (signalType === 'SELL' && indicators.rsi > 50) {
+  } else if (signalType === 'SELL' && rsi > 50) {
     agreeing++
     checks.push('RSI overbought')
   }
   
   // MACD check
-  if (signalType === 'BUY' && indicators.macd > indicators.macd_signal) {
-    agreeing++
-    checks.push('MACD bullish')
-  } else if (signalType === 'SELL' && indicators.macd < indicators.macd_signal) {
-    agreeing++
-    checks.push('MACD bearish')
+  if (indicators.macd && indicators.macd_signal) {
+    if (signalType === 'BUY' && indicators.macd > indicators.macd_signal) {
+      agreeing++
+      checks.push('MACD bullish')
+    } else if (signalType === 'SELL' && indicators.macd < indicators.macd_signal) {
+      agreeing++
+      checks.push('MACD bearish')
+    }
   }
   
   // ADX check (trend strength)
-  if (indicators.adx > 25) {
+  const adx = indicators.adx_14 || indicators.adx || 0
+  if (adx > 25) {
     agreeing++
     checks.push('Strong trend (ADX > 25)')
   }
   
   // Stochastic check
-  if (signalType === 'BUY' && indicators.stochastic_k < 30) {
-    agreeing++
-    checks.push('Stochastic oversold')
-  } else if (signalType === 'SELL' && indicators.stochastic_k > 70) {
-    agreeing++
-    checks.push('Stochastic overbought')
+  if (indicators.stochastic_k) {
+    if (signalType === 'BUY' && indicators.stochastic_k < 30) {
+      agreeing++
+      checks.push('Stochastic oversold')
+    } else if (signalType === 'SELL' && indicators.stochastic_k > 70) {
+      agreeing++
+      checks.push('Stochastic overbought')
+    }
   }
   
   // EMA alignment
-  if (signalType === 'BUY' && indicators.ema_20 > indicators.ema_50) {
-    agreeing++
-    checks.push('EMA bullish alignment')
-  } else if (signalType === 'SELL' && indicators.ema_20 < indicators.ema_50) {
-    agreeing++
-    checks.push('EMA bearish alignment')
+  if (indicators.ema_20 && indicators.ema_50) {
+    if (signalType === 'BUY' && indicators.ema_20 > indicators.ema_50) {
+      agreeing++
+      checks.push('EMA bullish alignment')
+    } else if (signalType === 'SELL' && indicators.ema_20 < indicators.ema_50) {
+      agreeing++
+      checks.push('EMA bearish alignment')
+    }
   }
   
   const total = 5
@@ -543,7 +551,7 @@ export async function gradeSignal(
     multiTimeframe: filterMultiTimeframeConfluence(signalType, mtfData),
     newsCalendar: filterNewsCalendar(currentTime),
     timeOfDay: filterTimeOfDay(currentTime),
-    volatility: filterVolatility(indicators.atr || 0, options?.atrHistory || []),
+    volatility: filterVolatility(indicators.atr_14 || indicators.atr || 0, options?.atrHistory || []),
     marketStructure: filterMarketStructure(signalType, candles),
     volumeProfile: filterVolumeProfile(currentPrice, candles),
     orderFlow: filterOrderFlow(signalType, candles),

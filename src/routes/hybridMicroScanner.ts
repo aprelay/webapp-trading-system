@@ -132,6 +132,12 @@ app.get('/scan', async (c) => {
         // Calculate indicators
         const indicators = await calculateIndicators(formatted)
         
+        // Skip if indicators calculation failed
+        if (!indicators) {
+          console.log(`[HYBRID-MICRO] Skipping ${tf} - insufficient data for indicators`)
+          continue
+        }
+        
         mtfData[tf] = {
           candles: formatted,
           indicators,
@@ -150,7 +156,9 @@ app.get('/scan', async (c) => {
     // Step 2: Generate base micro signal
     const baseSignal = await generateMicroTradeSignal(
       mtfData['5m'].candles,
-      mtfData['15m'].candles
+      mtfData['5m'].indicators,
+      mtfData['15m'].candles,
+      mtfData['15m'].indicators
     )
     
     if (!baseSignal) {
@@ -163,6 +171,18 @@ app.get('/scan', async (c) => {
     // Step 3: Grade the signal using hybrid filters
     const currentPrice = mtfData['5m'].candles[mtfData['5m'].candles.length - 1].close
     const indicators = mtfData['5m'].indicators
+    
+    // Validate indicators exist
+    if (!indicators || !indicators.rsi_14) {
+      return c.json({
+        success: false,
+        error: 'Technical indicators not available',
+        debug: {
+          hasIndicators: !!indicators,
+          indicatorKeys: indicators ? Object.keys(indicators).slice(0, 5) : []
+        }
+      })
+    }
     
     // Get ATR history for volatility filter
     const atrHistory = mtfData['5m'].candles.slice(-100).map((c: Candle, i: number, arr: Candle[]) => {
