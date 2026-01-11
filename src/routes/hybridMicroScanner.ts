@@ -98,6 +98,154 @@ function formatHybridMicroAlert(
 }
 
 /**
+ * Test Alert Endpoint - Send a sample Grade A hybrid signal
+ */
+app.get('/test-alert', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    // Get current price from latest candle
+    const latestCandle = await DB.prepare(`
+      SELECT close FROM market_data 
+      WHERE timeframe = '5m' 
+      ORDER BY timestamp DESC 
+      LIMIT 1
+    `).first() as any
+    
+    const currentPrice = latestCandle?.close || 4509.82
+    
+    // Create sample Grade A signal
+    const sampleSignal: MicroTradeSetup = {
+      signal_type: 'BUY',
+      price: currentPrice,
+      stop_loss: currentPrice - 8.0,
+      take_profit_1: currentPrice + 10.0,
+      take_profit_2: currentPrice + 18.0,
+      take_profit_3: currentPrice + 25.0,
+      confidence: 78.5,
+      setup_type: 'BREAKOUT',
+      trend_5m: 'BULLISH',
+      trend_15m: 'BULLISH',
+      indicators_5m: {
+        rsi: 68.5,
+        macd: 2.15,
+        macd_signal: 1.85,
+        stochastic_k: 75.2,
+        adx: 32.8
+      },
+      reason: 'TEST ALERT - Strong bullish breakout with Grade A quality (7/10 filters passed)'
+    }
+    
+    // Sample Grade A results
+    const gradeResult = {
+      grade: 'A' as const,
+      filtersPassed: 7,
+      totalFilters: 10,
+      positionMultiplier: 1.0,
+      confidence: 78.5,
+      filterResults: {}
+    }
+    
+    // Get signal number
+    const todaySignals = await DB.prepare(`
+      SELECT COUNT(*) as count FROM micro_trade_signals 
+      WHERE DATE(created_at) = DATE('now')
+    `).first() as any
+    
+    const signalNumber = (todaySignals?.count || 0) + 1
+    
+    // Get Telegram config
+    const settings = await DB.prepare(`
+      SELECT setting_key, setting_value FROM user_settings
+      WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
+    `).all()
+    
+    const config: any = {}
+    for (const row of settings.results || []) {
+      config[(row as any).setting_key] = (row as any).setting_value
+    }
+    
+    if (!config.telegram_bot_token || !config.telegram_chat_id) {
+      return c.json({
+        success: false,
+        error: 'Telegram not configured'
+      })
+    }
+    
+    // Send Telegram alert
+    const message = formatHybridMicroAlert(
+      sampleSignal,
+      gradeResult,
+      signalNumber,
+      85, // liquidityScore
+      'NEW_YORK' // session
+    )
+    
+    const telegramSent = await sendTelegramMessage(
+      {
+        botToken: config.telegram_bot_token,
+        chatId: config.telegram_chat_id
+      },
+      message
+    )
+    
+    // Store in database
+    await DB.prepare(`
+      INSERT INTO micro_trade_signals (
+        signal_type, price, stop_loss, 
+        take_profit_1, take_profit_2, take_profit_3,
+        confidence, setup_type, trend_5m, trend_15m,
+        rsi_5m, macd_5m, macd_signal_5m, adx_5m, stochastic_k_5m,
+        reason, grade, filters_passed, position_multiplier,
+        telegram_sent, timestamp, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).bind(
+      sampleSignal.signal_type,
+      sampleSignal.price,
+      sampleSignal.stop_loss,
+      sampleSignal.take_profit_1,
+      sampleSignal.take_profit_2,
+      sampleSignal.take_profit_3,
+      gradeResult.confidence,
+      sampleSignal.setup_type,
+      sampleSignal.trend_5m,
+      sampleSignal.trend_15m,
+      sampleSignal.indicators_5m.rsi,
+      sampleSignal.indicators_5m.macd,
+      sampleSignal.indicators_5m.macd_signal,
+      sampleSignal.indicators_5m.adx,
+      sampleSignal.indicators_5m.stochastic_k,
+      sampleSignal.reason,
+      gradeResult.grade,
+      gradeResult.filtersPassed,
+      gradeResult.positionMultiplier,
+      telegramSent ? 1 : 0
+    ).run()
+    
+    return c.json({
+      success: true,
+      message: 'Test Grade A hybrid alert sent to Telegram and stored in database!',
+      signal: {
+        grade: gradeResult.grade,
+        filters_passed: gradeResult.filtersPassed,
+        confidence: gradeResult.confidence,
+        position_multiplier: gradeResult.positionMultiplier,
+        signal_type: sampleSignal.signal_type,
+        entry: sampleSignal.price,
+        stop_loss: sampleSignal.stop_loss,
+        telegram_sent: telegramSent,
+        signal_number: signalNumber
+      }
+    })
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
  * Main Hybrid Micro Scanner Endpoint
  */
 app.get('/scan', async (c) => {
@@ -240,10 +388,10 @@ app.get('/scan', async (c) => {
         signal_type, price, stop_loss, 
         take_profit_1, take_profit_2, take_profit_3,
         confidence, setup_type, trend_5m, trend_15m,
-        indicators_5m, reason,
-        grade, filters_passed, position_multiplier,
-        telegram_sent, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+        rsi_5m, macd_5m, macd_signal_5m, adx_5m, stochastic_k_5m,
+        reason, grade, filters_passed, position_multiplier,
+        telegram_sent, timestamp, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))
     `).bind(
       signal.signal_type,
       signal.price,
@@ -255,7 +403,11 @@ app.get('/scan', async (c) => {
       signal.setup_type,
       signal.trend_5m,
       signal.trend_15m,
-      JSON.stringify(signal.indicators_5m),
+      signal.indicators_5m?.rsi || 50,
+      signal.indicators_5m?.macd || 0,
+      signal.indicators_5m?.macd_signal || 0,
+      signal.indicators_5m?.adx || 0,
+      signal.indicators_5m?.stochastic_k || 50,
       signal.reason,
       gradeResult.grade,
       gradeResult.filtersPassed,
