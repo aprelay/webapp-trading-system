@@ -389,10 +389,10 @@ app.get('/', (c) => {
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h2 class="text-2xl font-bold text-white">
-                                <i class="fas fa-bolt mr-3"></i>⚡ Micro Day Trade System
+                                <i class="fas fa-bolt mr-3"></i>🎯 Hybrid Micro Signals (Live)
                             </h2>
                             <p class="text-cyan-100 mt-2">
-                                5-Minute Signals • 30-35 Signals/Day • 5 Setup Types • Auto Position Sizing
+                                Grade A+/A/B • 10 Quality Filters • Position Sizing 0.5x-2x • Auto Telegram Alerts
                             </p>
                         </div>
                         <button onclick="sendMicroTestAlert()" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg font-semibold transition">
@@ -1159,7 +1159,7 @@ app.get('/', (c) => {
             // Micro Trade Test Alert Function
             async function sendMicroTestAlert() {
                 try {
-                    if (!confirm('⚡ This will send a SAMPLE micro-trade alert to your Telegram.\\n\\nThis is a TEST alert to show you what micro-trade signals look like.\\n\\nContinue?')) {
+                    if (!confirm('🎯 This will send a HYBRID GRADE A signal to your Telegram.\n\nThis test alert includes:\n✅ Grade A badge (7/10 filters passed)\n✅ Position multiplier (1.0x)\n✅ Quality metrics\n\nContinue?')) {
                         return;
                     }
                     
@@ -1167,15 +1167,17 @@ app.get('/', (c) => {
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
                     
-                    const res = await fetchWithTimeout('/api/micro/test-alert');
+                    const res = await fetchWithTimeout('/api/hybrid-micro/test-alert');
                     
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Test Alert';
                     
                     if (res.success) {
-                        alert('✅ Test micro-trade alert sent!\\n\\nCheck your Telegram to see what real micro-trade signals will look like.\\n\\n⚡ MICRO TRADE #999\\n🟢 BUY XAU/USD | 79%\\nSetup: BREAKOUT 📈\\n\\n💰 Entry: $4509.88\\n🛡️ Stop: $4501.88 (-8 pips)\\n🎯 TP1: $4519.88 (+10 pips)\\n\\nThis is a SAMPLE alert for testing purposes.');
+                        alert('✅ Hybrid Grade A signal sent!\n\nCheck your Telegram for:\n\n🟢 HIGH-QUALITY SIGNAL [A]\nSignal #' + (res.signal?.signal_number || 'N/A') + '\nBUY XAU/USD\nGrade: A ⭐\nFilters: 7/10\nPosition: 1.0x\n\n✅ Signal also stored in database and will appear on dashboard after refresh!');
+                        // Refresh the dashboard to show the new signal
+                        await refreshData();
                     } else {
-                        alert('❌ Failed to send test alert.\\n\\n' + res.message + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                        alert('❌ Failed to send test alert.\n\n' + (res.message || res.error) + '\n\nMake sure database migration is applied.');
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
@@ -1224,18 +1226,38 @@ app.get('/', (c) => {
                             signalsRes.signals.forEach(signal => {
                                 const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴';
                                 const color = signal.signal_type === 'BUY' ? 'text-green-400' : 'text-red-400';
-                                const timeStr = new Date(signal.timestamp).toLocaleString();
+                                const timeStr = new Date(signal.created_at || signal.timestamp).toLocaleString();
+                                
+                                // Hybrid grade badge
+                                const grade = signal.grade || 'B';
+                                let gradeBadgeClass = 'bg-blue-500';
+                                let gradeIcon = '✓';
+                                if (grade === 'A+') {
+                                    gradeBadgeClass = 'bg-yellow-500 text-black';
+                                    gradeIcon = '⭐⭐';
+                                } else if (grade === 'A') {
+                                    gradeBadgeClass = 'bg-green-500';
+                                    gradeIcon = '⭐';
+                                }
                                 
                                 html += '<div class="bg-gray-800 p-3 rounded border-l-4 ' + (signal.signal_type === 'BUY' ? 'border-green-500' : 'border-red-500') + '">';
-                                html += '<div class="flex justify-between items-start mb-1">';
+                                html += '<div class="flex justify-between items-start mb-2">';
+                                html += '<div class="flex items-center gap-2">';
                                 html += '<span class="' + color + ' font-bold">' + emoji + ' ' + signal.signal_type + '</span>';
-                                html += '<span class="text-xs text-gray-400">' + signal.setup_type + '</span>';
+                                html += '<span class="text-xs px-2 py-1 rounded font-bold ' + gradeBadgeClass + '">' + gradeIcon + ' ' + grade + '</span>';
                                 html += '</div>';
-                                html += '<div class="text-sm text-gray-300">';
+                                html += '<span class="text-xs text-gray-400">' + (signal.setup_type || 'SETUP') + '</span>';
+                                html += '</div>';
+                                html += '<div class="text-sm text-gray-300 mb-2">';
                                 html += 'Entry: $' + signal.price.toFixed(2) + ' | Stop: $' + signal.stop_loss.toFixed(2);
                                 html += '</div>';
-                                html += '<div class="text-xs text-gray-400 mt-1">';
-                                html += signal.confidence.toFixed(0) + '% | ' + signal.session + ' | ' + timeStr;
+                                html += '<div class="grid grid-cols-3 gap-2 text-xs mb-2">';
+                                html += '<div class="text-gray-400">Confidence: <span class="text-white font-bold">' + signal.confidence.toFixed(0) + '%</span></div>';
+                                html += '<div class="text-gray-400">Filters: <span class="text-white font-bold">' + (signal.filters_passed || 0) + '/10</span></div>';
+                                html += '<div class="text-gray-400">Position: <span class="text-white font-bold">' + (signal.position_multiplier || 1) + 'x</span></div>';
+                                html += '</div>';
+                                html += '<div class="text-xs text-gray-500">';
+                                html += (signal.session || 'SESSION') + ' | ' + timeStr;
                                 html += '</div>';
                                 html += '</div>';
                             });
