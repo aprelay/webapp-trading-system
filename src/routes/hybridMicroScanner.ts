@@ -424,7 +424,7 @@ async function handleScan(c: any) {
       gradeResult.positionMultiplier
     ).run()
     
-    // Step 7: Send Telegram alert
+    // Step 7: Send Telegram alert (only if confidence >= 60%)
     const settings = await DB.prepare(`
       SELECT setting_key, setting_value FROM user_settings
       WHERE setting_key IN ('telegram_bot_token', 'telegram_chat_id')
@@ -436,7 +436,8 @@ async function handleScan(c: any) {
     }
     
     let telegramSent = false
-    if (config.telegram_bot_token && config.telegram_chat_id) {
+    // Only send Telegram alert if confidence >= 60%
+    if (config.telegram_bot_token && config.telegram_chat_id && gradeResult.confidence >= 60) {
       const message = formatHybridMicroAlert(
         signal,
         gradeResult,
@@ -459,16 +460,22 @@ async function handleScan(c: any) {
       }
     }
     
+    const alertStatus = gradeResult.confidence >= 60 
+      ? (telegramSent ? 'sent to Telegram' : 'saved (Telegram failed)')
+      : 'saved (confidence < 60%, no alert)'
+    
     return c.json({
       success: true,
-      message: `${gradeResult.grade}-grade signal generated and ${telegramSent ? 'sent' : 'saved'}`,
+      message: `${gradeResult.grade}-grade signal generated and ${alertStatus}`,
       signal: {
         ...signal,
         grade: gradeResult.grade,
         filters_passed: gradeResult.filtersPassed,
+        confidence: gradeResult.confidence,
         position_multiplier: gradeResult.positionMultiplier
       },
       telegram_sent: telegramSent,
+      telegram_eligible: gradeResult.confidence >= 60,
       execution_time_ms: Date.now() - startTime
     })
     

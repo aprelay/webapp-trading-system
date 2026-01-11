@@ -1239,10 +1239,28 @@ app.get('/', (c) => {
                             console.log('[DEBUG] Building HTML for', signalsRes.signals.length, 'signals');
                             let html = '';
                             signalsRes.signals.forEach((signal, index) => {
-                                console.log('[DEBUG] Processing signal', index + 1, ':', signal.signal_type, signal.grade);
-                                const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴';
-                                const color = signal.signal_type === 'BUY' ? 'text-green-400' : 'text-red-400';
+                                console.log('[DEBUG] Processing signal', index + 1, ':', signal.signal_type, signal.grade, 'confidence:', signal.confidence);
                                 const timeStr = new Date(signal.created_at || signal.timestamp).toLocaleString();
+                                const confidence = signal.confidence || 0;
+                                
+                                // Determine display based on confidence
+                                let displayType, emoji, color, borderColor;
+                                if (confidence < 50) {
+                                    displayType = 'HOLD';
+                                    emoji = '⚪';
+                                    color = 'text-gray-400';
+                                    borderColor = 'border-gray-500';
+                                } else if (confidence < 60) {
+                                    displayType = 'HOLD';
+                                    emoji = '🟡';
+                                    color = 'text-yellow-400';
+                                    borderColor = 'border-yellow-500';
+                                } else {
+                                    displayType = signal.signal_type;
+                                    emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴';
+                                    color = signal.signal_type === 'BUY' ? 'text-green-400' : 'text-red-400';
+                                    borderColor = signal.signal_type === 'BUY' ? 'border-green-500' : 'border-red-500';
+                                }
                                 
                                 // Hybrid grade badge
                                 const grade = signal.grade || 'B';
@@ -1256,11 +1274,16 @@ app.get('/', (c) => {
                                     gradeIcon = '⭐';
                                 }
                                 
-                                html += '<div class="bg-gray-800 p-3 rounded border-l-4 ' + (signal.signal_type === 'BUY' ? 'border-green-500' : 'border-red-500') + '">';
+                                // Telegram status indicator
+                                const telegramIcon = signal.telegram_sent ? '✅' : '⏸️';
+                                const telegramLabel = signal.telegram_sent ? 'Sent' : (confidence >= 60 ? 'Pending' : 'Hold');
+                                
+                                html += '<div class="bg-gray-800 p-3 rounded border-l-4 ' + borderColor + '">';
                                 html += '<div class="flex justify-between items-start mb-2">';
                                 html += '<div class="flex items-center gap-2">';
-                                html += '<span class="' + color + ' font-bold">' + emoji + ' ' + signal.signal_type + '</span>';
+                                html += '<span class="' + color + ' font-bold">' + emoji + ' ' + displayType + '</span>';
                                 html += '<span class="text-xs px-2 py-1 rounded font-bold ' + gradeBadgeClass + '">' + gradeIcon + ' ' + grade + '</span>';
+                                html += '<span class="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300">' + telegramIcon + ' ' + telegramLabel + '</span>';
                                 html += '</div>';
                                 html += '<span class="text-xs text-gray-400">' + (signal.setup_type || 'SETUP') + '</span>';
                                 html += '</div>';
@@ -1268,7 +1291,7 @@ app.get('/', (c) => {
                                 html += 'Entry: $' + signal.price.toFixed(2) + ' | Stop: $' + signal.stop_loss.toFixed(2);
                                 html += '</div>';
                                 html += '<div class="grid grid-cols-3 gap-2 text-xs mb-2">';
-                                html += '<div class="text-gray-400">Confidence: <span class="text-white font-bold">' + signal.confidence.toFixed(0) + '%</span></div>';
+                                html += '<div class="text-gray-400">Confidence: <span class="text-white font-bold">' + confidence.toFixed(0) + '%</span></div>';
                                 html += '<div class="text-gray-400">Filters: <span class="text-white font-bold">' + (signal.filters_passed || 0) + '/10</span></div>';
                                 html += '<div class="text-gray-400">Position: <span class="text-white font-bold">' + (signal.position_multiplier || 1) + 'x</span></div>';
                                 html += '</div>';
