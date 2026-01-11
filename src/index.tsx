@@ -1192,10 +1192,13 @@ app.get('/', (c) => {
             // Load Micro Trade Data
             async function loadMicroTradeData() {
                 try {
+                    console.log('[DEBUG] loadMicroTradeData: Starting...');
                     const today = new Date().toISOString().split('T')[0];
                     
                     // Fetch daily stats
+                    console.log('[DEBUG] Fetching stats for date:', today);
                     const statsRes = await fetchWithTimeout('/api/micro/stats/daily?date=' + today);
+                    console.log('[DEBUG] Stats response:', statsRes);
                     if (statsRes.success && statsRes.stats) {
                         const stats = statsRes.stats;
                         document.getElementById('microSignalsToday').textContent = stats.total_signals || 0;
@@ -1216,14 +1219,23 @@ app.get('/', (c) => {
                     }
                     
                     // Fetch recent HYBRID signals (includes grade/filters/position_multiplier)
+                    console.log('[DEBUG] Fetching hybrid signals from /api/hybrid-micro/signals/recent?limit=10');
                     const signalsRes = await fetchWithTimeout('/api/hybrid-micro/signals/recent?limit=10');
+                    console.log('[DEBUG] Signals response:', signalsRes);
+                    console.log('[DEBUG] Signals count:', signalsRes.signals ? signalsRes.signals.length : 0);
+                    
                     if (signalsRes.success && signalsRes.signals) {
                         const listDiv = document.getElementById('microSignalsList');
+                        console.log('[DEBUG] microSignalsList div found:', !!listDiv);
+                        
                         if (signalsRes.signals.length === 0) {
+                            console.log('[DEBUG] No signals - showing empty state');
                             listDiv.innerHTML = '<p class="text-gray-400 text-sm">No signals yet. System will start generating signals during market hours.</p>';
                         } else {
+                            console.log('[DEBUG] Building HTML for', signalsRes.signals.length, 'signals');
                             let html = '';
-                            signalsRes.signals.forEach(signal => {
+                            signalsRes.signals.forEach((signal, index) => {
+                                console.log('[DEBUG] Processing signal', index + 1, ':', signal.signal_type, signal.grade);
                                 const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴';
                                 const color = signal.signal_type === 'BUY' ? 'text-green-400' : 'text-red-400';
                                 const timeStr = new Date(signal.created_at || signal.timestamp).toLocaleString();
@@ -1261,8 +1273,13 @@ app.get('/', (c) => {
                                 html += '</div>';
                                 html += '</div>';
                             });
+                            console.log('[DEBUG] HTML built, length:', html.length);
+                            console.log('[DEBUG] Setting innerHTML on microSignalsList');
                             listDiv.innerHTML = html;
+                            console.log('[DEBUG] innerHTML set successfully');
                         }
+                    } else {
+                        console.log('[DEBUG] Signals fetch failed or no signals property');
                     }
                     
                     // Check limits status
