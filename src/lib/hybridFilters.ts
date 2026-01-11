@@ -580,7 +580,7 @@ export async function gradeSignal(
     grade = 'A'
     positionMultiplier = 1.0
     confidence = 80 + (avgScore - 80) / 2  // 80-85%
-  } else if (filtersPassed >= 4) {
+  } else if (filtersPassed >= 5) {
     grade = 'B'
     positionMultiplier = 0.5
     confidence = 65 + (avgScore - 65) / 3  // 65-70%
@@ -588,6 +588,12 @@ export async function gradeSignal(
     grade = 'REJECT'
     positionMultiplier = 0
     confidence = avgScore
+  }
+  
+  // Additional check: If confidence is below 65%, reject regardless of filters
+  if (confidence < 65 && grade !== 'REJECT') {
+    grade = 'REJECT'
+    positionMultiplier = 0
   }
   
   return {
