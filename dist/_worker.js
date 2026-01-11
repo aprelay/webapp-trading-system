@@ -2386,7 +2386,7 @@ Continue?')) {
                     const today = new Date().toISOString().split('T')[0];
                     
                     // Fetch today's hybrid-micro signals directly
-                    console.log('[DEBUG] Fetching today's signals...');
+                    console.log('[DEBUG] Fetching today signals...');
                     const todaySignalsRes = await fetchWithTimeout('/api/hybrid-micro/signals/today?date=' + today);
                     console.log('[DEBUG] Today signals response:', todaySignalsRes);
                     
