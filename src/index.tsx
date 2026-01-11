@@ -1128,7 +1128,7 @@ app.get('/', (c) => {
             // Send Test A-Grade Alert
             async function sendTestAlert() {
                 try {
-                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\\n\\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\\n\\nContinue?')) {
+                    if (!confirm('📱 This will send a SAMPLE A-grade 5M setup alert to your Telegram.\\\n\\\nThis is NOT a real trade signal - just a test to show you what A-grade alerts look like.\\\n\\\nContinue?')) {
                         return;
                     }
                     
@@ -1142,9 +1142,9 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>📱 Send Test A-Grade Alert';
                     
                     if (res.success) {
-                        alert('✅ Test A-grade alert sent!\\n\\nCheck your Telegram to see what real alerts will look like.\\n\\n📊 Grade: A (87%)\\n🟢 Signal: BUY\\n💰 Entry: $4386.50\\n🛡️ Stop: $4401.50\\n🎯 TP1: $4356.20\\n\\nThis is a SAMPLE alert for testing purposes.');
+                        alert('✅ Test A-grade alert sent!\\\n\\\nCheck your Telegram to see what real alerts will look like.\\\n\\\n📊 Grade: A (87%)\\\n🟢 Signal: BUY\\\n💰 Entry: $4386.50\\\n🛡️ Stop: $4401.50\\\n🎯 TP1: $4356.20\\\n\\\nThis is a SAMPLE alert for testing purposes.');
                     } else {
-                        alert('❌ Failed to send test alert.\\n\\n' + res.error + '\\n\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
+                        alert('❌ Failed to send test alert.\\\n\\\n' + res.error + '\\\n\\\nMake sure Telegram Bot Token and Chat ID are configured in Settings.');
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
@@ -1159,7 +1159,7 @@ app.get('/', (c) => {
             // Micro Trade Test Alert Function
             async function sendMicroTestAlert() {
                 try {
-                    if (!confirm('🎯 This will send a HYBRID GRADE A signal to your Telegram.\n\nThis test alert includes:\n✅ Grade A badge (7/10 filters passed)\n✅ Position multiplier (1.0x)\n✅ Quality metrics\n\nContinue?')) {
+                    if (!confirm('🎯 This will send a HYBRID GRADE A signal to your Telegram.\\\n\\\nThis test alert includes:\\\n✅ Grade A badge (7/10 filters passed)\\\n✅ Position multiplier (1.0x)\\\n✅ Quality metrics\\\n\\\nContinue?')) {
                         return;
                     }
                     
@@ -1173,11 +1173,11 @@ app.get('/', (c) => {
                     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Test Alert';
                     
                     if (res.success) {
-                        alert('✅ Hybrid Grade A signal sent!\n\nCheck your Telegram for:\n\n🟢 HIGH-QUALITY SIGNAL [A]\nSignal #' + (res.signal?.signal_number || 'N/A') + '\nBUY XAU/USD\nGrade: A ⭐\nFilters: 7/10\nPosition: 1.0x\n\n✅ Signal also stored in database and will appear on dashboard after refresh!');
+                        alert('✅ Hybrid Grade A signal sent!\\n\\nCheck your Telegram for:\\n\\n🟢 HIGH-QUALITY SIGNAL [A]\\nSignal #' + (res.signal?.signal_number || 'N/A') + '\\nBUY XAU/USD\\nGrade: A ⭐\\nFilters: 7/10\\nPosition: 1.0x\\n\\n✅ Signal also stored in database and will appear on dashboard after refresh!');
                         // Refresh the dashboard to show the new signal
                         await refreshData();
                     } else {
-                        alert('❌ Failed to send test alert.\n\n' + (res.message || res.error) + '\n\nMake sure database migration is applied.');
+                        alert('❌ Failed to send test alert.\\n\\n' + (res.message || res.error) + '\\n\\nMake sure database migration is applied.');
                     }
                 } catch (error) {
                     alert('❌ Error sending test alert: ' + error.message);
@@ -1391,7 +1391,7 @@ app.get('/', (c) => {
                         
                         // Show alert for A-grade
                         if (scan.grade === 'A' || scan.grade === 'A+') {
-                            alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\\n\\nSignal: ' + scan.signal + '\\nEntry: $' + scan.entry.toFixed(2) + '\\nStop: $' + scan.stop_loss.toFixed(2) + '\\nTP1: $' + scan.targets[0].toFixed(2) + '\\n\\nCheck dashboard for full details!');
+                            alert('🎯 ' + scan.grade + '-GRADE SETUP DETECTED!\\\n\\\nSignal: ' + scan.signal + '\\\nEntry: $' + scan.entry.toFixed(2) + '\\\nStop: $' + scan.stop_loss.toFixed(2) + '\\\nTP1: $' + scan.targets[0].toFixed(2) + '\\\n\\\nCheck dashboard for full details!');
                         }
                     } else {
                         alert('❌ Scanner error: ' + res.error);
@@ -1427,15 +1427,15 @@ app.get('/', (c) => {
                     }, 180000); // 180 second timeout for slow mobile networks
                     
                     if (res.success) {
-                        let message = '✅ Market Data Fetched Successfully!\\n\\n';
-                        message += '📊 Fetched ' + res.totalCount + ' candles across 5 timeframes\\n\\n';
-                        message += '✅ Ready for:\\n';
-                        message += '   • Generate Signal NOW (simple)\\n';
-                        message += '   • Hedge Fund Signal (all 10 features)\\n\\n';
+                        let message = '✅ Market Data Fetched Successfully!\\\n\\\n';
+                        message += '📊 Fetched ' + res.totalCount + ' candles across 5 timeframes\\\n\\\n';
+                        message += '✅ Ready for:\\\n';
+                        message += '   • Generate Signal NOW (simple)\\\n';
+                        message += '   • Hedge Fund Signal (all 10 features)\\\n\\\n';
                         message += 'Click either button to analyze current market!';
                         alert(message);
                     } else {
-                        alert('✅ Partial Success\\n\\nFetched ' + res.totalCount + ' candles\\n\\nSome timeframes may have errors. Check console for details.');
+                        alert('✅ Partial Success\\\n\\\nFetched ' + res.totalCount + ' candles\\\n\\\nSome timeframes may have errors. Check console for details.');
                     }
                     
                     await refreshData();
@@ -1468,27 +1468,27 @@ app.get('/', (c) => {
                         // Format SIMPLE signal (matching Telegram format)
                         const emoji = day.signal_type === 'BUY' ? '🟢' : day.signal_type === 'SELL' ? '🔴' : '⚪';
                         
-                        let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\\n\\n';
-                        message += '📊 Day Trade\\n';
-                        message += '💰 Price: $' + day.price.toFixed(2) + '\\n';
-                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\\n\\n';
+                        let message = emoji + ' GOLD/USD ' + day.signal_type + ' SIGNAL ' + emoji + '\\\n\\\n';
+                        message += '📊 Day Trade\\\n';
+                        message += '💰 Price: $' + day.price.toFixed(2) + '\\\n';
+                        message += '📊 Confidence: ' + day.confidence.toFixed(1) + '%\\\n\\\n';
                         
-                        message += '🎯 Take Profits:\\n';
-                        message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\\n';
-                        message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\\n';
-                        message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\\n\\n';
+                        message += '🎯 Take Profits:\\\n';
+                        message += '   TP1: $' + day.take_profit_1.toFixed(2) + '\\\n';
+                        message += '   TP2: $' + day.take_profit_2.toFixed(2) + '\\\n';
+                        message += '   TP3: $' + day.take_profit_3.toFixed(2) + '\\\n\\\n';
                         
-                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\\n\\n';
+                        message += '🛡️ Stop Loss: $' + day.stop_loss.toFixed(2) + '\\\n\\\n';
                         
-                        message += '📝 Reason:\\n' + day.reason + '\\n\\n';
+                        message += '📝 Reason:\\\n' + day.reason + '\\\n\\\n';
                         
                         const timestamp = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
                         message += '⏰ ' + timestamp;
                         
                         if (res.telegram_sent) {
-                            message += '\\n\\n📱 Sent to Telegram!';
+                            message += '\\\n\\\n📱 Sent to Telegram!';
                         } else {
-                            message += '\\n\\n⚠️ Telegram not configured';
+                            message += '\\\n\\\n⚠️ Telegram not configured';
                         }
                         
                         alert(message);
@@ -1523,28 +1523,28 @@ app.get('/', (c) => {
                         const dayConf = res.confidence?.day_trade || 0;
                         const swingConf = res.confidence?.swing_trade || 0;
                         
-                        let message = '🏦 HEDGE FUND GRADE SIGNAL\\n\\n';
-                        message += res.message + '\\n\\n';
+                        let message = '🏦 HEDGE FUND GRADE SIGNAL\\\n\\\n';
+                        message += res.message + '\\\n\\\n';
                         
-                        message += '📊 CONFIDENCE:\\n';
-                        message += '📈 Day Trade: ' + dayConf.toFixed(0) + '%\\n';
-                        message += '🌊 Swing Trade: ' + swingConf.toFixed(0) + '%\\n\\n';
+                        message += '📊 CONFIDENCE:\\\n';
+                        message += '📈 Day Trade: ' + dayConf.toFixed(0) + '%\\\n';
+                        message += '🌊 Swing Trade: ' + swingConf.toFixed(0) + '%\\\n\\\n';
                         
-                        message += '🎯 THRESHOLD: ≥80% (Hedge Fund Grade)\\n\\n';
+                        message += '🎯 THRESHOLD: ≥80% (Hedge Fund Grade)\\\n\\\n';
                         
                         // Telegram Status
                         if (res.telegram_sent) {
-                            message += '📱 ✅ Alert sent to Telegram!\\n';
-                            message += '\\nCheck your Telegram for full signal details including:\\n';
-                            message += '• Entry price & stop loss\\n';
-                            message += '• Take profit levels (TP1, TP2, TP3)\\n';
-                            message += '• Risk metrics (VaR, drawdown)\\n';
-                            message += '• Market regime analysis\\n';
-                            message += '• Multi-timeframe alignment\\n';
+                            message += '📱 ✅ Alert sent to Telegram!\\\n';
+                            message += '\\\nCheck your Telegram for full signal details including:\\\n';
+                            message += '• Entry price & stop loss\\\n';
+                            message += '• Take profit levels (TP1, TP2, TP3)\\\n';
+                            message += '• Risk metrics (VaR, drawdown)\\\n';
+                            message += '• Market regime analysis\\\n';
+                            message += '• Multi-timeframe alignment\\\n';
                         } else if (dayConf < 80 && swingConf < 80) {
-                            message += '⚪ No alert sent\\n';
-                            message += '\\nConfidence below 80% threshold.\\n';
-                            message += 'Hedge fund signals require ≥80% confidence.\\n';
+                            message += '⚪ No alert sent\\\n';
+                            message += '\\\nConfidence below 80% threshold.\\\n';
+                            message += 'Hedge fund signals require ≥80% confidence.\\\n';
                         } else {
                             message += '📱 ⚠️ Telegram not configured (check settings)';
                         }
@@ -2064,7 +2064,7 @@ app.post('/api/telegram/test', async (c) => {
     
     const success = await sendTelegramMessage(
       { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
-      '🔔 <b>Test Alert</b>\n\nYour Gold/USD Trading System is connected and working!\n\n✅ Telegram alerts are active.'
+      '🔔 <b>Test Alert</b>\\n\\nYour Gold/USD Trading System is connected and working!\\n\\n✅ Telegram alerts are active.'
     );
     
     return c.json({ success });
@@ -3540,10 +3540,10 @@ app.post('/api/signals/generate-mtf', async (c) => {
       if (dayTradeMTF.isValid && dayTradeMTF.signal_type !== 'HOLD') {
         const daySuccess = await sendTelegramMessage(
           { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
-          `🎯 MULTI-TIMEFRAME CONFIRMED\n\n${formatTradeSignal({
+          `🎯 MULTI-TIMEFRAME CONFIRMED\\n\\n${formatTradeSignal({
             ...dayTradeMTF,
             timestamp: new Date().toISOString()
-          })}\n\n📊 ${formatAlignmentReport(alignment)}`
+          })}\\n\\n📊 ${formatAlignmentReport(alignment)}`
         );
         
         if (daySuccess) {
@@ -3557,10 +3557,10 @@ app.post('/api/signals/generate-mtf', async (c) => {
       if (swingTradeMTF.isValid && swingTradeMTF.signal_type !== 'HOLD') {
         const swingSuccess = await sendTelegramMessage(
           { botToken: config.telegram_bot_token, chatId: config.telegram_chat_id },
-          `🎯 MULTI-TIMEFRAME CONFIRMED\n\n${formatTradeSignal({
+          `🎯 MULTI-TIMEFRAME CONFIRMED\\n\\n${formatTradeSignal({
             ...swingTradeMTF,
             timestamp: new Date().toISOString()
-          })}\n\n📊 ${formatAlignmentReport(alignment)}`
+          })}\\n\\n📊 ${formatAlignmentReport(alignment)}`
         );
         
         if (swingSuccess) {
@@ -4510,7 +4510,7 @@ Confidence Boost: +${alignment.confidenceBoost}%
 ${alignment.trends.map(t => {
   const icon = t.trend === 'BULLISH' ? '📈' : t.trend === 'BEARISH' ? '📉' : '➡️'
   return `${icon} *${t.timeframe}*: ${t.trend} (${t.confidence.toFixed(0)}%)`
-}).join('\n')}
+}).join('\\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 *DAY TRADE SIGNAL*
@@ -4942,7 +4942,7 @@ Confidence Boost: +${alignment.confidenceBoost}%
 ${alignment.trends.map((t: any) => {
   const icon = t.trend === 'BULLISH' ? '📈' : t.trend === 'BEARISH' ? '📉' : '➡️'
   return `${icon} *${t.timeframe}*: ${t.trend} (${t.confidence.toFixed(0)}%)`
-}).join('\n')}
+}).join('\\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 *DAY TRADE SIGNAL*
