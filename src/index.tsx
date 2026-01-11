@@ -3289,6 +3289,34 @@ app.get('/api/cron/micro-trade', async (c) => {
   }
 })
 
+// GET /api/cron/fetch-mtf - Fast cron endpoint that triggers MTF fetch
+app.get('/api/cron/fetch-mtf', async (c) => {
+  try {
+    // Trigger the MTF fetch asynchronously (fire and forget)
+    const baseUrl = new URL(c.req.url).origin
+    const fetchUrl = `${baseUrl}/api/market/fetch-mtf`
+    
+    // Start the fetch but don't wait for it (async)
+    fetch(fetchUrl, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }).catch(err => console.error('[CRON-MTF] Background fetch error:', err))
+    
+    // Return immediately
+    return c.json({
+      success: true,
+      message: 'MTF data fetch triggered successfully',
+      timestamp: new Date().toISOString(),
+      note: 'Processing in background (~20 seconds)'
+    })
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message
+    }, 500)
+  }
+})
+
 // Fetch multi-timeframe market data (Phase 3: 90% Accuracy)
 app.post('/api/market/fetch-mtf', async (c) => {
   const { DB } = c.env;
