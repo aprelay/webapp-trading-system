@@ -531,6 +531,44 @@ app.get('/signals/recent', async (c) => {
 })
 
 /**
+ * Get today's signal count for dashboard stats
+ */
+app.get('/signals/today', async (c) => {
+  const { DB } = c.env
+  const date = c.req.query('date') || new Date().toISOString().split('T')[0]
+  
+  try {
+    // Count total signals for today
+    const totalResult = await DB.prepare(`
+      SELECT COUNT(*) as total
+      FROM micro_trade_signals
+      WHERE DATE(created_at) = ?
+    `).bind(date).first()
+    
+    // Count signals sent to Telegram
+    const sentResult = await DB.prepare(`
+      SELECT COUNT(*) as sent
+      FROM micro_trade_signals
+      WHERE DATE(created_at) = ?
+      AND telegram_sent = 1
+    `).bind(date).first()
+    
+    return c.json({
+      success: true,
+      date,
+      total: (totalResult as any)?.total || 0,
+      telegram_sent: (sentResult as any)?.sent || 0
+    })
+  } catch (error: any) {
+    console.error('[HYBRID-MICRO] Error fetching today stats:', error)
+    return c.json({
+      success: false,
+      error: error.message
+    }, 500)
+  }
+})
+
+/**
  * Test hybrid system
  */
 app.get('/test', async (c) => {

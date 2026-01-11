@@ -1195,16 +1195,20 @@ app.get('/', (c) => {
                     console.log('[DEBUG] loadMicroTradeData: Starting...');
                     const today = new Date().toISOString().split('T')[0];
                     
-                    // Fetch daily stats
-                    console.log('[DEBUG] Fetching stats for date:', today);
-                    const statsRes = await fetchWithTimeout('/api/micro/stats/daily?date=' + today);
-                    console.log('[DEBUG] Stats response:', statsRes);
-                    if (statsRes.success && statsRes.stats) {
-                        const stats = statsRes.stats;
-                        document.getElementById('microSignalsToday').textContent = stats.total_signals || 0;
+                    // Fetch today's hybrid-micro signals directly
+                    console.log('[DEBUG] Fetching today\'s signals...');
+                    const todaySignalsRes = await fetchWithTimeout('/api/hybrid-micro/signals/today?date=' + today);
+                    console.log('[DEBUG] Today signals response:', todaySignalsRes);
+                    
+                    if (todaySignalsRes.success) {
+                        const totalSignals = todaySignalsRes.total || 0;
+                        const telegramSent = todaySignalsRes.telegram_sent || 0;
                         
-                        if (stats.total_signals > 0) {
-                            const winRate = ((stats.signals_sent / stats.total_signals) * 100).toFixed(0);
+                        document.getElementById('microSignalsToday').textContent = totalSignals;
+                        
+                        if (totalSignals > 0) {
+                            // Win rate = (telegram sent / total) * 100
+                            const winRate = ((telegramSent / totalSignals) * 100).toFixed(0);
                             document.getElementById('microWinRate').textContent = winRate + '%';
                         } else {
                             document.getElementById('microWinRate').textContent = '--';
