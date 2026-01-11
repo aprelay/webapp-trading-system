@@ -12,6 +12,7 @@ import telegramCommandsRouter from './routes/telegramCommands'
 import aiAnalysisRouter from './routes/aiAnalysis'
 import monitoringRouter from './routes/monitoring'
 import microTradeScannerRouter from './routes/microTradeScanner'
+import hybridMicroScannerRouter from './routes/hybridMicroScanner'
 
 type Bindings = {
   DB: D1Database;
@@ -33,6 +34,7 @@ app.route('/api/telegram', telegramCommandsRouter)
 app.route('/api/ai', aiAnalysisRouter)
 app.route('/api/monitoring', monitoringRouter)
 app.route('/api/micro', microTradeScannerRouter)
+app.route('/api/hybrid-micro', hybridMicroScannerRouter)
 
 // Homepage - Dashboard
 app.get('/', (c) => {
