@@ -1191,93 +1191,104 @@ app.get('/', (c) => {
 
             // Load Micro Trade Data
             async function loadMicroTradeData() {
+                const signalsList = document.getElementById('microSignalsList');
+                const signalsToday = document.getElementById('microSignalsToday');
+                const winRate = document.getElementById('microWinRate');
+                const dailyPnL = document.getElementById('microDailyPnL');
+                
                 try {
-                    const today = new Date().toISOString().split('T')[0];
+                    console.log('[Dashboard] Loading micro trade data...');
                     
-                    // Fetch daily stats
-                    const statsRes = await fetchWithTimeout('/api/micro/stats/daily?date=' + today);
-                    if (statsRes.success && statsRes.stats) {
-                        const stats = statsRes.stats;
-                        document.getElementById('microSignalsToday').textContent = stats.total_signals || 0;
-                        
-                        if (stats.total_signals > 0) {
-                            const winRate = ((stats.signals_sent / stats.total_signals) * 100).toFixed(0);
-                            document.getElementById('microWinRate').textContent = winRate + '%';
-                        } else {
-                            document.getElementById('microWinRate').textContent = '--';
-                        }
-                        
-                        document.getElementById('microDailyPnL').textContent = '--'; // TODO: Track P&L
-                    } else {
-                        // No stats yet - show defaults
-                        document.getElementById('microSignalsToday').textContent = '0';
-                        document.getElementById('microWinRate').textContent = '--';
-                        document.getElementById('microDailyPnL').textContent = '--';
+                    // Show loading state
+                    if (signalsList) {
+                        signalsList.innerHTML = '<p class="text-blue-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>Loading signals...</p>';
                     }
                     
+                    const today = new Date().toISOString().split('T')[0];
+                    
                     // Fetch recent HYBRID signals (includes grade/filters/position_multiplier)
-                    const signalsRes = await fetchWithTimeout('/api/hybrid-micro/signals/recent?limit=10');
-                    if (signalsRes.success && signalsRes.signals) {
-                        const listDiv = document.getElementById('microSignalsList');
+                    console.log('[Dashboard] Fetching hybrid signals...');
+                    const signalsRes = await fetchWithTimeout('/api/hybrid-micro/signals/recent?limit=10', 10000);
+                    console.log('[Dashboard] Signals response:', signalsRes);
+                    
+                    if (signalsRes && signalsRes.success && signalsRes.signals) {
+                        console.log('[Dashboard] Found', signalsRes.signals.length, 'signals');
+                        
+                        if (signalsToday) signalsToday.textContent = signalsRes.signals.length.toString();
+                        
                         if (signalsRes.signals.length === 0) {
-                            listDiv.innerHTML = '<p class="text-gray-400 text-sm">No signals yet. System will start generating signals during market hours.</p>';
+                            if (signalsList) {
+                                signalsList.innerHTML = '<p class="text-gray-400 text-sm">No signals yet. System will start generating signals during market hours.</p>';
+                            }
                         } else {
                             let html = '';
                             signalsRes.signals.forEach(signal => {
-                                const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴';
-                                const color = signal.signal_type === 'BUY' ? 'text-green-400' : 'text-red-400';
-                                const timeStr = new Date(signal.created_at || signal.timestamp).toLocaleString();
-                                
-                                // Hybrid grade badge
-                                const grade = signal.grade || 'B';
-                                let gradeBadgeClass = 'bg-blue-500';
-                                let gradeIcon = '✓';
-                                if (grade === 'A+') {
-                                    gradeBadgeClass = 'bg-yellow-500 text-black';
-                                    gradeIcon = '⭐⭐';
-                                } else if (grade === 'A') {
-                                    gradeBadgeClass = 'bg-green-500';
-                                    gradeIcon = '⭐';
+                                try {
+                                    const emoji = signal.signal_type === 'BUY' ? '🟢' : '🔴';
+                                    const color = signal.signal_type === 'BUY' ? 'text-green-400' : 'text-red-400';
+                                    const timeStr = new Date(signal.created_at || signal.timestamp).toLocaleString();
+                                    
+                                    // Hybrid grade badge
+                                    const grade = signal.grade || 'B';
+                                    let gradeBadgeClass = 'bg-blue-500';
+                                    let gradeIcon = '✓';
+                                    if (grade === 'A+') {
+                                        gradeBadgeClass = 'bg-yellow-500 text-black';
+                                        gradeIcon = '⭐⭐';
+                                    } else if (grade === 'A') {
+                                        gradeBadgeClass = 'bg-green-500';
+                                        gradeIcon = '⭐';
+                                    }
+                                    
+                                    html += '<div class="bg-gray-800 p-3 rounded border-l-4 ' + (signal.signal_type === 'BUY' ? 'border-green-500' : 'border-red-500') + '">';
+                                    html += '<div class="flex justify-between items-start mb-2">';
+                                    html += '<div class="flex items-center gap-2">';
+                                    html += '<span class="' + color + ' font-bold">' + emoji + ' ' + signal.signal_type + '</span>';
+                                    html += '<span class="text-xs px-2 py-1 rounded font-bold ' + gradeBadgeClass + '">' + gradeIcon + ' ' + grade + '</span>';
+                                    html += '</div>';
+                                    html += '<span class="text-xs text-gray-400">' + (signal.setup_type || 'SETUP') + '</span>';
+                                    html += '</div>';
+                                    html += '<div class="text-sm text-gray-300 mb-2">';
+                                    html += 'Entry: $' + (signal.price || 0).toFixed(2) + ' | Stop: $' + (signal.stop_loss || 0).toFixed(2);
+                                    html += '</div>';
+                                    html += '<div class="grid grid-cols-3 gap-2 text-xs mb-2">';
+                                    html += '<div class="text-gray-400">Confidence: <span class="text-white font-bold">' + (signal.confidence || 0).toFixed(0) + '%</span></div>';
+                                    html += '<div class="text-gray-400">Filters: <span class="text-white font-bold">' + (signal.filters_passed || 0) + '/10</span></div>';
+                                    html += '<div class="text-gray-400">Position: <span class="text-white font-bold">' + (signal.position_multiplier || 1) + 'x</span></div>';
+                                    html += '</div>';
+                                    html += '<div class="text-xs text-gray-500">';
+                                    html += (signal.session || 'SESSION') + ' | ' + timeStr;
+                                    html += '</div>';
+                                    html += '</div>';
+                                } catch (err) {
+                                    console.error('[Dashboard] Error rendering signal:', err, signal);
                                 }
-                                
-                                html += '<div class="bg-gray-800 p-3 rounded border-l-4 ' + (signal.signal_type === 'BUY' ? 'border-green-500' : 'border-red-500') + '">';
-                                html += '<div class="flex justify-between items-start mb-2">';
-                                html += '<div class="flex items-center gap-2">';
-                                html += '<span class="' + color + ' font-bold">' + emoji + ' ' + signal.signal_type + '</span>';
-                                html += '<span class="text-xs px-2 py-1 rounded font-bold ' + gradeBadgeClass + '">' + gradeIcon + ' ' + grade + '</span>';
-                                html += '</div>';
-                                html += '<span class="text-xs text-gray-400">' + (signal.setup_type || 'SETUP') + '</span>';
-                                html += '</div>';
-                                html += '<div class="text-sm text-gray-300 mb-2">';
-                                html += 'Entry: $' + signal.price.toFixed(2) + ' | Stop: $' + signal.stop_loss.toFixed(2);
-                                html += '</div>';
-                                html += '<div class="grid grid-cols-3 gap-2 text-xs mb-2">';
-                                html += '<div class="text-gray-400">Confidence: <span class="text-white font-bold">' + signal.confidence.toFixed(0) + '%</span></div>';
-                                html += '<div class="text-gray-400">Filters: <span class="text-white font-bold">' + (signal.filters_passed || 0) + '/10</span></div>';
-                                html += '<div class="text-gray-400">Position: <span class="text-white font-bold">' + (signal.position_multiplier || 1) + 'x</span></div>';
-                                html += '</div>';
-                                html += '<div class="text-xs text-gray-500">';
-                                html += (signal.session || 'SESSION') + ' | ' + timeStr;
-                                html += '</div>';
-                                html += '</div>';
                             });
-                            listDiv.innerHTML = html;
+                            if (signalsList) {
+                                signalsList.innerHTML = html || '<p class="text-yellow-400 text-sm">Error rendering signals</p>';
+                            }
+                        }
+                    } else {
+                        console.warn('[Dashboard] No signals data or failed response');
+                        if (signalsList) {
+                            signalsList.innerHTML = '<p class="text-yellow-400 text-sm">Unable to load signals. API response: ' + (signalsRes ? signalsRes.error || 'No data' : 'No response') + '</p>';
                         }
                     }
                     
-                    // Check limits status
-                    const limitsRes = await fetchWithTimeout('/api/micro/signals/recent?limit=1');
-                    if (limitsRes.success) {
-                        document.getElementById('microStatus').textContent = 'ACTIVE';
-                        document.getElementById('microStatus').className = 'text-sm font-bold text-green-400';
-                    }
-                    
                 } catch (error) {
-                    console.error('Error loading micro trade data:', error);
-                    document.getElementById('microSignalsToday').textContent = '--';
-                    document.getElementById('microWinRate').textContent = '--';
-                    document.getElementById('microDailyPnL').textContent = '--';
-                    document.getElementById('microSignalsList').innerHTML = '<p class="text-red-400 text-sm">Error loading data</p>';
+                    console.error('[Dashboard] Error loading micro trade data:', error);
+                    console.error('[Dashboard] Error stack:', error.stack);
+                    
+                    // Set defaults for missing elements
+                    const signalsToday = document.getElementById('microSignalsToday');
+                    const winRate = document.getElementById('microWinRate');
+                    const dailyPnL = document.getElementById('microDailyPnL');
+                    const signalsList = document.getElementById('microSignalsList');
+                    
+                    if (signalsToday) signalsToday.textContent = '--';
+                    if (winRate) winRate.textContent = '--';
+                    if (dailyPnL) dailyPnL.textContent = '--';
+                    if (signalsList) signalsList.innerHTML = '<p class="text-red-400 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>Error: ' + error.message + '</p>';
                 }
             }
 
