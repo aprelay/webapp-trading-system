@@ -2740,9 +2740,9 @@ app.get('/api/cron/auto-fetch', async (c) => {
         
         // Check if this is a HIGH CONVICTION signal (≥80%)
         const isHighConviction = dayTradeSignal.confidence >= 80;
-        const convictionLabel = isHighConviction ? '${ICONS.fire} <b>HIGH CONVICTION</b> ${ICONS.fire}' : '';
+        const convictionLabel = isHighConviction ? '🔥 <b>HIGH CONVICTION</b> 🔥' : '';
         
-        const message = `${emoji} <b>GOLD/USD ${dayTradeSignal.signal_type} SIGNAL</b>
+        const message = `${emoji} <b>GOLD/USD ${dayTradeSignal.signal_type} SIGNAL</b> ${emoji}
 ${convictionLabel}
 
 📊 <b>Day Trade</b>
@@ -2779,7 +2779,7 @@ ${escapeHtml(dayTradeSignal.reason)}
             
             // Wait 2 minutes, send first reminder
             setTimeout(async () => {
-              const reminder1 = `${emoji} <b>${ICONS.warning} REMINDER: HIGH CONVICTION SIGNAL</b>
+              const reminder1 = `${emoji} <b>⚠️ REMINDER: HIGH CONVICTION SIGNAL</b> ${emoji}
 
 📊 <b>${dayTradeSignal.signal_type} Day Trade</b>
 💰 Current Price: $${currentPrice.toFixed(2)}
@@ -2801,7 +2801,7 @@ ${escapeHtml(dayTradeSignal.reason)}
             
             // Wait 5 minutes, send second reminder
             setTimeout(async () => {
-              const reminder2 = `${emoji} <b>${ICONS.warning} FINAL REMINDER: HIGH CONVICTION</b>
+              const reminder2 = `${emoji} <b>⚠️ FINAL REMINDER: HIGH CONVICTION</b> ${emoji}
 
 📊 <b>${dayTradeSignal.signal_type} Signal Still Valid</b>
 💰 Price: $${currentPrice.toFixed(2)}
@@ -2846,9 +2846,9 @@ ${escapeHtml(dayTradeSignal.reason)}
         
         // Check if this is a HIGH CONVICTION signal (≥85% for swing)
         const isHighConviction = swingTradeSignal.confidence >= 85;
-        const convictionLabel = isHighConviction ? '${ICONS.fire} <b>HIGH CONVICTION</b> ${ICONS.fire}' : '';
+        const convictionLabel = isHighConviction ? '🔥 <b>HIGH CONVICTION</b> 🔥' : '';
         
-        const message = `${emoji} <b>GOLD/USD ${swingTradeSignal.signal_type} SIGNAL</b>
+        const message = `${emoji} <b>GOLD/USD ${swingTradeSignal.signal_type} SIGNAL</b> ${emoji}
 ${convictionLabel}
 
 📈 <b>Swing Trade</b>
@@ -2884,7 +2884,7 @@ ${escapeHtml(swingTradeSignal.reason)}
             
             // Wait 3 minutes, send first reminder
             setTimeout(async () => {
-              const reminder1 = `${emoji} <b>${ICONS.warning} REMINDER: HIGH CONVICTION SWING</b>
+              const reminder1 = `${emoji} <b>⚠️ REMINDER: HIGH CONVICTION SWING</b> ${emoji}
 
 📈 <b>${swingTradeSignal.signal_type} Swing Trade</b>
 💰 Current Price: $${currentPrice.toFixed(2)}
@@ -2906,7 +2906,7 @@ ${escapeHtml(swingTradeSignal.reason)}
             
             // Wait 7 minutes, send second reminder
             setTimeout(async () => {
-              const reminder2 = `${emoji} <b>${ICONS.warning} FINAL REMINDER: HIGH CONVICTION</b>
+              const reminder2 = `${emoji} <b>⚠️ FINAL REMINDER: HIGH CONVICTION</b> ${emoji}
 
 📈 <b>${swingTradeSignal.signal_type} Swing Still Valid</b>
 💰 Price: $${currentPrice.toFixed(2)}
